@@ -2,7 +2,9 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  // `vite --mode demo` (npm run demo) runs on the in-browser mock API while the database is pending (D1-20).
+  define: mode === 'demo' ? { 'import.meta.env.VITE_USE_MOCKS': JSON.stringify('true') } : {},
   plugins: [
     react(),
     VitePWA({
@@ -31,4 +33,4 @@ export default defineConfig({
     include: ['src/**/*.test.{js,jsx}'],
     css: false,
   },
-});
+}));

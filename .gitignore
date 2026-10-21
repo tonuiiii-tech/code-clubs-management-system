@@ -12,6 +12,3 @@ playwright-report/
 test-results/
 .vscode/*
 !.vscode/extensions.json
-
-# Demo mode settings for client/.env.demo (no secrets in it)
-!client/.env.demo
