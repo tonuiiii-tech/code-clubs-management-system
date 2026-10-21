@@ -1,12 +1,14 @@
 # STEAMLabs Code Clubs: Sprint 1 plan
 
-20 October 2026 · Status: awaiting Enock's approval
+Updated 21 October 2026 · Status: structure accepted by Enock; offline sync deferred to Sprint 3; awaiting OK to start coding
+
+> **Changes on 21 Oct:** adopted Enock's folder structure with the suggested additions; added a Schools module; offline sync (Dexie, outbox, sync engine) moved from Sprint 2 to Sprint 3 (D1-17, D1-18, D1-19, R1-10).
 
 ## Summary
 
-Sprint 1 delivers a working monorepo with login, configurable role-based access, an audit log, Club and Facilitator management, a realistic Kenyan seed dataset and a CI pipeline that runs lint and tests on every push. The repo is empty today, so this sprint also sets the conventions every later sprint builds on.
+Sprint 1 delivers a working monorepo with login, configurable role-based access, an audit log, School, Club and Facilitator management, a realistic Kenyan seed dataset and a CI pipeline that runs lint and tests on every push. The repo is empty today, so this sprint also sets the conventions every later sprint builds on.
 
-The biggest choice in this plan is to put the offline-sync foundations into the data model now (client-generated UUIDs, per-field timestamps, a server change sequence and soft deletes), even though the sync engine itself is built in Sprint 2. That way Sprint 2 adds sync without migrating any data.
+Offline sync is deferred to Sprint 3, as Enock asked. Sprint 1 and 2 run online only. The one thing kept now is a small set of sync fields on every record (client-generated UUIDs, timestamps, a server change sequence and soft deletes), because they cost little now and avoid migrating every record when offline sync arrives.
 
 What I need from you: an OK on this plan, plus answers to the open questions at the end (or I will go with the defaults stated there). No code is written until you say go.
 
@@ -15,94 +17,101 @@ What I need from you: an OK on this plan, plus answers to the open questions at 
 Sprint 1 is backend-heavy: the server is complete and tested, and the client is a thin but installable PWA shell that already speaks English and Kiswahili.
 
 1. **Repo setup.** npm workspaces monorepo, ESLint + Prettier, `.editorconfig`, `.env.example` files, Windows-first README, `/docs` with the decision log, risk register and sprint notes.
-2. **Shared package.** Zod schemas, enums (regions, tracks, venue types, statuses) and the RBAC policy in `packages/shared`, used by both server and client so validation works offline in the browser too.
+2. **Shared package.** Zod schemas, enums (regions, tracks, venue types, statuses) and the RBAC policy in `shared/`, used by both server and client so both validate with the same rules.
 3. **Server foundation.** Express app with helmet, CORS allowlist, request IDs, central error handler, env validated at startup, Mongo connection, sync-fields plugin applied to every model.
 4. **Auth.** Login with email or phone, bcrypt (cost 12), 15-minute JWT access token, rotating 30-day refresh token in an httpOnly cookie, logout, change password, rate limiting and lockout on failed logins.
 5. **RBAC + audit log.** `authorize(permission)` middleware, scope filters (all / region / own clubs), field redaction, and an append-only audit log with field-level diffs.
-6. **Club CRUD** with server-assigned human-readable codes, filters (region, county, status, track, search) and pagination.
-7. **Facilitator CRUD** (facilitators are users), club assignments (many-to-many), safeguarding status, and HQ user management (create coordinators, change roles, grant learner-contact access).
-8. **Seed script** with realistic Kenyan data across all four regions.
-9. **Client shell.** Vite + React + React Router, vite-plugin-pwa (installable, app shell cached), react-i18next with `en` and `sw` files, login, Clubs list/detail/form, Facilitators list/detail/form, a placeholder sync-status bar, and Dexie schema v1 declared but not yet used for sync. All screens use the `steamlabsui` 1.0.0 package (STEAMLabs Africa UI library, on npm): its React components (Button, Field, Input, Select, Table, Card, Stat, Badge, Alert, Dialog, Tabs, Pagination, Toast, EmptyState), tokens and Logo. Poppins is self-hosted and precached instead of loaded from Google Fonts, so the app looks right offline.
-10. **CI.** GitHub Actions running lint, server tests (Jest + Supertest + mongodb-memory-server), client unit tests (Vitest), client build and one Playwright smoke test.
+6. **School CRUD** for host schools and organisations (primary schools, community centres, libraries) with location and contact, so clubs link to a school record.
+7. **Club CRUD** with server-assigned human-readable codes, filters (region, county, status, track, search) and pagination.
+8. **Users and facilitators** (facilitators are users), club assignments (many-to-many), safeguarding status, and HQ user management (create coordinators, change roles, grant learner-contact access).
+9. **Seed script** with realistic Kenyan data across all four regions.
+10. **Client.** Vite + React + React Router, vite-plugin-pwa (installable, app shell cached; no offline data yet), react-i18next with `en` and `sw` files, and pages for Login, Dashboard (simple totals), Users, Schools and Clubs. All screens use the `steamlabsui` 1.0.0 package (STEAMLabs Africa UI library, on npm): its React components (Button, Field, Input, Select, Table, Card, Stat, Badge, Alert, Dialog, Tabs, Pagination, Toast, EmptyState), tokens and Logo. Poppins is self-hosted and precached instead of loaded from Google Fonts, so the app looks right offline.
+11. **Docs for Friday.** `docs/architecture.md` (diagram and stack choice) and `docs/coding-principles.md`, plus the decision log and risk register.
+12. **CI.** GitHub Actions running lint, server tests (Jest + Supertest + mongodb-memory-server), client unit tests (Vitest), client build and one Playwright smoke test.
 
 ### Sprint roadmap (small adjustments)
 
 | Sprint | Scope | Change from your plan |
 | --- | --- | --- |
-| 1 | Repo, auth + RBAC + audit, Clubs, Facilitators, seed, CI | Adds sync fields to models and Playwright setup now |
-| 2 | Offline sync engine first, then Learners + consent upload, Sessions + attendance, file upload queue | Sync built first so Learners and Sessions are offline from day one; offline Playwright tests start here, not Sprint 4 |
-| 3 | HQ dashboard + alerts, PDF termly report + scheduled email (stub), Events + event consent, Announcements + SMS/WhatsApp stub provider | None |
-| 4 | Equipment inventory, Resources library (offline download), Progress tracking, full Kiswahili review, full offline end-to-end suite | Kiswahili keys exist from Sprint 1; Sprint 4 is the translation review |
+| 1 | Repo, auth + RBAC + audit, Schools, Clubs, Users/Facilitators, seed, CI, architecture docs | Adds Schools; sync fields on models; Playwright set up |
+| 2 | Learners + consent upload, Sessions + attendance (online) | Offline sync moved out to Sprint 3 |
+| 3 | Offline sync engine (Dexie, outbox, push/pull, conflicts, idempotency), file upload queue, offline caching, offline Playwright tests | New position for offline, as Enock asked |
+| 4 | HQ dashboard + alerts, PDF termly report + scheduled email (stub), Events + event consent, Announcements + SMS/WhatsApp stub provider | Moved from Sprint 3 |
+| 5 | Equipment inventory, Resources library (offline download), Progress tracking, full Kiswahili review | Moved from Sprint 4; roadmap is now 5 sprints |
 
-In Sprint 1 the client calls the REST API directly, through a small data-access layer. In Sprint 2 that layer switches to Dexie + outbox, so no screen has to be rewritten.
+In Sprints 1 and 2 the client calls the REST API directly, through `services/`. In Sprint 3 those services switch to read and write the local database first and sync later, so pages do not have to be rewritten.
 
 ## Folder structure
 
-One repo with npm workspaces: `server`, `client` and a small `packages/shared` so the server and the offline client validate data with the same rules. Server code is grouped by feature module, which keeps each sprint's work in its own folder.
+Enock's structure (pages, layouts, routes, services, context; server feature modules including Schools), with the additions agreed on 21 Oct. Folders marked Sprint 3 are created when offline sync is built.
 
 ```text
 code-clubs-management-system/
-├── .github/workflows/ci.yml        # lint + tests + build on push/PR
-├── .editorconfig  .gitignore  .nvmrc  .prettierrc  eslint.config.js
-├── package.json                    # npm workspaces + root scripts (dev, test, lint, seed)
-├── README.md                       # Windows setup steps first
-├── docs/
-│   ├── decision-log.md             # D<sprint>-<n>
-│   ├── risk-register.md            # R<sprint>-<n>
-│   ├── data-model.md
-│   ├── rbac.md                     # role/permission matrix
-│   ├── sync-protocol.md            # push/pull contract (fields defined now, engine in S2)
-│   └── sprints/sprint-1.md         # plan + end-of-sprint summary
-├── packages/shared/
+├── .github/workflows/ci.yml          # lint + tests + build on every push/PR
+├── docs/                           
+│   ├── architecture.md               # diagram + stack choice (for Friday)
+│   ├── coding-principles.md          # (for Friday)
+│   ├── decision-log.md               # D<sprint>-<n>
+│   ├── risk-register.md              # R<sprint>-<n>
+│   └── sprints/sprint-1.md
+├── shared/                           # used by server AND client
+│   ├── enums.js                      # regions, counties, tracks, venue types, statuses
+│   ├── permissions.js                # role → permission → scope policy (one place to change roles)
+│   └── schemas/                      # Zod: club, school, user, auth
+│
+├── client/
+│   ├── .env.example                  # client-only vars (VITE_API_URL)
+│   ├── public/                       # PWA icons, manifest assets
+│   ├── e2e/                          # Playwright tests (offline flow from Sprint 3)
 │   └── src/
-│       ├── enums.js                # regions, counties, tracks, venue types, statuses
-│       ├── permissions.js          # default RBAC policy (one place to change roles)
-│       └── schemas/                # Zod: club.js, user.js, facilitator.js, auth.js
+│       ├── components/
+│       ├── layouts/
+│       ├── pages/
+│       │   ├── Login/
+│       │   ├── Dashboard/
+│       │   ├── Users/
+│       │   ├── Schools/
+│       │   └── Clubs/
+│       ├── routes/
+│       ├── services/                 # API calls; in Sprint 3 they read/write the local DB first
+│       ├── context/                  # AuthContext (SyncContext in Sprint 3)
+│       ├── db/                       # (Sprint 3) Dexie schema + outbox table
+│       ├── sync/                     # (Sprint 3) push/pull service, sync status ("3 changes waiting")
+│       ├── i18n/                     # react-i18next: locales/en, locales/sw
+│       ├── ui/                       # steamlabsui setup: CSS, self-hosted Poppins, ThemeProvider
+│       └── utils/
+│
 ├── server/
-│   ├── .env.example  jest.config.js  package.json
-│   ├── scripts/
-│   │   ├── seed.js
-│   │   └── seed-data/              # kenya-locations.js, clubs.js, people.js
-│   ├── src/
-│   │   ├── app.js                  # builds the Express app (used by Supertest)
-│   │   ├── server.js               # connects DB and listens
-│   │   ├── config/env.js           # env validated with Zod, fails fast
-│   │   ├── db/                     # connect.js, plugins/syncFields.js, counters.js
-│   │   ├── middleware/             # authenticate, validate, rateLimit, errorHandler, requestId
-│   │   ├── rbac/                   # authorize.js, scope.js, redact.js
-│   │   ├── models/                 # User, Club, ClubFacilitator, AuditLog, RefreshToken
-│   │   └── modules/
-│   │       ├── auth/               # auth.routes.js, auth.controller.js, auth.service.js
-│   │       ├── users/
-│   │       ├── clubs/
-│   │       ├── facilitators/
-│   │       ├── audit/
-│   │       └── meta/               # enums for the client, health check
-│   └── tests/
-│       ├── setup.js                # mongodb-memory-server lifecycle
-│       ├── helpers/                # factories, login helper
-│       └── auth / rbac / clubs / facilitators / audit .test.js
-└── client/
-    ├── .env.example  index.html  vite.config.js  playwright.config.js  package.json
-    ├── public/icons/               # PWA icons
-    ├── e2e/smoke.spec.js
-    └── src/
-        ├── main.jsx  App.jsx  routes.jsx
-        ├── i18n/                   # index.js, locales/en/*.json, locales/sw/*.json
-        ├── api/                    # http.js (token refresh), data-access layer per entity
-        ├── db/dexie.js             # schema v1 (sync in Sprint 2)
-        ├── auth/                   # AuthProvider, RequirePermission
-        ├── ui/                     # steamlabsui setup: CSS imports, self-hosted Poppins, ThemeProvider, app compositions (FormField, DataTable)
-        ├── components/             # Layout, SyncStatusBar, LanguageSwitcher, forms (built from ui/)
-        ├── features/               # login/, clubs/, facilitators/
-        └── test/                   # Vitest setup
+│   ├── .env.example                  # moved here: server-only secrets (JWT, Mongo URI)
+│   ├── scripts/seed.js               # Kenyan seed data
+│   ├── tests/                        # moved here from root: Jest + Supertest + mongodb-memory-server
+│   └── src/
+│       ├── config/
+│       ├── db/                       # connection + syncFields plugin (UUID, updatedAt, serverSeq, deletedAt)
+│       ├── middleware/
+│       │   ├── authenticate.js
+│       │   ├── authorize.js          # reads shared/permissions.js
+│       │   ├── validate.js           # Zod validation
+│       │   ├── rateLimit.js          # auth rate limiting
+│       │   └── errorHandler.js
+│       ├── modules/                  # each module: routes, controller, service, model
+│       │   ├── auth/
+│       │   ├── users/                # facilitators, coordinators, HQ
+│       │   ├── schools/
+│       │   ├── clubs/
+│       │   ├── audit/
+│       │   └── sync/                 # (Sprint 3) /api/sync/push and /pull
+│       ├── utils/
+│       ├── app.js
+│       └── server.js
+│
+├── README.md                         # Windows setup steps
+└── package.json                      # npm workspaces: client, server, shared
 ```
-
-Your local copy (`C:\Users\PC\STEAMlabs\code-clubs-management-system`) has no code yet, only a root `package.json` with `steamlabsui` installed. In this layout `steamlabsui` moves into `client/package.json`, since only the client uses it.
 
 ## Data model
 
-Every synced record carries the same sync fields, added by one Mongoose plugin. Sprint 1 builds five collections; the rest are designed now so their shape is settled before Sprint 2.
+Every synced record carries the same sync fields, added by one Mongoose plugin. Sprint 1 builds six collections; the rest are designed now so their shape is settled early.
 
 ### Sync fields on every synced record
 
@@ -135,23 +144,35 @@ Every synced record carries the same sync fields, added by one Mongoose plugin. 
 | `status` | `active` \| `disabled` |
 | `failedLogins`, `lockedUntil`, `lastLoginAt`, `tokenVersion` | Lockout and session revocation |
 
+### School (host school or organisation) — Sprint 1
+
+| Field | Type / rules |
+| --- | --- |
+| `name` | String, required |
+| `type` | `primary_school` \| `community_centre` \| `library` \| `other` |
+| `region` | `nairobi_central` \| `western_nyanza` \| `coast` \| `rift_valley` |
+| `location` | `{ county, subCounty, ward, gps: GeoJSON Point }`; county validated against the 47 counties |
+| `contact` | `{ name, phone }` (host contact) |
+| `status` | `active` \| `inactive` |
+
+Indexes: `region`, `location.county`, `location.gps` 2dsphere, `name` text. Learners (Sprint 2) can also link to their school here.
+
 ### Club — Sprint 1
 
 | Field | Type / rules |
 | --- | --- |
 | `code` | Human-readable unique ID, server-assigned per region: `NAC-001`, `WNY-001`, `CST-001`, `RVL-001` |
 | `name` | String, required |
-| `host` | `{ name, organisationType }` (school or organisation) |
+| `schoolId` | The host School; empty for online clubs |
 | `venueType` | `primary_school` \| `community_centre` \| `library` \| `online` |
 | `region` | `nairobi_central` \| `western_nyanza` \| `coast` \| `rift_valley` |
-| `location` | `{ county, subCounty, ward, gps: GeoJSON Point }`; optional for online clubs; county validated against the 47 counties |
-| `hostContact` | `{ name, phone }` |
+| `region` copy, location | Region is copied from the School for fast filtering; county, ward and GPS come from the School |
 | `schedule` | `{ dayOfWeek, startTime "HH:mm", endTime, frequency: weekly \| fortnightly \| monthly }` |
 | `status` | `active` \| `paused` \| `closed` |
 | `mainTrack` | `unplugged` \| `scratch` \| `robotics` \| `game_design` \| `ai_basics` |
 | `capacity` | Integer 1–30, default 30 |
 
-Indexes: `code` unique, `region + status`, `location.gps` 2dsphere, `serverSeq`.
+Indexes: `code` unique, `region + status`, `schoolId`, `serverSeq`.
 
 ### ClubFacilitator (assignment) — Sprint 1
 
@@ -178,14 +199,14 @@ A separate collection instead of an array on Club or User, so two offline device
 | LearnerContact | `learnerId`, guardian name and phone. Separate collection so it is never sent to roles without `learnerContact:read`, online or in sync | 2 |
 | ClubSession | `clubId`, `date`, `start`, `end`, `facilitatorIds`, `topic`, `track`, `notes`, `photoIds` | 2 |
 | Attendance | `sessionId`, `learnerId`, `present`. Deterministic `_id` from session + learner, so two devices marking the same learner merge instead of duplicating | 2 |
-| Attachment | File metadata (`owner`, `kind`, `mime`, `size`, `sha256`, `storageKey`, `uploadedAt`); bytes queue in IndexedDB until online | 2 |
-| SyncMutation, SyncConflict | Processed mutation IDs (idempotent pushes) and the conflict log | 2 |
+| Attachment | File metadata (`owner`, `kind`, `mime`, `size`, `sha256`, `storageKey`, `uploadedAt`); uploaded online in Sprint 2; offline upload queue in Sprint 3 | 2 |
+| SyncMutation, SyncConflict | Processed mutation IDs (idempotent pushes) and the conflict log | 3 |
 | Term | School term calendar: `year`, `term`, `start`, `end` | 2 |
-| Event, EventParticipation | Event details and club list; per-learner participation, event consent status, project presented, award | 3 |
-| Announcement, AnnouncementReceipt, MessageDelivery | Audience (all, region, club), channels, text; read receipts; SMS/WhatsApp delivery records via the stub provider | 3 |
-| Equipment, EquipmentLoan, RepairLog | Item, type, serial, holding club, condition; check-out and return; repair history | 4 |
-| Resource | Title, track, type (lesson plan, slides, video), file, language, offline flag | 4 |
-| ProgressRecord | `learnerId`, `kind` (project or assessment), link/file/photo, score, `track`, `date` | 4 |
+| Event, EventParticipation | Event details and club list; per-learner participation, event consent status, project presented, award | 4 |
+| Announcement, AnnouncementReceipt, MessageDelivery | Audience (all, region, club), channels, text; read receipts; SMS/WhatsApp delivery records via the stub provider | 4 |
+| Equipment, EquipmentLoan, RepairLog | Item, type, serial, holding club, condition; check-out and return; repair history | 5 |
+| Resource | Title, track, type (lesson plan, slides, video), file, language, offline flag | 5 |
+| ProgressRecord | `learnerId`, `kind` (project or assessment), link/file/photo, score, `track`, `date` | 5 |
 | Certificate (later) | `learnerId`, `track`, `level`, `criteriaMet [progressRecordIds]`, `issuedOn`. Fits without changing ProgressRecord | later |
 
 ## Access control, audit and sync groundwork
@@ -196,6 +217,8 @@ Every protected route uses three pieces: `authorize('club:update')` checks the p
 
 | Permission | Super Admin / HQ | Regional Coordinator | Facilitator |
 | --- | --- | --- | --- |
+| `school:read` | all | region | schools of own clubs |
+| `school:create`, `school:update` | all | region | — |
 | `club:read` | all | region | own |
 | `club:create`, `club:update` | all | region | — |
 | `club:close` | all | region | — |
@@ -210,7 +233,7 @@ Every protected route uses three pieces: `authorize('club:update')` checks the p
 
 **Audit log.** Services, not Mongoose hooks, write audit entries, because they know the actor, request and the before/after values. Each entry stores only the changed fields, with passwords and learner contact values redacted. Logins and failed logins are logged too.
 
-**Sync groundwork in Sprint 1.** The sync-fields plugin, the `serverSeq` counter and soft deletes are in place and tested, and REST writes already stamp them. `docs/sync-protocol.md` will define the Sprint 2 contract: a push is a batch of mutations, each with its own `mutationId`, so a repeated push is answered from `SyncMutation` without applying anything twice; field conflicts resolve by newest `fieldUpdatedAt` and the losing value goes to `SyncConflict`.
+**Sync groundwork only.** Offline sync is built in Sprint 3. Sprint 1 adds only the sync-fields plugin, the `serverSeq` counter and soft deletes, and REST writes stamp them. In Sprint 3, `docs/sync-protocol.md` will define the contract: a push is a batch of mutations, each with its own `mutationId`, so a repeated push is answered from `SyncMutation` without applying anything twice; field conflicts resolve by newest `fieldUpdatedAt` and the losing value goes to `SyncConflict`.
 
 ## Sprint 1 API
 
@@ -223,6 +246,8 @@ All routes sit under `/api`, take and return JSON, validate input with the share
 | `POST /auth/logout` | Revokes the refresh token | signed in |
 | `GET /auth/me` | Current user, role, effective permissions | signed in |
 | `POST /auth/change-password` | Requires the old password | signed in |
+| `GET /schools`, `GET /schools/:id` | List (filters: region, county, type, q; paginated) and detail, scoped | `school:read` |
+| `POST /schools`, `PATCH /schools/:id` | Create and update | `school:create`, `school:update` |
 | `GET /clubs`, `GET /clubs/:id` | List (filters: region, county, status, track, q; paginated) and detail, scoped | `club:read` |
 | `POST /clubs`, `PATCH /clubs/:id` | Create and update | `club:create`, `club:update` |
 | `DELETE /clubs/:id` | Soft delete; normal use is status `closed` | `club:close` |
@@ -246,11 +271,11 @@ These go into `docs/decision-log.md` and `docs/risk-register.md` once you approv
 
 | ID | Decision | Why |
 | --- | --- | --- |
-| D1-1 | npm workspaces monorepo with `server`, `client`, `packages/shared` | One install, one CI run, one set of schemas for server and offline client |
+| D1-1 | npm workspaces monorepo with `server`, `client`, `shared` (Enock's structure, D1-19) | One install, one CI run, one set of schemas for server and offline client |
 | D1-2 | JavaScript (ES modules) with JSDoc, not TypeScript | Lower barrier for volunteer contributors; see open question 1 |
 | D1-3 | Zod rather than Joi | Runs in the browser too, so offline forms validate with the server's rules |
 | D1-4 | Client-generated UUID v7 as `_id` on all synced records | Records can be created offline with no ID clash; time-ordered for index locality |
-| D1-5 | Sync fields on every model from Sprint 1; pull checkpoint is a server sequence number | No data migration in Sprint 2; immune to wrong device clocks |
+| D1-5 | Sync fields on every model from Sprint 1; pull checkpoint is a server sequence number | No data migration when offline sync arrives in Sprint 3; immune to wrong device clocks |
 | D1-6 | Soft deletes everywhere | Deletes must sync as tombstones, and records are kept indefinitely |
 | D1-7 | Facilitators are Users; club assignments in a ClubFacilitator collection | Many-to-many that merges cleanly offline and keeps assignment history |
 | D1-8 | RBAC policy in one shared file + `authorize` / `scopeFilter` / `redact` | Roles can change after the HQ meeting without touching routes; a database-backed role editor can come later |
@@ -258,22 +283,26 @@ These go into `docs/decision-log.md` and `docs/risk-register.md` once you approv
 | D1-10 | Learner contacts in their own collection (Sprint 2) | Contacts structurally never reach a device or API response without permission |
 | D1-11 | Human-readable club codes assigned by the server per region | Readable IDs for reports and phone calls; clubs are created online by HQ or coordinators |
 | D1-12 | Node 24 LTS, MongoDB 7+; Atlas free tier or local MongoDB for dev | Current LTS; tests need no MongoDB install thanks to mongodb-memory-server |
-| D1-13 | Playwright set up in Sprint 1; offline end-to-end tests start in Sprint 2 | Sync is the riskiest part, so test it as soon as it exists |
+| D1-13 | Playwright set up in Sprint 1; offline end-to-end tests start in Sprint 3 with the sync engine | Sync is the riskiest part, so test it as soon as it exists |
 | D1-14 | Audit entries written by services with field diffs and redaction | Hooks lack actor and request context; diffs keep the log readable |
 | D1-15 | UI built on steamlabsui 1.0.0 components and tokens; no Tailwind for now | Brand-consistent with other STEAMLabs apps; the kit covers forms, tables, stats, dialogs and toasts, so Tailwind adds little (its Tailwind v4 theme can be added later) |
 | D1-16 | Import tokens.css + components.css, not styles.css; self-host Poppins via @fontsource/poppins | styles.css loads Poppins from Google Fonts, which fails offline; self-hosted fonts are precached by the service worker |
+| D1-17 | Offline sync (Dexie, outbox, push/pull, conflict handling, offline caching) deferred to Sprint 3; Sprints 1–2 are online only | Enock's call on 21 Oct: get the core management features working and presentable first |
+| D1-18 | Schools are their own entity; clubs link to a School | Enock added Schools; avoids retyping host details and lets learners link to their school |
+| D1-19 | Adopt Enock's folder structure (pages, layouts, routes, services, context; feature modules) plus shared/, i18n/, ui/, docs/, CI, per-package tests and .env.example | Agreed on 21 Oct |
 
 | ID | Risk | Mitigation |
 | --- | --- | --- |
 | R1-1 | Roles change after the HQ meeting | Policy file + tests generated from the policy table |
-| R1-2 | Wrong device clocks distort last-write-wins | Server sequence for pull; clamp future timestamps; consider a hybrid logical clock in Sprint 2 |
-| R1-3 | Lost or shared laptops/tablets hold learner data in IndexedDB | Cache only the facilitator's own clubs, never contacts without permission; wipe Dexie on logout; local PIN / encryption reviewed in Sprint 2 |
+| R1-2 | Wrong device clocks distort last-write-wins | Server sequence for pull; clamp future timestamps; consider a hybrid logical clock in Sprint 3 |
+| R1-3 | Lost or shared laptops/tablets hold learner data in IndexedDB | Cache only the facilitator's own clubs, never contacts without permission; wipe Dexie on logout; local PIN / encryption reviewed in Sprint 3 |
 | R1-4 | Kenya Data Protection Act: children's data and indefinite retention | Needs HQ confirmation of ODPC registration, a DPIA and a written retention justification; I can draft, but it needs legal review |
-| R1-5 | Sprint 2 is heavy (sync, learners, consent upload, sessions, file queue) | Sync first; if time runs short, file upload queue moves to early Sprint 3 |
+| R1-5 | Sprint 3 is heavy (sync engine, file queue, offline caching, offline tests) | Sync engine first; if time runs short, the file upload queue moves to early Sprint 4 |
 | R1-6 | PWA storage can be evicted, especially on iOS Safari | Request persistent storage; show a warning if denied; confirm devices in use |
 | R1-7 | Facilitators without email cannot self-reset passwords | HQ or coordinator resets until the SMS provider exists |
 | R1-8 | mongodb-memory-server binary download blocked on some networks | Cache in CI; README fallback to a local MongoDB for tests |
 | R1-9 | steamlabsui is a new v1.0.0, marked UNLICENSED, and brand colours limit contrast (white on Clover Green 3.4:1) | Pin the exact version; confirm STEAMLabs owns the package; follow the kit's contrast rules and run axe checks in Playwright |
+| R1-10 | Offline is the top field requirement (most venues have no internet) but arrives in Sprint 3, so facilitators cannot use the app at venues until then | Sync fields and `services/` layer from Sprint 1 so Sprint 3 needs no rework; Friday demo is presented as online-first with offline on the roadmap |
 
 ## Testing, done criteria and open questions
 
@@ -281,7 +310,7 @@ Sprint 1 is done when CI is green on the branch and every item below passes loca
 
 - [ ] Server: auth (login by email and phone, wrong password, lockout, rate limit, refresh rotation and reuse detection, logout)
 - [ ] Server: RBAC matrix tests generated from the policy file, one per role × permission × scope, including a facilitator trying another region's club (404, not 403, so club existence does not leak)
-- [ ] Server: Club and Facilitator CRUD, validation errors (capacity over 30, bad county, bad phone), soft delete, assignment uniqueness
+- [ ] Server: School, Club and Facilitator CRUD, validation errors (capacity over 30, bad county, bad phone), soft delete, assignment uniqueness
 - [ ] Server: sync fields stamped on every write, `serverSeq` strictly increasing, future timestamps clamped
 - [ ] Server: audit entries written with diffs and redaction; no audit update or delete route
 - [ ] Seed runs twice without duplicates and refuses production
