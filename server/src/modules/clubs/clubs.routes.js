@@ -36,6 +36,12 @@ clubsRouter.patch(
   validate({ params: idParams, body: updateClubSchema }),
   controller.update,
 );
+clubsRouter.get(
+  '/:id/champions',
+  authorize('club:read'),
+  validate({ params: idParams }),
+  controller.listChampions,
+);
 clubsRouter.put(
   '/:id/champions/:userId',
   authorize('club:assignChampion'),

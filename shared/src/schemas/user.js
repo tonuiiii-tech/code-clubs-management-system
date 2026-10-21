@@ -7,7 +7,7 @@ import {
   SAFEGUARDING_STATUSES,
   USER_STATUSES,
 } from '../enums.js';
-import { emailSchema, kenyanPhoneSchema } from './common.js';
+import { emailSchema, kenyanPhoneSchema, paginationSchema } from './common.js';
 
 export const safeguardingSchema = z.object({
   status: z.enum(SAFEGUARDING_STATUSES),
@@ -33,8 +33,8 @@ export const createUserSchema = z
   })
   .strict();
 
-/** Administrator update. Role changes are separate so they can be audited and restricted. */
-export const updateUserSchema = createUserSchema.omit({ role: true }).partial().strict();
+/** Administrator update. Administrators cannot change their own role (checked in the service). */
+export const updateUserSchema = createUserSchema.partial().strict();
 
 export const updateUserStatusSchema = z.object({ status: z.enum(USER_STATUSES) }).strict();
 
@@ -47,3 +47,9 @@ export const updateOwnProfileSchema = z
   })
   .partial()
   .strict();
+
+export const listUsersQuerySchema = paginationSchema.extend({
+  role: z.enum(ROLE_VALUES).optional(),
+  status: z.enum(USER_STATUSES).optional(),
+  q: z.string().trim().max(80).optional(),
+});

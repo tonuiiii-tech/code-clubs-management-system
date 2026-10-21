@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcrypt';
-import { conflict, notFound } from '../../utils/httpError.js';
+import { conflict, forbidden, notFound } from '../../utils/httpError.js';
 import { scopeFilter } from '../scope.js';
 import { recordAudit } from '../audit/audit.service.js';
 import * as repo from './users.repository.js';
@@ -17,6 +17,31 @@ export function toPublicUser(user) {
 export async function listUsers(actor, scope, query) {
   const result = await repo.listUsers(scopeFilter(actor, scope), query);
   return { ...result, data: result.data.map(toPublicUser) };
+}
+
+export async function getUser(actor, scope, id) {
+  const user = await repo.findUserInScope(id, scopeFilter(actor, scope));
+  if (!user) throw notFound('User not found');
+  return toPublicUser(user);
+}
+
+/** Users may change only their own name, phone and language (never role, status or assignments). */
+export async function updateOwnProfile(actor, changes, { requestId }) {
+  const updated = await repo.updateUserById(actor.id, {
+    ...changes,
+    updatedAt: new Date(),
+    updatedBy: actor.id,
+  });
+  await recordAudit({
+    actor,
+    action: 'user.updateSelf',
+    entityType: 'user',
+    entityId: actor.id,
+    before: actor,
+    after: changes,
+    requestId,
+  });
+  return toPublicUser(updated);
 }
 
 export async function createUser(actor, input, { temporaryPassword, requestId }) {
@@ -49,6 +74,8 @@ export async function createUser(actor, input, { temporaryPassword, requestId })
 }
 
 export async function updateUser(actor, id, changes, { requestId }) {
+  if (id === actor.id && changes.role !== undefined)
+    throw forbidden('You cannot change your own role');
   const before = await repo.findUserById(id);
   if (!before) throw notFound();
   const updated = await repo.updateUserById(id, {
@@ -70,6 +97,7 @@ export async function updateUser(actor, id, changes, { requestId }) {
 
 /** Deactivation also bumps tokenVersion so existing sessions stop working at once (R1-4). */
 export async function setUserStatus(actor, id, status, { requestId }) {
+  if (id === actor.id) throw forbidden('You cannot change your own account status');
   const before = await repo.findUserById(id);
   if (!before) throw notFound();
   const changes = {

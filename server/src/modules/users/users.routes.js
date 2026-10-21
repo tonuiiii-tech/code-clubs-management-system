@@ -2,8 +2,9 @@ import { Router } from 'express';
 import { z } from 'zod';
 import {
   createUserSchema,
+  updateOwnProfileSchema,
   idSchema,
-  paginationSchema,
+  listUsersQuerySchema,
   updateUserSchema,
   updateUserStatusSchema,
 } from '@code-clubs/shared/schemas';
@@ -19,9 +20,16 @@ usersRouter.use(authenticate);
 usersRouter.get(
   '/',
   authorize('user:read'),
-  validate({ query: paginationSchema }),
+  validate({ query: listUsersQuerySchema }),
   controller.list,
 );
+usersRouter.patch(
+  '/me',
+  authorize('user:updateSelf'),
+  validate({ body: updateOwnProfileSchema }),
+  controller.updateMe,
+);
+usersRouter.get('/:id', authorize('user:read'), validate({ params: idParams }), controller.get);
 usersRouter.post(
   '/',
   authorize('user:manage'),

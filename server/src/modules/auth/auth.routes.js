@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { loginSchema } from '@code-clubs/shared/schemas';
+import { changePasswordSchema, loginSchema } from '@code-clubs/shared/schemas';
 import { authenticate } from '../../middleware/authenticate.js';
 import { loginRateLimit } from '../../middleware/rateLimit.js';
 import { validate } from '../../middleware/validate.js';
@@ -11,3 +11,9 @@ authRouter.post('/login', loginRateLimit, validate({ body: loginSchema }), contr
 authRouter.post('/refresh', controller.refresh);
 authRouter.post('/logout', controller.logout);
 authRouter.get('/me', authenticate, controller.me);
+authRouter.post(
+  '/change-password',
+  authenticate,
+  validate({ body: changePasswordSchema }),
+  controller.changePassword,
+);

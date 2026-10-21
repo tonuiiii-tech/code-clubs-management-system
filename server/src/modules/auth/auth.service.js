@@ -2,10 +2,10 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
-import { unauthorized } from '../../utils/httpError.js';
+import { badRequest, unauthorized } from '../../utils/httpError.js';
 import { recordAudit } from '../audit/audit.service.js';
 import { findUserByEmail, findUserById, updateUserById } from '../users/users.repository.js';
-import { toPublicUser } from '../users/users.service.js';
+import { BCRYPT_COST, toPublicUser } from '../users/users.service.js';
 import * as repo from './auth.repository.js';
 
 export const ACCESS_TOKEN_TTL = '15m';
@@ -95,6 +95,28 @@ export async function refresh(refreshToken) {
     accessToken: signAccessToken(user),
     refreshToken: await issueRefreshToken(user, record.familyId),
   };
+}
+
+/** Changing the password signs out every other session (tokenVersion bump + refresh tokens revoked). */
+export async function changePassword(user, { currentPassword, newPassword }, { requestId }) {
+  const full = await findUserById(user.id);
+  if (!(await bcrypt.compare(currentPassword, full.passwordHash))) {
+    throw badRequest('Current password is incorrect', [
+      { field: 'body.currentPassword', message: 'Current password is incorrect' },
+    ]);
+  }
+  await updateUserById(user.id, {
+    passwordHash: await bcrypt.hash(newPassword, BCRYPT_COST),
+    tokenVersion: full.tokenVersion + 1,
+  });
+  await repo.revokeAllRefreshTokensForUser(user.id);
+  await recordAudit({
+    actor: user,
+    action: 'auth.changePassword',
+    entityType: 'user',
+    entityId: user.id,
+    requestId,
+  });
 }
 
 export async function logout(refreshToken) {

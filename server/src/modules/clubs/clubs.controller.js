@@ -20,6 +20,10 @@ export async function update(req, res) {
   res.json({ data: club });
 }
 
+export async function listChampions(req, res) {
+  res.json({ data: await service.listChampions(req.user, req.scope, req.valid.params.id) });
+}
+
 export async function assignChampion(req, res) {
   const { id, userId } = req.valid.params;
   const assignment = await service.assignChampion(req.user, req.scope, id, userId, req.valid.body, {

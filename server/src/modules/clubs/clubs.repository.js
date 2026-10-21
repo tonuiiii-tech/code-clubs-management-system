@@ -24,6 +24,11 @@ export async function updateClubById(_id, _changes) {
   throw databasePending();
 }
 
+/** Current (not ended) assignments for a club, with the champion's name. */
+export async function listClubChampions(_clubId) {
+  throw databasePending();
+}
+
 export async function upsertChampionAssignment(_assignment) {
   throw databasePending();
 }

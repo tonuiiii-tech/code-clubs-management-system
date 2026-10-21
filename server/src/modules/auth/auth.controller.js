@@ -33,6 +33,12 @@ export async function logout(req, res) {
   res.status(204).end();
 }
 
+export async function changePassword(req, res) {
+  await service.changePassword(req.user, req.valid.body, { requestId: req.id });
+  res.clearCookie(REFRESH_COOKIE, { ...cookieOptions, maxAge: undefined });
+  res.status(204).end();
+}
+
 export function me(req, res) {
   res.json({ data: toPublicUser(req.user) });
 }

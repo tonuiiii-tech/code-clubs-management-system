@@ -73,6 +73,11 @@ export async function updateClub(actor, scope, id, changes, { requestId }) {
   return updated;
 }
 
+export async function listChampions(actor, scope, clubId) {
+  await getClub(actor, scope, clubId);
+  return repo.listClubChampions(clubId);
+}
+
 export async function assignChampion(actor, scope, clubId, userId, input, { requestId }) {
   await getClub(actor, scope, clubId);
   const champion = await findUserById(userId);

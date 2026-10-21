@@ -5,6 +5,16 @@ export async function list(req, res) {
   res.json(await service.listUsers(req.user, req.scope, req.valid.query));
 }
 
+export async function get(req, res) {
+  res.json({ data: await service.getUser(req.user, req.scope, req.valid.params.id) });
+}
+
+export async function updateMe(req, res) {
+  res.json({
+    data: await service.updateOwnProfile(req.user, req.valid.body, { requestId: req.id }),
+  });
+}
+
 export async function create(req, res) {
   // Temporary password is shown once to the administrator; the user changes it at first sign-in.
   const temporaryPassword = randomBytes(9).toString('base64url');
