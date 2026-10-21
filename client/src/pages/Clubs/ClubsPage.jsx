@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Button,
@@ -8,32 +9,70 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TextLink,
 } from 'steamlabsui';
+import { CLUB_STATUSES, REGION_VALUES, TRACKS } from '@code-clubs/shared/enums';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { DataState } from '../../components/DataState.jsx';
+import { EnumSelect } from '../../components/EnumSelect.jsx';
+import { ListFooter } from '../../components/ListFooter.jsx';
+import { SearchInput } from '../../components/SearchInput.jsx';
+import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { useApi } from '../../utils/useApi.js';
+import { useUrlFilters } from '../../utils/useUrlFilters.js';
 import { listClubs } from '../../services/clubsService.js';
-
-const COLUMNS = [
-  { key: 'code', label: 'Code' },
-  { key: 'name', label: 'Name' },
-  { key: 'mainTrack', label: 'Track' },
-  { key: 'status', label: 'Status' },
-];
 
 export function ClubsPage() {
   const { t } = useTranslation();
-  const { can } = useAuth();
-  const { loading, error, data, reload } = useApi(listClubs);
+  const { user, can } = useAuth();
+  const { filters, page, setFilter, setPage } = useUrlFilters(['q', 'region', 'status', 'track']);
+  const { loading, error, data, reload } = useApi(listClubs, { ...filters, page });
   const rows = data?.data ?? [];
+  // A champion only ever sees their own clubs, so region filtering adds nothing for them.
+  const showRegionFilter = user.role !== 'champion';
 
   return (
     <>
       <PageHeader
         title={t('clubs.title')}
         description={t('clubs.description')}
-        actions={can('club:write') && <Button>{t('clubs.add')}</Button>}
+        actions={
+          can('club:write') && (
+            <Button asChild>
+              <Link to="/clubs/new">{t('clubs.add')}</Link>
+            </Button>
+          )
+        }
       />
+      <div className="filter-bar" role="search">
+        <SearchInput value={filters.q} onSearch={(v) => setFilter('q', v)} />
+        {showRegionFilter && (
+          <EnumSelect
+            aria-label={t('clubs.region')}
+            values={REGION_VALUES}
+            labelKey="regions"
+            placeholder={t('clubs.anyRegion')}
+            value={filters.region}
+            onChange={(e) => setFilter('region', e.target.value)}
+          />
+        )}
+        <EnumSelect
+          aria-label={t('clubs.status')}
+          values={CLUB_STATUSES}
+          labelKey="status"
+          placeholder={t('clubs.anyStatus')}
+          value={filters.status}
+          onChange={(e) => setFilter('status', e.target.value)}
+        />
+        <EnumSelect
+          aria-label={t('clubs.track')}
+          values={TRACKS}
+          labelKey="tracks"
+          placeholder={t('clubs.anyTrack')}
+          value={filters.track}
+          onChange={(e) => setFilter('track', e.target.value)}
+        />
+      </div>
       <DataState
         loading={loading}
         error={error}
@@ -44,21 +83,38 @@ export function ClubsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              {COLUMNS.map((c) => (
-                <TableHead key={c.key}>{c.label}</TableHead>
-              ))}
+              <TableHead>{t('clubs.code')}</TableHead>
+              <TableHead>{t('clubs.name')}</TableHead>
+              <TableHead>{t('clubs.region')}</TableHead>
+              <TableHead>{t('clubs.schedule')}</TableHead>
+              <TableHead>{t('clubs.track')}</TableHead>
+              <TableHead>{t('clubs.capacity')}</TableHead>
+              <TableHead>{t('clubs.status')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((row) => (
-              <TableRow key={row.id}>
-                {COLUMNS.map((c) => (
-                  <TableCell key={c.key}>{row[c.key]}</TableCell>
-                ))}
+            {rows.map((club) => (
+              <TableRow key={club.id}>
+                <TableCell>{club.code}</TableCell>
+                <TableCell>
+                  <TextLink asChild arrow={false}>
+                    <Link to={`/clubs/${club.id}`}>{club.name}</Link>
+                  </TextLink>
+                </TableCell>
+                <TableCell>{t(`regions.${club.region}`)}</TableCell>
+                <TableCell>
+                  {t(`days.${club.meetingDay}`)} {club.startTime}–{club.endTime}
+                </TableCell>
+                <TableCell>{t(`tracks.${club.mainTrack}`)}</TableCell>
+                <TableCell>{club.capacity}</TableCell>
+                <TableCell>
+                  <StatusBadge status={club.status} />
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+        <ListFooter result={data} onPageChange={setPage} />
       </DataState>
     </>
   );

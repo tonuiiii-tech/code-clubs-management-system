@@ -25,6 +25,7 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 | D1-17 | Zod for validation                                         | Proposed    |
 | D1-18 | JavaScript (ES modules), not TypeScript                    | Proposed    |
 | D1-19 | API prefix `/api/v1` and consistent responses              | Proposed    |
+| D1-20 | Demo mode: in-browser mock API while D1-8 is pending       | Accepted    |
 
 ## D1-1: Use a modular monolith
 
@@ -193,6 +194,15 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Date:** 2026-10-21
 - **Decision:** All routes under `/api/v1`. Responses: `{ data }`, lists `{ data, page, pageSize, total }`, errors `{ error: { code, message, details? } }`.
 - **Consequences:** A future `/api/v2` can coexist; clients can handle errors in one place.
+
+## D1-20: Demo mode with an in-browser mock API
+
+- **Status:** Accepted (Enock, 2026-10-21: "okay lets start building" on the frontend plan)
+- **Date:** 2026-10-21
+- **Context:** The frontend can be built before the database is chosen (D1-8), but every data request to the real API returns 501 until then.
+- **Decision:** With `VITE_USE_MOCKS=true` (`npm run demo`), `client/src/services/http.js` sends requests to `client/src/services/mock/mockApi.js` instead of the network. The mock answers the same `/api/v1` routes with the same shapes and error codes, validates with the shared schemas and applies the shared permission policy and scopes. Data is fictional (R1-12) and kept in that browser's localStorage. Vite leaves the mock code out of real builds.
+- **Alternatives considered:** Waiting for the database; a separate mock server (MSW or json-server).
+- **Consequences:** Every screen can be built, tested with Playwright and demonstrated now. The mock must be kept in step with the real API; once the database is connected, the same Playwright flows should run against the real server. The mock is a demo tool and not a security boundary.
 
 ## Decision template
 

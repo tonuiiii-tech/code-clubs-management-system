@@ -1,18 +1,33 @@
 {
-  "app": { "name": "STEAMLabs Code Clubs" },
+  "app": {
+    "name": "STEAMLabs Code Clubs"
+  },
   "nav": {
     "dashboard": "Dashibodi",
     "users": "Watumiaji",
     "schools": "Shule",
     "clubs": "Vilabu",
-    "signOut": "Toka"
+    "profile": "Wasifu wangu",
+    "signOut": "Toka",
+    "skip": "Ruka hadi maudhui",
+    "main": "Menyu kuu"
   },
-  "language": { "label": "Lugha", "en": "English", "sw": "Kiswahili" },
+  "language": {
+    "label": "Lugha",
+    "en": "English",
+    "sw": "Kiswahili"
+  },
   "roles": {
     "system_admin": "Msimamizi wa Mfumo",
     "programme_manager": "Meneja wa Programu",
     "coordinator": "Mratibu wa Vilabu vya Kuandika Programu",
     "champion": "Kiongozi wa Klabu"
+  },
+  "demo": {
+    "banner": "Hali ya majaribio: taarifa za kubuni zimehifadhiwa kwenye kivinjari hiki pekee. Hakuna kinachohifadhiwa kwenye seva.",
+    "signInAs": "Ingia kama mtumiaji wa majaribio",
+    "reset": "Rejesha taarifa za majaribio",
+    "resetDone": "Taarifa za majaribio zimerejeshwa"
   },
   "login": {
     "title": "Ingia",
@@ -27,32 +42,223 @@
     "description": "Kinachoendelea katika vilabu vyako",
     "activeClubs": "Vilabu vinavyoendelea",
     "schools": "Shule",
-    "champions": "Viongozi wa vilabu"
+    "champions": "Viongozi wa vilabu",
+    "byRegion": "Vilabu vinavyoendelea kwa kanda",
+    "byTrack": "Vilabu vinavyoendelea kwa mkondo",
+    "none": "Hakuna vilabu vinavyoendelea bado"
   },
   "users": {
     "title": "Watumiaji",
     "description": "Akaunti, majukumu na kazi walizopewa",
-    "empty": "Hakuna watumiaji bado",
-    "add": "Ongeza mtumiaji"
+    "empty": "Hakuna watumiaji wanaolingana na vichujio hivi",
+    "add": "Ongeza mtumiaji",
+    "edit": "Hariri mtumiaji",
+    "fullName": "Jina kamili",
+    "email": "Barua pepe",
+    "phone": "Simu",
+    "role": "Jukumu",
+    "status": "Hali",
+    "regions": "Kanda",
+    "regionsHint": "Waratibu huona vilabu na shule za kanda hizi.",
+    "championType": "Aina ya kiongozi",
+    "skills": "Ujuzi",
+    "skillsHint": "Tenganisha ujuzi kwa koma, mfano scratch, robotics",
+    "safeguarding": "Ukaguzi wa usalama wa watoto",
+    "safeguardingDate": "Tarehe ya ukaguzi",
+    "language": "Lugha anayopendelea",
+    "anyRole": "Majukumu yote",
+    "anyStatus": "Hali zote",
+    "activate": "Washa",
+    "deactivate": "Zima",
+    "created": "Mtumiaji ameongezwa",
+    "saved": "Mtumiaji amehifadhiwa",
+    "statusChanged": "Hali ya akaunti imebadilishwa",
+    "temporaryPasswordTitle": "Nenosiri la muda",
+    "temporaryPasswordBody": "Mpe {{name}} nenosiri hili ana kwa ana. Linaonyeshwa mara moja tu; alibadilishe baada ya kuingia.",
+    "you": "wewe"
   },
   "schools": {
     "title": "Shule",
     "description": "Shule na mashirika yanayokaribisha vilabu",
-    "empty": "Hakuna shule bado",
-    "add": "Ongeza shule"
+    "empty": "Hakuna shule zinazolingana na vichujio hivi",
+    "add": "Ongeza shule",
+    "edit": "Hariri shule",
+    "name": "Jina",
+    "type": "Aina",
+    "region": "Kanda",
+    "county": "Kaunti",
+    "subCounty": "Kaunti ndogo",
+    "ward": "Wadi",
+    "gps": "Mahali (GPS)",
+    "lat": "Latitudo",
+    "lng": "Longitudo",
+    "contactName": "Jina la mwenyeji",
+    "contactPhone": "Simu ya mwenyeji",
+    "status": "Hali",
+    "clubsHere": "Vilabu katika shule hii",
+    "noClubs": "Hakuna vilabu katika shule hii bado",
+    "anyRegion": "Kanda zote",
+    "anyCounty": "Kaunti zote",
+    "anyType": "Aina zote",
+    "anyStatus": "Hali zote",
+    "deactivate": "Zima shule",
+    "activate": "Washa shule",
+    "deactivateConfirm": "Shule itabaki kwenye kumbukumbu pamoja na historia yake, lakini vilabu vipya haviwezi kuongezwa.",
+    "created": "Shule imeongezwa",
+    "saved": "Shule imehifadhiwa",
+    "notFound": "Shule haikupatikana"
   },
   "clubs": {
     "title": "Vilabu",
     "description": "Kila klabu na wanaoiendesha",
-    "empty": "Hakuna vilabu bado",
-    "add": "Ongeza klabu"
+    "empty": "Hakuna vilabu vinavyolingana na vichujio hivi",
+    "add": "Ongeza klabu",
+    "edit": "Hariri klabu",
+    "code": "Msimbo",
+    "name": "Jina",
+    "school": "Shule",
+    "chooseSchool": "Chagua shule",
+    "venueType": "Mahali",
+    "region": "Kanda",
+    "schedule": "Ratiba",
+    "meetingDay": "Siku ya mkutano",
+    "startTime": "Saa ya kuanza",
+    "endTime": "Saa ya kumaliza",
+    "frequency": "Mara ngapi",
+    "track": "Mkondo mkuu",
+    "capacity": "Idadi ya nafasi",
+    "capacityHint": "Hadi wanafunzi {{max}}",
+    "status": "Hali",
+    "anyRegion": "Kanda zote",
+    "anyStatus": "Hali zote",
+    "anyTrack": "Mikondo yote",
+    "created": "Klabu imeongezwa",
+    "saved": "Klabu imehifadhiwa",
+    "notFound": "Klabu haikupatikana",
+    "champions": "Viongozi wa klabu",
+    "noChampions": "Hakuna kiongozi aliyepangiwa bado",
+    "assign": "Panga kiongozi",
+    "assignTitle": "Panga kiongozi wa klabu",
+    "champion": "Kiongozi",
+    "chooseChampion": "Chagua kiongozi",
+    "assignmentRole": "Jukumu katika klabu hii",
+    "since": "Tangu {{date}}",
+    "endAssignment": "Maliza kazi",
+    "endConfirm": "Maliza kazi ya {{name}} katika klabu hii? Historia itahifadhiwa.",
+    "assigned": "Kiongozi amepangwa",
+    "ended": "Kazi imemalizwa"
+  },
+  "profile": {
+    "title": "Wasifu wangu",
+    "description": "Taarifa zako na nenosiri",
+    "details": "Taarifa zako",
+    "saved": "Wasifu umehifadhiwa",
+    "password": "Badilisha nenosiri",
+    "currentPassword": "Nenosiri la sasa",
+    "newPassword": "Nenosiri jipya",
+    "newPasswordHint": "Angalau herufi {{min}}",
+    "changePassword": "Badilisha nenosiri",
+    "passwordChanged": "Nenosiri limebadilishwa. Ingia tena kwa nenosiri jipya."
   },
   "common": {
     "loading": "Inapakia…",
     "error": "Hitilafu imetokea",
     "retry": "Jaribu tena",
     "notAvailable": "Bado haipatikani",
-    "databasePending": "Taarifa zitaonekana hapa hifadhidata ikishaunganishwa."
+    "databasePending": "Taarifa zitaonekana hapa hifadhidata ikishaunganishwa.",
+    "save": "Hifadhi",
+    "cancel": "Ghairi",
+    "confirm": "Thibitisha",
+    "back": "Rudi",
+    "search": "Tafuta",
+    "filters": "Vichujio",
+    "view": "Angalia",
+    "edit": "Hariri",
+    "actions": "Vitendo",
+    "none": "—",
+    "close": "Funga",
+    "optional": "Si lazima",
+    "details": "Maelezo"
   },
-  "errors": { "forbidden": "Huna ruhusa ya kuona ukurasa huu." }
+  "status": {
+    "active": "Inaendelea",
+    "inactive": "Imezimwa",
+    "paused": "Imesitishwa",
+    "closed": "Imefungwa"
+  },
+  "regions": {
+    "nairobi_central": "Nairobi na Kati",
+    "western_nyanza": "Magharibi na Nyanza",
+    "coast": "Pwani",
+    "rift_valley": "Bonde la Ufa"
+  },
+  "schoolTypes": {
+    "primary_school": "Shule ya msingi",
+    "community_centre": "Kituo cha jamii",
+    "library": "Maktaba",
+    "other": "Nyingine"
+  },
+  "venueTypes": {
+    "primary_school": "Shule ya msingi",
+    "community_centre": "Kituo cha jamii",
+    "library": "Maktaba",
+    "online": "Mtandaoni"
+  },
+  "tracks": {
+    "unplugged": "Bila kompyuta",
+    "scratch": "Scratch",
+    "robotics": "Roboti",
+    "game_design": "Kubuni michezo",
+    "ai_basics": "Misingi ya AI"
+  },
+  "days": {
+    "monday": "Jumatatu",
+    "tuesday": "Jumanne",
+    "wednesday": "Jumatano",
+    "thursday": "Alhamisi",
+    "friday": "Ijumaa",
+    "saturday": "Jumamosi",
+    "sunday": "Jumapili"
+  },
+  "frequencies": {
+    "weekly": "Kila wiki",
+    "fortnightly": "Kila wiki mbili",
+    "monthly": "Kila mwezi"
+  },
+  "championTypes": {
+    "teacher": "Mwalimu",
+    "volunteer": "Mjitolea",
+    "staff": "Mfanyakazi wa STEAMLabs"
+  },
+  "safeguarding": {
+    "pending": "Inasubiri",
+    "cleared": "Imeidhinishwa",
+    "expired": "Imeisha muda"
+  },
+  "assignmentRoles": {
+    "lead": "Kiongozi mkuu",
+    "assistant": "Msaidizi"
+  },
+  "validation": {
+    "required": "Sehemu hii inahitajika",
+    "tooShort": "Angalau herufi {{min}}",
+    "tooLong": "Isizidi herufi {{max}}",
+    "tooSmall": "Angalau {{min}}",
+    "tooBig": "Isizidi {{max}}",
+    "choose": "Chagua mojawapo",
+    "email": "Andika barua pepe sahihi",
+    "phone": "Tumia muundo +2547XXXXXXXX au +2541XXXXXXXX",
+    "time": "Tumia SS:dd, mfano 15:30",
+    "endAfterStart": "Saa ya kumaliza iwe baada ya saa ya kuanza",
+    "schoolRequired": "Shule inahitajika isipokuwa klabu inakutana mtandaoni",
+    "number": "Andika nambari",
+    "invalid": "Angalia sehemu hii",
+    "currentPassword": "Nenosiri la sasa si sahihi"
+  },
+  "errors": {
+    "forbidden": "Huna ruhusa ya kuona ukurasa huu.",
+    "notFoundTitle": "Ukurasa haukupatikana",
+    "notFound": "Ukurasa unaoutafuta haupo au huna ruhusa ya kuuona.",
+    "home": "Nenda kwenye dashibodi"
+  }
 }

@@ -192,6 +192,7 @@ Prefix: `/api/v1`. Endpoints for Sprint 1 are listed in `docs/sprints/sprint-1.m
 - Consistent JSON responses: `{ data }` for one record, `{ data, page, pageSize, total }` for lists, `{ error: { code, message, details? } }` for errors.
 - Validate request bodies, route parameters and query parameters.
 - Never expose password hashes, tokens or stack traces.
+- **Demo mode (D1-20):** while the database is pending, `npm run demo` points the web app at an in-browser mock of this API (`client/src/services/mock/`). It reuses the shared schemas and permission policy, so the screens and their role rules can be shown and tested now. It is not part of real builds.
 
 ## 10. Offline strategy
 
@@ -246,6 +247,7 @@ Friday is a checkpoint, not the end of the sprint. Stakeholders should see:
 
 1. **Tech stack:** section 3 of this document, with the reasons in `docs/decision-log.md`.
 2. **Architecture:** the diagrams in section 4 and the role/scope model in section 8.
-3. **Coding principles applied:** `docs/coding-principles.md`, shown in the running repo: workspaces, shared Zod schemas, permission and scope middleware with passing negative tests, the steamlabsui app shell in English and Kiswahili, and CI running on every push.
+3. **Coding principles applied:** `docs/coding-principles.md`, shown in the running repo: workspaces, shared Zod schemas, permission and scope middleware with passing negative tests, the steamlabsui screens in English and Kiswahili, and CI running on every push.
+4. **Clickable demo:** `npm run demo`, signing in as each of the four roles to show that a Club Champion sees only their own clubs and a Coordinator only their region.
 
 Offline synchronisation is presented as a planned Sprint 3 capability, not a finished feature.

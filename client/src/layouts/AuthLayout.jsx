@@ -1,11 +1,15 @@
 import { Outlet } from 'react-router-dom';
+import { DemoBanner } from '../components/DemoBanner.jsx';
 
 export function AuthLayout() {
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <Outlet />
+    <>
+      <DemoBanner />
+      <div className="auth-page">
+        <div className="auth-card">
+          <Outlet />
+        </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -232,7 +232,10 @@ Prefix: `/api/v1`
 | POST   | `/auth/logout`                 | Sign out                            |
 | POST   | `/auth/refresh`                | Rotate the refresh token            |
 | GET    | `/auth/me`                     | Current user                        |
+| POST   | `/auth/change-password`        | Change own password (ends sessions) |
 | GET    | `/users`                       | List authorized users               |
+| GET    | `/users/:id`                   | Get a user in scope                 |
+| PATCH  | `/users/me`                    | Update own name, phone, language    |
 | POST   | `/users`                       | Create user                         |
 | PATCH  | `/users/:id`                   | Update permitted user fields        |
 | PATCH  | `/users/:id/status`            | Activate/deactivate user            |
@@ -244,12 +247,16 @@ Prefix: `/api/v1`
 | POST   | `/clubs`                       | Create club                         |
 | GET    | `/clubs/:id`                   | Get club                            |
 | PATCH  | `/clubs/:id`                   | Update club details                 |
+| GET    | `/clubs/:id/champions`         | Current champions of a club         |
 | PUT    | `/clubs/:id/champions/:userId` | Assign a champion                   |
 | DELETE | `/clubs/:id/champions/:userId` | End an assignment (kept as history) |
+| GET    | `/dashboard/summary`           | Counts within the user's scope      |
 | GET    | `/audit`                       | List audit entries in scope         |
 | GET    | `/health`                      | Liveness check                      |
 
 All endpoints must validate input and enforce both permission and resource scope on the server.
+
+Until the database is chosen (D1-8), the web app can run in **demo mode** (`npm run demo`): an in-browser mock API answers these same endpoints with the same shapes and error codes, using the shared schemas and permission policy and fictional data. Real builds do not include it (D1-20).
 
 ## 8. Suggested implementation plan
 
@@ -326,6 +333,8 @@ Confirm with STEAMLabs:
 - Which database: PostgreSQL or MongoDB (D1-8)? Needed by day 3.
 - Which fields are required to identify a school and avoid duplicates?
 - Who is allowed to create schools and clubs?
+- Can a coordinator see champions who have no club yet, so they can assign them? (Default in the code: yes.)
+- Online clubs have no school, so where does their region come from? (Not offered in the club form yet.)
 - Can Programme Managers create or change staff accounts?
 - What session report fields are currently expected from champions?
 - What hosting and account-management requirements apply?

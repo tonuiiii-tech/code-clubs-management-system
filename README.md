@@ -57,17 +57,28 @@ npm run dev
 
 On macOS or Linux, use `cp` instead of `Copy-Item` and `/` instead of `\`.
 
+### Demo mode (no database needed)
+
+While the database choice is pending (D1-8), the API answers data requests with `501 Not implemented`. To click through every screen, run the web app in demo mode:
+
+```powershell
+npm run demo
+```
+
+Open <http://localhost:5173> and use the **Sign in as…** buttons to try each role. Demo mode uses an in-browser mock API with fictional Kenyan schools, clubs and people, stored only in that browser. **Reset demo data** on the sign-in page puts it back to the start. The mock code is left out of real builds.
+
 ## Commands
 
-| Command                      | What it does                                                                |
-| ---------------------------- | --------------------------------------------------------------------------- |
-| `npm run dev`                | API and web app with live reload                                            |
-| `npm test`                   | Server tests (Jest + Supertest) and client tests (Vitest)                   |
-| `npm run lint`               | ESLint across all workspaces                                                |
-| `npm run format`             | Format with Prettier                                                        |
-| `npm run build`              | Production build of the PWA                                                 |
-| `npm run test:e2e -w client` | Playwright browser tests (run `npx playwright install chromium` once first) |
-| `npm run seed`               | Development seed data (added once the database is chosen)                   |
+| Command                      | What it does                                                                                  |
+| ---------------------------- | --------------------------------------------------------------------------------------------- |
+| `npm run dev`                | API and web app with live reload                                                              |
+| `npm run demo`               | Web app only, on the mock API with fictional demo data                                        |
+| `npm test`                   | Server tests (Jest + Supertest) and client tests (Vitest)                                     |
+| `npm run lint`               | ESLint across all workspaces                                                                  |
+| `npm run format`             | Format with Prettier                                                                          |
+| `npm run build`              | Production build of the PWA                                                                   |
+| `npm run test:e2e -w client` | Playwright browser tests on the demo build (run `npx playwright install chromium` once first) |
+| `npm run seed`               | Development seed data (added once the database is chosen)                                     |
 
 CI runs lint, format check, tests and build on every push and pull request (`.github/workflows/ci.yml`).
 

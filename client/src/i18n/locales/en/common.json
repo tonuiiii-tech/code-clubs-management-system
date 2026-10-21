@@ -1,18 +1,33 @@
 {
-  "app": { "name": "STEAMLabs Code Clubs" },
+  "app": {
+    "name": "STEAMLabs Code Clubs"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "users": "Users",
     "schools": "Schools",
     "clubs": "Clubs",
-    "signOut": "Sign out"
+    "profile": "My profile",
+    "signOut": "Sign out",
+    "skip": "Skip to content",
+    "main": "Main navigation"
   },
-  "language": { "label": "Language", "en": "English", "sw": "Kiswahili" },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "sw": "Kiswahili"
+  },
   "roles": {
     "system_admin": "System Administrator",
     "programme_manager": "Programme Manager",
     "coordinator": "Code Clubs Coordinator",
     "champion": "Club Champion"
+  },
+  "demo": {
+    "banner": "Demo mode: fictional data stored in this browser only. Nothing is saved to a server.",
+    "signInAs": "Sign in as a demo user",
+    "reset": "Reset demo data",
+    "resetDone": "Demo data reset"
   },
   "login": {
     "title": "Sign in",
@@ -27,32 +42,223 @@
     "description": "What is happening across your clubs",
     "activeClubs": "Active clubs",
     "schools": "Schools",
-    "champions": "Club champions"
+    "champions": "Club champions",
+    "byRegion": "Active clubs by region",
+    "byTrack": "Active clubs by track",
+    "none": "No active clubs yet"
   },
   "users": {
     "title": "Users",
     "description": "Accounts, roles and assignments",
-    "empty": "No users yet",
-    "add": "Add user"
+    "empty": "No users match these filters",
+    "add": "Add user",
+    "edit": "Edit user",
+    "fullName": "Full name",
+    "email": "Email",
+    "phone": "Phone",
+    "role": "Role",
+    "status": "Status",
+    "regions": "Regions",
+    "regionsHint": "Coordinators see the clubs and schools in these regions.",
+    "championType": "Champion type",
+    "skills": "Skills",
+    "skillsHint": "Separate skills with commas, e.g. scratch, robotics",
+    "safeguarding": "Safeguarding check",
+    "safeguardingDate": "Date of check",
+    "language": "Preferred language",
+    "anyRole": "All roles",
+    "anyStatus": "All statuses",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "created": "User created",
+    "saved": "User saved",
+    "statusChanged": "Account status changed",
+    "temporaryPasswordTitle": "Temporary password",
+    "temporaryPasswordBody": "Give this password to {{name}} in person. It is shown only once; they should change it after signing in.",
+    "you": "you"
   },
   "schools": {
     "title": "Schools",
     "description": "Schools and organisations that host clubs",
-    "empty": "No schools yet",
-    "add": "Add school"
+    "empty": "No schools match these filters",
+    "add": "Add school",
+    "edit": "Edit school",
+    "name": "Name",
+    "type": "Type",
+    "region": "Region",
+    "county": "County",
+    "subCounty": "Sub-county",
+    "ward": "Ward",
+    "gps": "GPS location",
+    "lat": "Latitude",
+    "lng": "Longitude",
+    "contactName": "Host contact name",
+    "contactPhone": "Host contact phone",
+    "status": "Status",
+    "clubsHere": "Clubs at this school",
+    "noClubs": "No clubs at this school yet",
+    "anyRegion": "All regions",
+    "anyCounty": "All counties",
+    "anyType": "All types",
+    "anyStatus": "All statuses",
+    "deactivate": "Deactivate school",
+    "activate": "Activate school",
+    "deactivateConfirm": "The school stays in the records and its history is kept, but no new clubs can be added to it.",
+    "created": "School added",
+    "saved": "School saved",
+    "notFound": "School not found"
   },
   "clubs": {
     "title": "Clubs",
     "description": "Every code club and who runs it",
-    "empty": "No clubs yet",
-    "add": "Add club"
+    "empty": "No clubs match these filters",
+    "add": "Add club",
+    "edit": "Edit club",
+    "code": "Code",
+    "name": "Name",
+    "school": "School",
+    "chooseSchool": "Choose a school",
+    "venueType": "Venue",
+    "region": "Region",
+    "schedule": "Schedule",
+    "meetingDay": "Meeting day",
+    "startTime": "Start time",
+    "endTime": "End time",
+    "frequency": "How often",
+    "track": "Main track",
+    "capacity": "Capacity",
+    "capacityHint": "Up to {{max}} learners",
+    "status": "Status",
+    "anyRegion": "All regions",
+    "anyStatus": "All statuses",
+    "anyTrack": "All tracks",
+    "created": "Club added",
+    "saved": "Club saved",
+    "notFound": "Club not found",
+    "champions": "Club champions",
+    "noChampions": "No champions assigned yet",
+    "assign": "Assign champion",
+    "assignTitle": "Assign a club champion",
+    "champion": "Champion",
+    "chooseChampion": "Choose a champion",
+    "assignmentRole": "Role in this club",
+    "since": "Since {{date}}",
+    "endAssignment": "End assignment",
+    "endConfirm": "End {{name}}'s assignment to this club? The history is kept.",
+    "assigned": "Champion assigned",
+    "ended": "Assignment ended"
+  },
+  "profile": {
+    "title": "My profile",
+    "description": "Your details and password",
+    "details": "Your details",
+    "saved": "Profile saved",
+    "password": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "newPasswordHint": "At least {{min}} characters",
+    "changePassword": "Change password",
+    "passwordChanged": "Password changed. Sign in again with your new password."
   },
   "common": {
     "loading": "Loading…",
     "error": "Something went wrong",
     "retry": "Try again",
     "notAvailable": "Not available yet",
-    "databasePending": "Data will appear here once the database is connected."
+    "databasePending": "Data will appear here once the database is connected.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "back": "Back",
+    "search": "Search",
+    "filters": "Filters",
+    "view": "View",
+    "edit": "Edit",
+    "actions": "Actions",
+    "none": "—",
+    "close": "Close",
+    "optional": "Optional",
+    "details": "Details"
   },
-  "errors": { "forbidden": "You do not have permission to see this page." }
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "paused": "Paused",
+    "closed": "Closed"
+  },
+  "regions": {
+    "nairobi_central": "Nairobi & Central",
+    "western_nyanza": "Western & Nyanza",
+    "coast": "Coast",
+    "rift_valley": "Rift Valley"
+  },
+  "schoolTypes": {
+    "primary_school": "Primary school",
+    "community_centre": "Community centre",
+    "library": "Library",
+    "other": "Other"
+  },
+  "venueTypes": {
+    "primary_school": "Primary school",
+    "community_centre": "Community centre",
+    "library": "Library",
+    "online": "Online"
+  },
+  "tracks": {
+    "unplugged": "Unplugged",
+    "scratch": "Scratch",
+    "robotics": "Robotics",
+    "game_design": "Game design",
+    "ai_basics": "AI basics"
+  },
+  "days": {
+    "monday": "Monday",
+    "tuesday": "Tuesday",
+    "wednesday": "Wednesday",
+    "thursday": "Thursday",
+    "friday": "Friday",
+    "saturday": "Saturday",
+    "sunday": "Sunday"
+  },
+  "frequencies": {
+    "weekly": "Weekly",
+    "fortnightly": "Every two weeks",
+    "monthly": "Monthly"
+  },
+  "championTypes": {
+    "teacher": "Teacher",
+    "volunteer": "Volunteer",
+    "staff": "STEAMLabs staff"
+  },
+  "safeguarding": {
+    "pending": "Pending",
+    "cleared": "Cleared",
+    "expired": "Expired"
+  },
+  "assignmentRoles": {
+    "lead": "Lead",
+    "assistant": "Assistant"
+  },
+  "validation": {
+    "required": "This field is required",
+    "tooShort": "Must be at least {{min}} characters",
+    "tooLong": "Must be at most {{max}} characters",
+    "tooSmall": "Must be at least {{min}}",
+    "tooBig": "Must be at most {{max}}",
+    "choose": "Choose an option",
+    "email": "Enter a valid email address",
+    "phone": "Use the format +2547XXXXXXXX or +2541XXXXXXXX",
+    "time": "Use HH:mm, e.g. 15:30",
+    "endAfterStart": "End time must be after start time",
+    "schoolRequired": "A school is required unless the club meets online",
+    "number": "Enter a number",
+    "invalid": "Check this field",
+    "currentPassword": "Current password is incorrect"
+  },
+  "errors": {
+    "forbidden": "You do not have permission to see this page.",
+    "notFoundTitle": "Page not found",
+    "notFound": "The page you are looking for does not exist or you do not have access to it.",
+    "home": "Go to the dashboard"
+  }
 }

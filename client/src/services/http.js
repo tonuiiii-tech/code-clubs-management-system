@@ -3,7 +3,10 @@
  * In Sprint 3 the services built on this read and write the local database first
  * and sync later, so pages do not change (D1-5).
  */
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api/v1';
+export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api/v1';
+
+/** Demo mode while the database is pending (D1-8). Vite removes the mock code from real builds. */
+export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
 
 let accessToken = null;
 export const setAccessToken = (token) => {
@@ -19,7 +22,23 @@ export class ApiError extends Error {
   }
 }
 
-async function send(path, { method = 'GET', body, query } = {}) {
+async function sendToMock(path, { method = 'GET', body, query } = {}) {
+  const { mockRequest } = await import('./mock/mockApi.js');
+  const cleanQuery = Object.fromEntries(
+    Object.entries(query ?? {}).filter(([, value]) => value !== undefined && value !== ''),
+  );
+  const res = await mockRequest({ method, path, query: cleanQuery, body, token: accessToken });
+  if (res.status === 204) return null;
+  if (res.status >= 400) {
+    const { code, message, details } = res.body.error;
+    throw new ApiError(res.status, code, message, details);
+  }
+  return res.body;
+}
+
+async function send(path, options = {}) {
+  if (USE_MOCKS) return sendToMock(path, options);
+  const { method = 'GET', body, query } = options;
   const url = new URL(`${API_URL}${path}`);
   for (const [key, value] of Object.entries(query ?? {})) {
     if (value !== undefined && value !== '') url.searchParams.set(key, value);

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -13,8 +13,15 @@ import {
   Lead,
 } from 'steamlabsui';
 import { loginSchema } from '@code-clubs/shared/schemas';
+import { issuesToFieldErrors } from '../../utils/formErrors.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { LanguageSwitcher } from '../../components/LanguageSwitcher.jsx';
+
+// Loaded only in mock mode, so the demo accounts and mock data never ship in a real build.
+const DemoAccounts =
+  import.meta.env.VITE_USE_MOCKS === 'true'
+    ? lazy(() => import('./DemoAccounts.jsx').then((m) => ({ default: m.DemoAccounts })))
+    : null;
 
 export function LoginPage() {
   const { t } = useTranslation();
@@ -30,25 +37,29 @@ export function LoginPage() {
 
   const onChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-  async function onSubmit(e) {
-    e.preventDefault();
-    setError(null);
-    // Same shared schema the server uses (D1-3); the server still validates again.
-    const parsed = loginSchema.safeParse(form);
-    if (!parsed.success) {
-      setFieldErrors(Object.fromEntries(parsed.error.issues.map((i) => [i.path[0], i.message])));
-      return;
-    }
-    setFieldErrors({});
+  async function signIn(email, password) {
     setSubmitting(true);
     try {
-      await login(parsed.data.email, parsed.data.password);
+      await login(email, password);
       navigate(location.state?.from?.pathname ?? '/', { replace: true });
     } catch (err) {
       setError(err);
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function onSubmit(e) {
+    e.preventDefault();
+    setError(null);
+    // Same shared schema the server uses (D1-3); the server still validates again.
+    const parsed = loginSchema.safeParse(form);
+    if (!parsed.success) {
+      setFieldErrors(issuesToFieldErrors(t, parsed.error.issues));
+      return;
+    }
+    setFieldErrors({});
+    signIn(parsed.data.email, parsed.data.password);
   }
 
   return (
@@ -91,6 +102,11 @@ export function LoginPage() {
             {t('login.submit')}
           </Button>
         </form>
+        {DemoAccounts && (
+          <Suspense fallback={null}>
+            <DemoAccounts disabled={submitting} onSignIn={signIn} />
+          </Suspense>
+        )}
       </CardContent>
     </Card>
   );

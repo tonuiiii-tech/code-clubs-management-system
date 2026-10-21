@@ -10,7 +10,8 @@ export default defineConfig({
     }),
   },
   webServer: {
-    command: 'npm run build && npm run preview -- --port 4173',
+    // Demo build: the mock API stands in for the server while the database is pending (D1-8).
+    command: 'npm run build:demo && npm run preview -- --port 4173',
     port: 4173,
     reuseExistingServer: true,
   },
