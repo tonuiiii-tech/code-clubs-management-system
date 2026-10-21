@@ -1,0 +1,58 @@
+{
+  "app": { "name": "STEAMLabs Code Clubs" },
+  "nav": {
+    "dashboard": "Dashibodi",
+    "users": "Watumiaji",
+    "schools": "Shule",
+    "clubs": "Vilabu",
+    "signOut": "Toka"
+  },
+  "language": { "label": "Lugha", "en": "English", "sw": "Kiswahili" },
+  "roles": {
+    "system_admin": "Msimamizi wa Mfumo",
+    "programme_manager": "Meneja wa Programu",
+    "coordinator": "Mratibu wa Vilabu vya Kuandika Programu",
+    "champion": "Kiongozi wa Klabu"
+  },
+  "login": {
+    "title": "Ingia",
+    "intro": "Tumia barua pepe na nenosiri ulilopewa na msimamizi wa STEAMLabs.",
+    "email": "Barua pepe",
+    "password": "Nenosiri",
+    "submit": "Ingia",
+    "failed": "Hatukuweza kukuingiza"
+  },
+  "dashboard": {
+    "title": "Dashibodi",
+    "description": "Kinachoendelea katika vilabu vyako",
+    "activeClubs": "Vilabu vinavyoendelea",
+    "schools": "Shule",
+    "champions": "Viongozi wa vilabu"
+  },
+  "users": {
+    "title": "Watumiaji",
+    "description": "Akaunti, majukumu na kazi walizopewa",
+    "empty": "Hakuna watumiaji bado",
+    "add": "Ongeza mtumiaji"
+  },
+  "schools": {
+    "title": "Shule",
+    "description": "Shule na mashirika yanayokaribisha vilabu",
+    "empty": "Hakuna shule bado",
+    "add": "Ongeza shule"
+  },
+  "clubs": {
+    "title": "Vilabu",
+    "description": "Kila klabu na wanaoiendesha",
+    "empty": "Hakuna vilabu bado",
+    "add": "Ongeza klabu"
+  },
+  "common": {
+    "loading": "Inapakia…",
+    "error": "Hitilafu imetokea",
+    "retry": "Jaribu tena",
+    "notAvailable": "Bado haipatikani",
+    "databasePending": "Taarifa zitaonekana hapa hifadhidata ikishaunganishwa."
+  },
+  "errors": { "forbidden": "Huna ruhusa ya kuona ukurasa huu." }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@code-clubs/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Enums, permission policy and Zod schemas shared by client and server",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./enums": "./src/enums.js",
+    "./permissions": "./src/permissions.js",
+    "./schemas": "./src/schemas/index.js"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  }
+}

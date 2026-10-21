@@ -1,0 +1,58 @@
+{
+  "app": { "name": "STEAMLabs Code Clubs" },
+  "nav": {
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "schools": "Schools",
+    "clubs": "Clubs",
+    "signOut": "Sign out"
+  },
+  "language": { "label": "Language", "en": "English", "sw": "Kiswahili" },
+  "roles": {
+    "system_admin": "System Administrator",
+    "programme_manager": "Programme Manager",
+    "coordinator": "Code Clubs Coordinator",
+    "champion": "Club Champion"
+  },
+  "login": {
+    "title": "Sign in",
+    "intro": "Use the email and password from your STEAMLabs administrator.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "failed": "We could not sign you in"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "description": "What is happening across your clubs",
+    "activeClubs": "Active clubs",
+    "schools": "Schools",
+    "champions": "Club champions"
+  },
+  "users": {
+    "title": "Users",
+    "description": "Accounts, roles and assignments",
+    "empty": "No users yet",
+    "add": "Add user"
+  },
+  "schools": {
+    "title": "Schools",
+    "description": "Schools and organisations that host clubs",
+    "empty": "No schools yet",
+    "add": "Add school"
+  },
+  "clubs": {
+    "title": "Clubs",
+    "description": "Every code club and who runs it",
+    "empty": "No clubs yet",
+    "add": "Add club"
+  },
+  "common": {
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "retry": "Try again",
+    "notAvailable": "Not available yet",
+    "databasePending": "Data will appear here once the database is connected."
+  },
+  "errors": { "forbidden": "You do not have permission to see this page." }
+}

@@ -1,0 +1,48 @@
+import { insertAuditEntry, listAuditEntries } from './audit.repository.js';
+import { scopeFilter } from '../scope.js';
+
+/** Field names whose values are never written to the audit log. */
+const REDACTED = new Set([
+  'password',
+  'passwordHash',
+  'token',
+  'refreshToken',
+  'contactPhone',
+  'phone',
+]);
+
+/**
+ * Records who changed what (append-only). Stores changed field names and
+ * non-sensitive values only; never passwords, tokens or whole request bodies.
+ */
+export async function recordAudit({
+  actor,
+  action,
+  entityType,
+  entityId,
+  before = {},
+  after = {},
+  requestId,
+}) {
+  const changedFields = Object.keys(after)
+    .filter((field) => JSON.stringify(before[field]) !== JSON.stringify(after[field]))
+    .map((field) =>
+      REDACTED.has(field)
+        ? { field, redacted: true }
+        : { field, from: before[field] ?? null, to: after[field] ?? null },
+    );
+  return insertAuditEntry({
+    at: new Date(),
+    actorId: actor?.id ?? null,
+    actorRole: actor?.role ?? null,
+    action,
+    entityType,
+    entityId,
+    changedFields,
+    requestId,
+  });
+}
+
+export function listAudit(user, scope, query) {
+  return listAuditEntries(scopeFilter(user, scope), query);
+}

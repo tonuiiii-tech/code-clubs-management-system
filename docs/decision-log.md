@@ -1,25 +1,210 @@
-# Decision log
+# Architecture Decision Log
 
-IDs are D<sprint>-<n>. Sprint 1 decisions were proposed on 20 Oct 2026 and updated on 21 Oct 2026 after Enock accepted the folder structure and deferred offline sync. Full context: [sprints/sprint-1.md](sprints/sprint-1.md).
+This log records decisions that affect the architecture or long-term maintenance of the STEAMLabs Africa Code Clubs Management System.
 
-| ID | Decision | Why |
-| --- | --- | --- |
-| D1-1 | npm workspaces monorepo with `server`, `client`, `shared` (Enock's structure, D1-19) | One install, one CI run, one set of schemas for server and offline client |
-| D1-2 | JavaScript (ES modules) with JSDoc, not TypeScript | Lower barrier for volunteer contributors; see open question 1 |
-| D1-3 | Zod rather than Joi | Runs in the browser too, so offline forms validate with the server's rules |
-| D1-4 | Client-generated UUID v7 as `_id` on all synced records | Records can be created offline with no ID clash; time-ordered for index locality |
-| D1-5 | Sync fields on every model from Sprint 1; pull checkpoint is a server sequence number | No data migration when offline sync arrives in Sprint 3; immune to wrong device clocks |
-| D1-6 | Soft deletes everywhere | Deletes must sync as tombstones, and records are kept indefinitely |
-| D1-7 | Facilitators are Users; club assignments in a ClubFacilitator collection | Many-to-many that merges cleanly offline and keeps assignment history |
-| D1-8 | RBAC policy in one shared file + `authorize` / `scopeFilter` / `redact` | Roles can change after the HQ meeting without touching routes; a database-backed role editor can come later |
-| D1-9 | 15-min access JWT in memory, rotating 30-day refresh token in httpOnly cookie | Limits token theft; long enough for facilitators who are offline for weeks |
-| D1-10 | Learner contacts in their own collection (Sprint 2) | Contacts structurally never reach a device or API response without permission |
-| D1-11 | Human-readable club codes assigned by the server per region | Readable IDs for reports and phone calls; clubs are created online by HQ or coordinators |
-| D1-12 | Node 24 LTS, MongoDB 7+; Atlas free tier or local MongoDB for dev | Current LTS; tests need no MongoDB install thanks to mongodb-memory-server |
-| D1-13 | Playwright set up in Sprint 1; offline end-to-end tests start in Sprint 3 with the sync engine | Sync is the riskiest part, so test it as soon as it exists |
-| D1-14 | Audit entries written by services with field diffs and redaction | Hooks lack actor and request context; diffs keep the log readable |
-| D1-15 | UI built on steamlabsui 1.0.0 components and tokens; no Tailwind for now | Brand-consistent with other STEAMLabs apps; the kit covers forms, tables, stats, dialogs and toasts, so Tailwind adds little (its Tailwind v4 theme can be added later) |
-| D1-16 | Import tokens.css + components.css, not styles.css; self-host Poppins via @fontsource/poppins | styles.css loads Poppins from Google Fonts, which fails offline; self-hosted fonts are precached by the service worker |
-| D1-17 | Offline sync (Dexie, outbox, push/pull, conflict handling, offline caching) deferred to Sprint 3; Sprints 1–2 are online only | Enock's call on 21 Oct: get the core management features working and presentable first |
-| D1-18 | Schools are their own entity; clubs link to a School | Enock added Schools; avoids retyping host details and lets learners link to their school |
-| D1-19 | Adopt Enock's folder structure (pages, layouts, routes, services, context; feature modules) plus shared/, i18n/, ui/, docs/, CI, per-package tests and .env.example | Agreed on 21 Oct |
+IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Proposed** until confirmed, **Accepted** once Enock or the STEAMLabs team confirms them, and **Pending** when a choice is deliberately left open.
+
+| ID    | Decision                                                   | Status      |
+| ----- | ---------------------------------------------------------- | ----------- |
+| D1-1  | Modular monolith                                           | Proposed    |
+| D1-2  | npm workspaces: client, server, shared                     | Proposed    |
+| D1-3  | Share schemas, enforce trust on the server                 | Proposed    |
+| D1-4  | Role and resource scope on every protected operation       | Proposed    |
+| D1-5  | Offline synchronisation in Sprint 3                        | Accepted    |
+| D1-6  | Device-generatable UUIDs; deactivate instead of delete     | Proposed    |
+| D1-7  | CI for lint, tests and builds                              | Proposed    |
+| D1-8  | Database: PostgreSQL or MongoDB                            | **Pending** |
+| D1-9  | UI built with the STEAMLabs UI kit (`steamlabsui`)         | Accepted    |
+| D1-10 | Self-host the Poppins font                                 | Proposed    |
+| D1-11 | English and Kiswahili from day one                         | Proposed    |
+| D1-12 | Authentication: access token + rotating refresh cookie     | Proposed    |
+| D1-13 | Four roles from Enock's Sprint 1 proposal                  | Accepted    |
+| D1-14 | Folder structure                                           | Accepted    |
+| D1-15 | Schools as an entity; club–champion assignments as records | Accepted    |
+| D1-16 | Data access through repositories                           | Proposed    |
+| D1-17 | Zod for validation                                         | Proposed    |
+| D1-18 | JavaScript (ES modules), not TypeScript                    | Proposed    |
+| D1-19 | API prefix `/api/v1` and consistent responses              | Proposed    |
+
+## D1-1: Use a modular monolith
+
+- **Status:** Proposed
+- **Date:** 2026-10-21
+- **Context:** Sprint 1 needs a maintainable backend without the operational complexity of multiple services.
+- **Decision:** Use one Express backend organised into business modules with routes, controllers, services and repositories.
+- **Alternatives considered:** A flat Express application; microservices.
+- **Consequences:** Easier local development and deployment; modules must keep clear boundaries as the application grows.
+
+## D1-2: Use npm workspaces
+
+- **Status:** Proposed
+- **Date:** 2026-10-21
+- **Context:** Client, server and shared contracts are developed in one repository.
+- **Decision:** Use npm workspaces for `client`, `server` and `shared`.
+- **Alternatives considered:** Separate repositories; a single package without workspace boundaries.
+- **Consequences:** Shared schemas and policies are versioned together; package exports and dependencies must be explicit.
+
+## D1-3: Share schemas, enforce trust on the server
+
+- **Status:** Proposed
+- **Date:** 2026-10-21
+- **Context:** Shared Zod schemas and permission definitions reduce duplication between client and server.
+- **Decision:** Put reusable data-shape schemas and permission metadata in `shared/`, while enforcing authentication, authorisation, scope and database-dependent rules on the server.
+- **Alternatives considered:** Duplicated client/server schemas; client-only validation.
+- **Consequences:** Better consistency without treating browser code as trusted.
+
+## D1-4: Enforce role and resource scope on every protected API operation
+
+- **Status:** Proposed
+- **Date:** 2026-10-21
+- **Context:** Users have different responsibilities and must only access assigned schools and clubs.
+- **Decision:** Apply server-side permission and resource-scope checks to reads and writes. Out-of-scope records return 404 so their existence is not revealed.
+- **Alternatives considered:** Frontend-only route guards; role checks without record-level scope.
+- **Consequences:** More authorisation tests are required, but access control is substantially stronger.
+
+## D1-5: Defer offline synchronisation to Sprint 3
+
+- **Status:** Accepted (Enock, 2026-10-21)
+- **Date:** 2026-10-21
+- **Context:** Offline support adds local persistence, queues, retries, conflict resolution and data privacy concerns. The core management features should be stable first.
+- **Decision:** Sprints 1 and 2 are online-only and isolate API calls in the client services layer. Dexie, the outbox and sync workflows are built in Sprint 3.
+- **Alternatives considered:** Offline in Sprint 1 or Sprint 2.
+- **Consequences:** Clearer finish lines for Sprints 1–2. Facilitators cannot use the app at venues without internet until Sprint 3 (R1-14). IDs and the services layer must not block offline support later.
+
+## D1-6: Use device-generatable identifiers and preserve operational history
+
+- **Status:** Proposed
+- **Date:** 2026-10-21
+- **Context:** Records will later be created offline, and schools, clubs and users may become inactive while their history remains important. Records are kept indefinitely.
+- **Decision:** Every record uses a UUID that a device can generate. Operational records are deactivated, never permanently deleted.
+- **Alternatives considered:** Hard deletion; server-generated IDs only.
+- **Consequences:** Queries and UI must distinguish active and inactive records; Sprint 3 needs a documented deletion (tombstone) strategy.
+
+## D1-7: Add CI for lint, tests and builds
+
+- **Status:** Proposed
+- **Date:** 2026-10-21
+- **Context:** The project needs repeatable quality checks for every contribution.
+- **Decision:** A GitHub Actions workflow runs linting, automated tests and client/server builds on pushes and pull requests, on a pinned Node 24 LTS with `npm ci`.
+- **Alternatives considered:** Manual checks only.
+- **Consequences:** CI scripts and environment-independent tests must be maintained.
+
+## D1-8: Database engine
+
+- **Status:** Pending (Enock, 2026-10-21: keep open for now)
+- **Date:** 2026-10-21
+- **Context:** The original brief specified MongoDB with Mongoose. Enock asked whether to use PostgreSQL instead.
+- **Options:**
+  - **PostgreSQL** (with Drizzle or Prisma; PGlite for in-process tests). Strong fit for relational data (schools, clubs, assignments, attendance) and for dashboard and report queries with joins.
+  - **MongoDB** (with Mongoose; mongodb-memory-server for tests). Matches the Shule Safe stack and the original brief; flexible documents.
+- **Decision:** Not yet made. Code is written against repositories (D1-16) so the engine sits in one layer.
+- **Consequences:** Must be decided before persistence code is written (Sprint 1, day 3) to keep the sprint on track (R1-15).
+
+## D1-9: Build the UI with the STEAMLabs UI kit
+
+- **Status:** Accepted (Enock, 2026-10-21)
+- **Date:** 2026-10-21
+- **Context:** The app should look like other STEAMLabs Africa products. The kit is published on npm as `steamlabsui` (React components, design tokens, logos, optional Tailwind v4 theme).
+- **Decision:** Build all screens from `steamlabsui` components and tokens. Pin the exact version. Tailwind is not added in Sprint 1; the kit's Tailwind theme can be added later if layout needs it.
+- **Alternatives considered:** Tailwind with hand-made components; another component library.
+- **Consequences:** Consistent branding with little custom CSS; the project depends on a new 1.0.0 package (R1-16).
+
+## D1-10: Self-host the Poppins font
+
+- **Status:** Proposed
+- **Date:** 2026-10-21
+- **Context:** The kit's all-in-one stylesheet loads Poppins from Google Fonts, which fails without internet.
+- **Decision:** Import the kit's `tokens.css` and `components.css` and self-host Poppins (SIL Open Font License) so the service worker can cache it.
+- **Alternatives considered:** Loading from Google Fonts; falling back to system fonts.
+- **Consequences:** Correct branding offline; slightly larger app bundle.
+
+## D1-11: English and Kiswahili from day one
+
+- **Status:** Proposed
+- **Date:** 2026-10-21
+- **Context:** The brief requires English and Kiswahili with i18n from day one. Retrofitting translation later means touching every screen.
+- **Decision:** Use react-i18next from Sprint 1. All UI text uses translation keys in `en` and `sw` files; English is the fallback. A full Kiswahili review happens in a later sprint.
+- **Alternatives considered:** English only until translations are ready.
+- **Consequences:** Small extra effort per screen; no rework later.
+
+## D1-12: Authentication design
+
+- **Status:** Proposed
+- **Date:** 2026-10-21
+- **Context:** Users need secure sessions that can be revoked when an account is deactivated, and later must survive long offline periods.
+- **Decision:** Login with email (phone later) and password hashed with bcrypt. A 15-minute JWT access token is kept in memory; a rotating 30-day refresh token is stored hashed on the server and sent as an httpOnly, Secure, SameSite cookie. Reuse of an old refresh token revokes the whole session family. Account status and token version are checked on every request.
+- **Alternatives considered:** Server sessions in a session store; long-lived JWTs.
+- **Consequences:** Deactivation takes effect on the next request; refresh tokens need a small table/collection.
+
+## D1-13: Use the four roles from Enock's Sprint 1 proposal
+
+- **Status:** Accepted (Enock, 2026-10-21)
+- **Date:** 2026-10-21
+- **Context:** The brief listed provisional roles (Super Admin/HQ, Regional Coordinator, Facilitator). Enock's proposal uses STEAMLabs' own titles.
+- **Decision:** Roles are System Administrator, Programme Manager, Code Clubs Coordinator and Club Champion. The Club Champion is the facilitator who runs a club (teacher, volunteer or staff). Permissions live in `shared/permissions.js` so they can change after STEAMLabs confirms them.
+- **Alternatives considered:** The brief's three roles.
+- **Consequences:** The permissions matrix in `docs/sprints/sprint-1.md` is a baseline until confirmed (R1-9).
+
+## D1-14: Folder structure
+
+- **Status:** Accepted (Enock, 2026-10-21)
+- **Date:** 2026-10-21
+- **Decision:** Enock's structure (client `components`, `layouts`, `pages`, `routes`, `services`, `context`, `utils`; server `config`, `middleware`, `modules`, `utils`) plus `shared/`, `client/src/i18n`, `client/src/ui`, `docs/`, CI, tests next to each workspace and separate `.env.example` files. Client `db/` and `sync/` and server `modules/sync` are added in Sprint 3.
+- **Consequences:** See the tree in `docs/sprints/sprint-1.md`.
+
+## D1-15: Schools as their own entity; club–champion assignments as records
+
+- **Status:** Accepted (Enock, 2026-10-21)
+- **Date:** 2026-10-21
+- **Context:** Clubs are hosted by schools, community centres or libraries. A club can have several champions, and a champion can run several clubs.
+- **Decision:** School is an entity that clubs reference. Each club–champion assignment is its own record with start and end dates.
+- **Consequences:** No retyping of host details; assignment history is preserved; offline edits to different assignments will not overwrite each other in Sprint 3.
+
+## D1-16: Data access through repositories
+
+- **Status:** Proposed
+- **Date:** 2026-10-21
+- **Context:** The database engine is still open (D1-8), and services should stay testable.
+- **Decision:** Services call repository functions (`findClubById`, `listClubs(scope, filters)`, …); only repositories touch the database.
+- **Alternatives considered:** Calling the ORM/ODM directly from services.
+- **Consequences:** One layer to change if the engine changes; one more file per module.
+
+## D1-17: Zod for validation
+
+- **Status:** Proposed
+- **Date:** 2026-10-21
+- **Context:** The brief allows Zod or Joi.
+- **Decision:** Zod, because it runs in the browser too and the same schemas validate forms (including offline in Sprint 3) and API requests.
+- **Alternatives considered:** Joi.
+- **Consequences:** One validation library across the stack.
+
+## D1-18: JavaScript (ES modules), not TypeScript
+
+- **Status:** Proposed
+- **Date:** 2026-10-21
+- **Context:** The brief does not specify. Volunteer contributors may be new to TypeScript.
+- **Decision:** JavaScript with ES modules, JSDoc on shared types and Zod for runtime shapes.
+- **Alternatives considered:** TypeScript.
+- **Consequences:** Lower barrier to contribute; fewer compile-time checks. Revisit if the team prefers TypeScript.
+
+## D1-19: API prefix and response format
+
+- **Status:** Proposed
+- **Date:** 2026-10-21
+- **Decision:** All routes under `/api/v1`. Responses: `{ data }`, lists `{ data, page, pageSize, total }`, errors `{ error: { code, message, details? } }`.
+- **Consequences:** A future `/api/v2` can coexist; clients can handle errors in one place.
+
+## Decision template
+
+Copy this template for future entries:
+
+```md
+## D<sprint>-<number>: <Short title>
+
+- **Status:** Proposed / Accepted / Pending / Superseded
+- **Date:** YYYY-MM-DD
+- **Context:** What problem or constraint led to this decision?
+- **Decision:** What are we choosing?
+- **Alternatives considered:** What else was considered?
+- **Consequences:** What trade-offs or follow-up work result?
+```

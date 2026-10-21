@@ -1,0 +1,38 @@
+import express from 'express';
+import helmet from 'helmet';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import { env } from './config/env.js';
+import { requestId } from './middleware/requestId.js';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import { authRouter } from './modules/auth/auth.routes.js';
+import { usersRouter } from './modules/users/users.routes.js';
+import { schoolsRouter } from './modules/schools/schools.routes.js';
+import { clubsRouter } from './modules/clubs/clubs.routes.js';
+import { auditRouter } from './modules/audit/audit.routes.js';
+
+/** Builds the Express app without listening, so tests can use it with Supertest. */
+export function createApp() {
+  const app = express();
+
+  app.disable('x-powered-by');
+  app.set('trust proxy', 1);
+  app.use(requestId);
+  app.use(helmet());
+  app.use(cors({ origin: env.CORS_ORIGIN.split(','), credentials: true }));
+  app.use(express.json({ limit: '100kb' }));
+  app.use(cookieParser());
+
+  const api = express.Router();
+  api.get('/health', (_req, res) => res.json({ data: { status: 'ok' } }));
+  api.use('/auth', authRouter);
+  api.use('/users', usersRouter);
+  api.use('/schools', schoolsRouter);
+  api.use('/clubs', clubsRouter);
+  api.use('/audit', auditRouter);
+  app.use('/api/v1', api);
+
+  app.use(notFoundHandler);
+  app.use(errorHandler);
+  return app;
+}
