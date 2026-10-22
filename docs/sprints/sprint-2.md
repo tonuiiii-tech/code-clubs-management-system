@@ -18,6 +18,7 @@ Everything stays online in this sprint. The data model is designed so Sprint 3 c
 
 - Sprint 1 is closed: real-database checks, Playwright against the real server, Definition of Done ticked.
 - **No real learner data** is entered until STEAMLabs confirms its registration with the Office of the Data Protection Commissioner and a data protection impact assessment exists (R1-13). Sprint 2 is built and demonstrated with fictional data only.
+- If the learner fields are not yet approved when the sprint starts, it begins with sessions and attendance, and the learner fields are finalised once they are.
 
 ## 3. In scope
 
@@ -46,27 +47,32 @@ All `_id`s are UUID strings (D1-21). All records get `createdAt`, `updatedAt`, `
 
 ### learners
 
-| Field                                  | Why it is needed                                                                     |
-| -------------------------------------- | ------------------------------------------------------------------------------------ |
-| `learnerNumber`                        | Short reference without using names, e.g. `NAC-014-023` (club code + sequence)       |
-| `firstName`, `lastName`                | Taking attendance                                                                    |
-| `birthYear`                            | Age band for reporting. Not the full date of birth (proposed D2-2)                   |
-| `gender`                               | Programme reporting on girls' participation; includes "prefer not to say"            |
-| `grade`                                | Grade 4 to Grade 9 (CBC), for grouping and reporting                                 |
-| `clubId`, `region`                     | Scope                                                                                |
-| `status`                               | `active` or `left`; leaving keeps history                                            |
-| `joinedAt`, `leftAt`                   | Enrolment history                                                                    |
-| `consent.status`                       | `pending`, `received`, `withdrawn`                                                   |
-| `consent.receivedAt`, `consent.fileId` | When and where the signed form is                                                    |
-| `accessibilityNeeds`                   | Optional, free text, max 200 characters, visible to the club's champions and HQ only |
+| Field                   | Why it is needed                                                                     |
+| ----------------------- | ------------------------------------------------------------------------------------ |
+| `learnerNumber`         | Short reference without using names, e.g. `NAC-014-023` (club code + sequence)       |
+| `firstName`, `lastName` | Taking attendance                                                                    |
+| `birthYear`             | Age band for reporting. Not the full date of birth (proposed D2-2)                   |
+| `gender`                | Programme reporting on girls' participation; includes "prefer not to say"            |
+| `grade`                 | Grade 4 to Grade 9 (CBC), for grouping and reporting                                 |
+| `clubId`, `region`      | Scope                                                                                |
+| `status`                | `active` or `left`; leaving keeps history                                            |
+| `accessibilityNeeds`    | Optional, free text, max 200 characters, visible to the club's champions and HQ only |
 
-Not collected: full date of birth, home address, national or birth certificate numbers, school admission number, photos.
+Not collected: learner phone or email, full date of birth, home address, national or birth certificate numbers, school admission number, photos.
 
 ### learnerContacts (separate collection, proposed D2-1)
 
 `learnerId`, `guardianName`, `relationship`, `phone`, `altPhone`.
 
 Champions and coordinators can **enter** a guardian contact when registering a learner but cannot **read** it back. Only System Administrators and Programme Managers can read contacts, plus anyone given the `learnerContact:read` grant. API responses for other roles never include these fields.
+
+### enrolments (history)
+
+`learnerId`, `clubId`, `startDate`, `endDate`. One open enrolment per learner, so moving a learner to another club keeps their history and attendance. Enrolling above the club's capacity is refused.
+
+### consents
+
+`learnerId`, `type` (`participation`, `photo`), `status` (`pending`, `given`, `refused`, `withdrawn`), `signedOn`, `fileId`, `recordedBy`. Unique `learnerId + type`. Photo consent is recorded now so later sprints can check it before any photo is used.
 
 ### consentFiles (GridFS bucket, proposed D2-3)
 
@@ -106,6 +112,7 @@ Prefix: `/api/v1`
 | POST   | `/learners`                  | Register a learner (with optional contact)      |
 | GET    | `/learners/:id`              | Get a learner                                   |
 | PATCH  | `/learners/:id`              | Update a learner                                |
+| POST   | `/learners/:id/move`         | Move to another club (history kept)             |
 | PATCH  | `/learners/:id/status`       | Mark as left or re-activate                     |
 | GET    | `/learners/:id/contact`      | Guardian contact (HQ or grant only)             |
 | PUT    | `/learners/:id/contact`      | Enter or replace guardian contact               |
@@ -135,7 +142,7 @@ Every learner, contact, consent and attendance change is written to the audit lo
 
 - **US-07 Register learners.** A champion registers a learner in their club with only the agreed fields; duplicates (same name, birth year and club) are warned about.
 - **US-08 Guardian contacts.** Contacts are stored separately; only HQ or granted users can read them; reads are audited.
-- **US-09 Consent.** A signed form can be uploaded; status shows on the learner list; withdrawn consent is recorded.
+- **US-09 Consent.** Participation and photo consent are recorded separately; a signed form can be uploaded; learners without participation consent are flagged on the club page and in attendance.
 - **US-10 Sessions.** A champion plans or reports a session for their club, or records why it was cancelled.
 - **US-11 Attendance.** A champion takes attendance in one step from the club's learner list.
 - **US-12 Dashboard.** Counts and attendance rate respect each user's scope.
@@ -176,6 +183,8 @@ Every learner, contact, consent and attendance change is written to the audit lo
 4. Who may read guardian contacts: HQ only, or also the club's coordinator?
 5. How long should records of learners who have left be kept before they are anonymised?
 6. Can a learner belong to more than one club?
+7. Is consent collected once, or again every year or term?
+8. Should champions see guardian phone numbers for their own clubs, for example to call when a child is not collected?
 
 ## 14. Definition of Done
 
