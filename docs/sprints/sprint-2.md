@@ -76,6 +76,8 @@ All `_id`s are UUID strings (D1-21). All records get `createdAt`, `updatedAt`, `
 | `status`, `joinedAt`, `leftAt` | `active` or `left`; leaving keeps attendance history                                 |
 | `accessibilityNeeds`           | Optional, free text, max 200 characters, visible to the club's champions and HQ only |
 
+Until HQ answers question 1 in section 13, only `firstName` and `lastName` are required; `birthYear`, `gender`, `grade` and `accessibilityNeeds` are built as optional fields and switched on only if HQ wants them.
+
 Not collected: learner phone or email, full date of birth, home address, national or birth certificate numbers, school admission number, photos of individual learners.
 
 Learners join by open sign-up (Q16) up to the club's capacity of 30 (Q8); enrolling above capacity is refused.
