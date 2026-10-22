@@ -2,7 +2,7 @@
 
 A management system for STEAMLabs Africa's code clubs in Kenya: schools, clubs, club champions, and later learners, sessions, attendance, events and reports. It is one installable web app (PWA) for laptops, tablets and phones, in English and Kiswahili. Offline use with sync comes in Sprint 3.
 
-**Status:** Sprint 1 foundation. The database engine is still being decided (PostgreSQL or MongoDB, decision D1-8), so API routes that read or save data return `501 Not Implemented` for now.
+**Status:** Sprint 1. The database is MongoDB (decision D1-8, 22 Oct). Until the MongoDB data layer is built, API routes that read or save data return `501 Not Implemented`; use demo mode to click through the app.
 
 ## Documentation
 
@@ -27,7 +27,7 @@ You need:
 
 1. **Node.js 24 LTS** from <https://nodejs.org> (choose the LTS installer). Node 22.12 or newer also works.
 2. **Git** from <https://git-scm.com/download/win>.
-3. A database is **not** needed yet (decision D1-8 is pending). Setup steps for the chosen database will be added here.
+3. A database is **not** needed yet. MongoDB setup steps (D1-8) will be added here with the data layer.
 
 Then, in **PowerShell**:
 
@@ -59,7 +59,7 @@ On macOS or Linux, use `cp` instead of `Copy-Item` and `/` instead of `\`.
 
 ### Demo mode (no database needed)
 
-While the database choice is pending (D1-8), the API answers data requests with `501 Not implemented`. To click through every screen, run the web app in demo mode:
+Until the MongoDB data layer is built (D1-8), the API answers data requests with `501 Not implemented`. To click through every screen, run the web app in demo mode:
 
 ```powershell
 npm run demo

@@ -2,7 +2,7 @@
 
 ## Architecture Overview
 
-**Status:** Proposed (database choice pending, see D1-8)
+**Status:** Proposed (database: MongoDB, decided 22 Oct, D1-8)
 **Sprint:** 1
 **Last updated:** 2026-10-21
 
@@ -21,7 +21,7 @@ Two constraints shape the design:
 - Enforce authentication, authorisation (permission **and** resource scope), and validation on the server.
 - Keep business rules in backend services, not only in React components.
 - Reuse shared schemas and stable enums; never treat shared code as a security boundary.
-- Put data access behind repositories, so the database choice (D1-8) stays in one layer.
+- Put data access behind repositories, so the database engine (MongoDB, D1-8) stays in one layer.
 - Keep Sprints 1–2 online-first; add real offline-first workflows in Sprint 3.
 - Minimise personal data, particularly information about children.
 - Record sensitive administrative changes in an audit log.
@@ -39,11 +39,11 @@ Two constraints shape the design:
 | Languages                  | react-i18next (`en`, `sw`)                                                                           | English and Kiswahili                                                   | Accepted (D1-11) |
 | Installable app            | vite-plugin-pwa                                                                                      | Installs on laptops, tablets and phones; offline data comes in Sprint 3 | Accepted         |
 | Backend                    | Node.js 24 LTS + Express                                                                             | REST API                                                                | Accepted         |
-| Database                   | **PostgreSQL or MongoDB: pending**                                                                   | Persistent records                                                      | Pending (D1-8)   |
+| Database                   | **MongoDB with Mongoose**                                                                            | Persistent records                                                      | Accepted (D1-8)  |
 | Shared validation          | Zod                                                                                                  | Request and data-shape validation, shared by client and server          | Accepted         |
 | Authentication             | Short-lived JWT access token + rotating refresh token in an httpOnly cookie; bcrypt password hashing | Authenticated requests                                                  | Proposed (D1-12) |
 | Backend tests              | Jest + Supertest                                                                                     | API and service tests                                                   | Accepted         |
-| Test database              | In-process database for the chosen engine (PGlite for Postgres, mongodb-memory-server for MongoDB)   | Isolated tests, no install needed                                       | Follows D1-8     |
+| Test database              | mongodb-memory-server (in-process MongoDB)                                                           | Isolated tests, no install needed                                       | Follows D1-8     |
 | Frontend tests             | Vitest; Playwright for end-to-end                                                                    | Units and browser workflows                                             | Accepted         |
 | CI                         | GitHub Actions                                                                                       | Lint, test and build on every push and pull request                     | Accepted         |
 | Offline storage (Sprint 3) | Dexie / IndexedDB + outbox                                                                           | Local-first data and sync                                               | Planned          |
@@ -60,7 +60,7 @@ flowchart TD
     VALID --> ROUTES[Module routes and controllers]
     ROUTES --> SERVICES[Service layer: business rules]
     SERVICES --> REPO[Repositories]
-    REPO --> DB[(Database: Postgres or MongoDB, D1-8)]
+    REPO --> DB[(MongoDB, D1-8)]
     SERVICES --> AUDIT[Audit log]
     SHARED[shared/: enums, permissions, Zod schemas] -.-> UI
     SHARED -.-> API
@@ -234,7 +234,7 @@ Client (`client/.env.example`):
 Server (`server/.env.example`):
 
 - `NODE_ENV`, `PORT`
-- `DATABASE_URL` (connection string for the engine chosen in D1-8)
+- `MONGODB_URI` (MongoDB connection string, D1-8)
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`
 - `CORS_ORIGIN`
 - `SEED_DEFAULT_PASSWORD` (development only)

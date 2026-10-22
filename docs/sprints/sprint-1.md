@@ -53,7 +53,7 @@ The final permissions and assignment model must be confirmed with STEAMLabs. Thi
 - Full analytics and report exports.
 - Dexie/IndexedDB persistence, outbox queue, and offline synchronization (Sprint 3).
 - Full Playwright offline E2E suite (Sprint 3).
-- Final database engine choice is pending (D1-8); it must be made by day 3.
+- Database: MongoDB with Mongoose (D1-8, decided 22 Oct).
 
 A PWA manifest or icons may be added as preparation, but this does not count as offline functionality.
 
@@ -103,7 +103,7 @@ code-clubs-management-system/
 │   ├── tests/                        # moved here from root: Jest + Supertest + mongodb-memory-server
 │   └── src/
 │       ├── config/
-│       ├── db/                       # database connection + repositories (engine pending, D1-8)
+│       ├── db/                       # MongoDB connection + Mongoose models (D1-8)
 │       ├── middleware/
 │       │   ├── authenticate.js
 │       │   ├── authorize.js          # reads shared/permissions.js
@@ -264,7 +264,7 @@ Until the database is chosen (D1-8), the web app can run in **demo mode** (`npm 
 
 - Set up npm workspaces and client/server scripts.
 - Add `.env.example` files and `.gitignore`.
-- Set up error handling and the repository layer; **decide the database (D1-8) by day 3** and add the connection.
+- Set up error handling and the repository layer; database decided 22 Oct (MongoDB, D1-8); add the connection.
 - Add shared package exports, enums, and initial Zod schemas.
 - Add CI workflow and initial documentation.
 
@@ -317,7 +317,7 @@ Sprint 1 is complete when:
 - [ ] Server-side permission and resource-scope checks are tested.
 - [ ] Authorized users can create and manage schools.
 - [ ] Authorized users can create clubs under schools and assign champions.
-- [ ] User, school, and club data persists in the chosen database (D1-8).
+- [ ] User, school, and club data persists in MongoDB (D1-8).
 - [ ] Sensitive administrative actions are audited.
 - [ ] UI uses steamlabsui; all text exists in English and Kiswahili files.
 - [ ] Seed script creates fictional Kenyan data and refuses to run in production.
@@ -330,7 +330,7 @@ Sprint 1 is complete when:
 Confirm with STEAMLabs:
 
 - Are coordinators assigned by county, region, school, or individual club? (Default: region, as in the Head of Code Clubs questionnaire.)
-- Which database: PostgreSQL or MongoDB (D1-8)? Needed by day 3.
+- ~~Which database (D1-8)?~~ MongoDB, decided 22 Oct.
 - Which fields are required to identify a school and avoid duplicates?
 - Who is allowed to create schools and clubs?
 - Can a coordinator see champions who have no club yet, so they can assign them? (Default in the code: yes.)

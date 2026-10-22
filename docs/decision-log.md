@@ -4,28 +4,28 @@ This log records decisions that affect the architecture or long-term maintenance
 
 IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Proposed** until confirmed, **Accepted** once Enock or the STEAMLabs team confirms them, and **Pending** when a choice is deliberately left open.
 
-| ID    | Decision                                                   | Status      |
-| ----- | ---------------------------------------------------------- | ----------- |
-| D1-1  | Modular monolith                                           | Proposed    |
-| D1-2  | npm workspaces: client, server, shared                     | Proposed    |
-| D1-3  | Share schemas, enforce trust on the server                 | Proposed    |
-| D1-4  | Role and resource scope on every protected operation       | Proposed    |
-| D1-5  | Offline synchronisation in Sprint 3                        | Accepted    |
-| D1-6  | Device-generatable UUIDs; deactivate instead of delete     | Proposed    |
-| D1-7  | CI for lint, tests and builds                              | Proposed    |
-| D1-8  | Database: PostgreSQL or MongoDB                            | **Pending** |
-| D1-9  | UI built with the STEAMLabs UI kit (`steamlabsui`)         | Accepted    |
-| D1-10 | Self-host the Poppins font                                 | Proposed    |
-| D1-11 | English and Kiswahili from day one                         | Proposed    |
-| D1-12 | Authentication: access token + rotating refresh cookie     | Proposed    |
-| D1-13 | Four roles from Enock's Sprint 1 proposal                  | Accepted    |
-| D1-14 | Folder structure                                           | Accepted    |
-| D1-15 | Schools as an entity; club–champion assignments as records | Accepted    |
-| D1-16 | Data access through repositories                           | Proposed    |
-| D1-17 | Zod for validation                                         | Proposed    |
-| D1-18 | JavaScript (ES modules), not TypeScript                    | Proposed    |
-| D1-19 | API prefix `/api/v1` and consistent responses              | Proposed    |
-| D1-20 | Demo mode: in-browser mock API while D1-8 is pending       | Accepted    |
+| ID    | Decision                                                   | Status   |
+| ----- | ---------------------------------------------------------- | -------- |
+| D1-1  | Modular monolith                                           | Proposed |
+| D1-2  | npm workspaces: client, server, shared                     | Proposed |
+| D1-3  | Share schemas, enforce trust on the server                 | Proposed |
+| D1-4  | Role and resource scope on every protected operation       | Proposed |
+| D1-5  | Offline synchronisation in Sprint 3                        | Accepted |
+| D1-6  | Device-generatable UUIDs; deactivate instead of delete     | Proposed |
+| D1-7  | CI for lint, tests and builds                              | Proposed |
+| D1-8  | Database: MongoDB with Mongoose                            | Accepted |
+| D1-9  | UI built with the STEAMLabs UI kit (`steamlabsui`)         | Accepted |
+| D1-10 | Self-host the Poppins font                                 | Proposed |
+| D1-11 | English and Kiswahili from day one                         | Proposed |
+| D1-12 | Authentication: access token + rotating refresh cookie     | Proposed |
+| D1-13 | Four roles from Enock's Sprint 1 proposal                  | Accepted |
+| D1-14 | Folder structure                                           | Accepted |
+| D1-15 | Schools as an entity; club–champion assignments as records | Accepted |
+| D1-16 | Data access through repositories                           | Proposed |
+| D1-17 | Zod for validation                                         | Proposed |
+| D1-18 | JavaScript (ES modules), not TypeScript                    | Proposed |
+| D1-19 | API prefix `/api/v1` and consistent responses              | Proposed |
+| D1-20 | Demo mode: in-browser mock API while D1-8 is pending       | Accepted |
 
 ## D1-1: Use a modular monolith
 
@@ -92,14 +92,12 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 
 ## D1-8: Database engine
 
-- **Status:** Pending (Enock, 2026-10-21: keep open for now)
-- **Date:** 2026-10-21
-- **Context:** The original brief specified MongoDB with Mongoose. Enock asked whether to use PostgreSQL instead.
-- **Options:**
-  - **PostgreSQL** (with Drizzle or Prisma; PGlite for in-process tests). Strong fit for relational data (schools, clubs, assignments, attendance) and for dashboard and report queries with joins.
-  - **MongoDB** (with Mongoose; mongodb-memory-server for tests). Matches the Shule Safe stack and the original brief; flexible documents.
-- **Decision:** Not yet made. Code is written against repositories (D1-16) so the engine sits in one layer.
-- **Consequences:** Must be decided before persistence code is written (Sprint 1, day 3) to keep the sprint on track (R1-15).
+- **Status:** Accepted (Enock, 2026-10-22: "we are now going back to using MongoDb and leaving postgresql")
+- **Date:** 2026-10-22
+- **Context:** The original brief specified MongoDB with Mongoose. PostgreSQL was considered on 21 Oct and the choice was left open.
+- **Decision:** MongoDB with Mongoose. Tests use mongodb-memory-server. Only the repository files (D1-16) talk to Mongoose.
+- **Alternatives considered:** PostgreSQL with Drizzle or Prisma (better fit for joins in reports, but not chosen).
+- **Consequences:** Matches the Shule Safe stack and the brief. Club–champion assignments stay a separate collection (D1-15), and dashboard and report counts use aggregation pipelines. Club codes need an atomic counter. Multi-document transactions need a replica set (Atlas provides one; local development uses a single-node replica set).
 
 ## D1-9: Build the UI with the STEAMLabs UI kit
 
