@@ -14,32 +14,32 @@ Sprint 1 delivered users, schools, clubs and champion assignments. Sprint 2 adds
 
 The Head of Code Clubs answered the requirements questionnaire. Answers that affect this sprint:
 
-| Topic                   | Answer                                                             | Effect on this plan                                                                                |
-| ----------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
-| Internet at club venues | Mostly none                                                        | Online-only attendance cannot be taken at most venues. See decision needed in section 2a.          |
-| Devices                 | Laptops, desktops and tablets; both web and mobile app wanted      | Design screens for tablet first, not phones. The PWA covers "mobile app" for now.                  |
-| Learner details         | None ticked; "to confirm with HQ"                                  | Keep the minimum needed for a register (section 5); confirm with HQ (gate 1).                      |
-| How learners join       | Open sign-up                                                       | Champions enrol learners directly; no approval step.                                               |
-| Moving between clubs    | Not allowed                                                        | Removed the move endpoint and enrolment history. A learner belongs to one club.                    |
-| Guardian contacts       | STEAMLabs HQ only                                                  | Champions and coordinators never see contacts. No per-person grant in this sprint.                 |
-| Consent                 | A consent form already exists; photos allowed under its conditions | Record consent against the existing form; photo consent tracked separately.                        |
-| Per session             | Topic, learners present/absent, notes or challenges, photos        | Session report = topic, notes, attendance, optional photos. No facilitator list, no cancel reason. |
-| Capacity and calendar   | 30 learners; clubs follow the school term calendar                 | Capacity check at 30; generated sessions skip school holidays (needs term dates).                  |
-| Retention               | Forever                                                            | Conflicts with the Data Protection Act. See gate 2.                                                |
-| Data protection lead    | Named at STEAMLabs; Kenya Data Protection Act 2019 applies         | That person signs off gates 1 and 2.                                                               |
-| Roles and permissions   | To be discussed in a meeting this week                             | Section 6 stays a proposal until that meeting (R1-9).                                              |
-| Existing data to import | None                                                               | No import tool needed.                                                                             |
+| Topic                   | Answer                                                             | Effect on this plan                                                                                          |
+| ----------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| Internet at club venues | Mostly none                                                        | Online-only attendance cannot be taken at most venues. See decision needed in section 2a.                    |
+| Devices                 | Laptops, desktops and tablets; both web and mobile app wanted      | Design screens for tablet first, not phones. The PWA covers "mobile app" for now.                            |
+| Learner details         | None ticked; "to confirm with HQ"                                  | Product owner chose name, age, grade and admission number (22 Oct); data protection lead signs off (gate 1). |
+| How learners join       | Open sign-up                                                       | Champions enrol learners directly; no approval step.                                                         |
+| Moving between clubs    | Not allowed                                                        | Removed the move endpoint and enrolment history. A learner belongs to one club.                              |
+| Guardian contacts       | STEAMLabs HQ only                                                  | Champions and coordinators never see contacts. No per-person grant in this sprint.                           |
+| Consent                 | A consent form already exists; photos allowed under its conditions | Record consent against the existing form; photo consent tracked separately.                                  |
+| Per session             | Topic, learners present/absent, notes or challenges, photos        | Session report = topic, notes, attendance, optional photos. No facilitator list, no cancel reason.           |
+| Capacity and calendar   | 30 learners; clubs follow the school term calendar                 | Capacity check at 30; generated sessions skip school holidays (needs term dates).                            |
+| Retention               | Forever                                                            | Conflicts with the Data Protection Act. See gate 2.                                                          |
+| Data protection lead    | Named at STEAMLabs; Kenya Data Protection Act 2019 applies         | That person signs off gates 1 and 2.                                                                         |
+| Roles and permissions   | To be discussed in a meeting this week                             | Section 6 stays a proposal until that meeting (R1-9).                                                        |
+| Existing data to import | None                                                               | No import tool needed.                                                                                       |
 
 ## 2. Before the sprint starts (gates)
 
 Learners are children aged 9–14. These must be done before any learner code is merged:
 
-1. **Learner fields (R1-3).** HQ and the data protection lead approve the fields in section 5. The questionnaire ticked none, but a register needs at least a name; every other field must have a reason to exist.
+1. **Learner fields (R1-3).** The product owner chose the fields on 22 Oct: name, age, grade and school admission number (section 5). The data protection lead confirms them. Reasons: name for the register, age and grade for reporting by age group and level, admission number to match the school's own register and tell apart learners with the same name.
 2. **Retention (R1-13).** The answer "keep forever" conflicts with the Data Protection Act's storage-limitation principle. The data protection lead agrees a retention period (for example, delete or anonymise learner records a set number of years after the learner leaves; keep anonymised attendance counts for impact reporting). Registration with the Office of the Data Protection Commissioner and a data protection impact assessment are still needed.
 3. **Roles meeting.** The permissions meeting the Head of Code Clubs proposed confirms section 6.
 4. **Sprint 1 Definition of Done is met**, in particular that data persists in MongoDB.
 
-If a gate is not met, the sprint starts with sessions and attendance using a name-only register, and the remaining learner fields are added once the gate is cleared.
+If a gate is not met, the sprint starts with sessions and attendance and learners are entered with the chosen fields; any field the data protection lead rejects is removed before launch.
 
 ## 2a. Decision needed: offline before or after this sprint
 
@@ -79,17 +79,23 @@ Club venues mostly have no internet. If Sprint 2 stays online-only, champions ca
 
 Same rules as Sprint 1: UUID string `_id` (D1-21), `timestamps`, `createdBy` and `updatedBy`, access only through repositories (D1-16), shared Zod schemas (D1-17).
 
-| Collection        | Fields                                                                                                                                         | Indexes                                      |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| `learners`        | firstName, lastName, birthYear (pending gate 1), grade (pending gate 1), clubId, region, status (enrolled, withdrawn), enrolledOn, withdrawnOn | `clubId, status` · `region`                  |
-| `learnerContacts` | learnerId, guardianName, relationship, phone, preferredLanguage                                                                                | `learnerId`                                  |
-| `consents`        | learnerId, type (participation, photo), status (pending, given, refused, withdrawn), signedOn, fileId, recordedBy                              | `learnerId + type` unique                    |
-| `files`           | Stored in MongoDB GridFS: filename, contentType, size, uploadedBy, entityType, entityId                                                        | `entityType + entityId`                      |
-| `terms`           | year, name, startDate, endDate (school term calendar)                                                                                          | `year + name` unique                         |
-| `sessions`        | clubId, region, date, status (scheduled, held), topic, notes, photoFileIds                                                                     | `clubId + date` unique · `region, date`      |
-| `attendance`      | sessionId, learnerId, clubId, status (present, absent)                                                                                         | `sessionId + learnerId` unique · `learnerId` |
+| Collection        | Fields                                                                                                                                                                                           | Indexes                                                                     |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| `learners`        | firstName, lastName, birthYear (from the age entered), grade, admissionNumber (optional), clubId, schoolId (copied from the club), region, status (enrolled, withdrawn), enrolledOn, withdrawnOn | `clubId, status` · `region` · `schoolId + admissionNumber` unique (partial) |
+| `learnerContacts` | learnerId, guardianName, relationship, phone, preferredLanguage                                                                                                                                  | `learnerId`                                                                 |
+| `consents`        | learnerId, type (participation, photo), status (pending, given, refused, withdrawn), signedOn, fileId, recordedBy                                                                                | `learnerId + type` unique                                                   |
+| `files`           | Stored in MongoDB GridFS: filename, contentType, size, uploadedBy, entityType, entityId                                                                                                          | `entityType + entityId`                                                     |
+| `terms`           | year, name, startDate, endDate (school term calendar)                                                                                                                                            | `year + name` unique                                                        |
+| `sessions`        | clubId, region, date, status (scheduled, held), topic, notes, photoFileIds                                                                                                                       | `clubId + date` unique · `region, date`                                     |
+| `attendance`      | sessionId, learnerId, clubId, status (present, absent)                                                                                                                                           | `sessionId + learnerId` unique · `learnerId`                                |
 
-Not collected: full date of birth, gender, home address, school admission number, learner phone or email. Adding any of these needs a new privacy review.
+Age: the champion enters the learner's age (9–14); the server stores the birth year (enrolment year minus age) so the age shown stays correct in later years without storing a date of birth.
+
+Grade: Grade 1–9 under the Competency-Based Curriculum (shared enum).
+
+Admission number: optional, because clubs at community centres or online have no school register. When given, it must be unique within the club's host school (`schoolId + admissionNumber` unique, partial index). It is visible to the same people as the learner record.
+
+Not collected: full date of birth, gender, home address, learner phone or email. Adding any of these needs a new privacy review.
 
 Files: PDF, JPEG or PNG, at most 5 MB, type checked on the server from the file content, not the name. Photos are resized on the client before upload. Files are never served from a public URL; they are streamed through an authenticated endpoint that checks scope and writes an audit event for consent forms.
 
@@ -147,6 +153,8 @@ Prefix: `/api/v1`. Same response format (D1-19) and server-side permission and s
 As a champion, I can add a learner to my club with only the agreed fields, so that I have a register for my sessions.
 
 - Cannot enrol into a club outside my scope (403) or when the club already has 30 learners (409).
+- Age must be 9–14 and grade one of the agreed grades (400 otherwise).
+- Admission number already used at the same school is rejected (409).
 - Duplicate warning when the same first and last name already exist in the club.
 
 ### US-08: Guardian contacts
@@ -235,7 +243,7 @@ Answered by the questionnaire: guardian contact visibility (HQ only), moving bet
 
 Still open:
 
-1. Which learner fields does HQ need beyond a name? Is birth year or grade needed for reporting by age?
+1. Does the data protection lead accept the chosen learner fields (name, age, grade, admission number)?
 2. What retention period will the data protection lead approve, given that "forever" conflicts with the Act?
 3. Is consent collected once per learner, or each year or term?
 4. Who enters school term dates each year, and are they the national Ministry of Education calendar?
@@ -247,7 +255,7 @@ Still open:
 
 | Risk                                                        | Mitigation                                                                                              |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Privacy and data protection gates are not cleared in time   | Start with sessions and attendance on a name-only register; add fields once approved                    |
+| Privacy and data protection gates are not cleared in time   | Start with sessions and attendance; remove any field the data protection lead rejects before launch     |
 | Retention "forever" is not lawful for children's data       | Data protection lead agrees a period before launch; design for deletion or anonymisation from the start |
 | Champions cannot enter data at venues with no internet      | Section 2a decision; Sprint 3 offline capture; allow entering a past session's attendance later         |
 | Session photos and consent uploads fill the Atlas free tier | 5 MB limit, client-side resizing, photos as a stretch goal; decide on object storage (question 5)       |
