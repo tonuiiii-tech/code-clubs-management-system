@@ -11,6 +11,7 @@ A management system for STEAMLabs Africa's code clubs in Kenya: schools, clubs, 
 - [Decision log](docs/decision-log.md) (`D<sprint>-<n>`)
 - [Risk register](docs/risk-register.md) (`R<sprint>-<n>`)
 - [Sprint 1 plan](docs/sprints/sprint-1.md): user stories, permissions, API, definition of done
+- [Sprint 1 data layer](docs/sprints/sprint-1-data-layer.md): MongoDB collections, indexes and scope queries
 
 ## Project layout
 

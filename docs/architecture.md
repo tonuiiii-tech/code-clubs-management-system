@@ -102,9 +102,9 @@ Never put server secrets, database access or trusted authorisation decisions in 
 
 ## 7. Data model: Sprint 1
 
-Written independently of the database engine (D1-8). Every record has:
+Stored in MongoDB (D1-8). Collections, indexes and how scope becomes a query are in `docs/sprints/sprint-1-data-layer.md`. Every record has:
 
-- `id`: UUID, which can be generated on a device (needed for offline creation in Sprint 3)
+- `id`: UUID (stored as the MongoDB `_id`, D1-21), which can be generated on a device (needed for offline creation in Sprint 3)
 - `createdAt`, `updatedAt`: server-controlled timestamps
 - `createdBy`, `updatedBy`: user IDs
 - `deactivatedAt` / `status`: records are deactivated, never hard-deleted (D1-6)
