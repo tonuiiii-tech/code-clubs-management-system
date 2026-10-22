@@ -31,7 +31,7 @@ export async function nextClubCode(regionPrefix) {
   const counter = await Counter.findByIdAndUpdate(
     regionPrefix,
     { $inc: { seq: 1 } },
-    { new: true, upsert: true },
+    { returnDocument: 'after', upsert: true },
   ).lean();
   return `${regionPrefix}-${String(counter.seq).padStart(3, '0')}`;
 }
@@ -41,7 +41,9 @@ export async function insertClub(club) {
 }
 
 export async function updateClubById(id, changes) {
-  return toRecord(await Club.findByIdAndUpdate(id, { $set: changes }, { new: true }).lean());
+  return toRecord(
+    await Club.findByIdAndUpdate(id, { $set: changes }, { returnDocument: 'after' }).lean(),
+  );
 }
 
 /** Current (not ended) assignments for a club, with the champion's name. */
@@ -59,7 +61,7 @@ export async function upsertChampionAssignment({ clubId, userId, role, startDate
   const doc = await ClubChampion.findOneAndUpdate(
     { clubId, userId, endDate: null },
     { $set: { role }, $setOnInsert: toDocument({ id: randomUUID(), startDate }) },
-    { new: true, upsert: true },
+    { returnDocument: 'after', upsert: true },
   ).lean();
   const { _id, ...assignment } = doc;
   return assignment;

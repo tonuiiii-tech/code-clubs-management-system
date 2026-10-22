@@ -50,7 +50,9 @@ export async function insertUnique(model, record, conflictMessage) {
 /** Updates a record by id and returns it; a unique-index clash becomes a 409. */
 export async function updateUnique(model, id, changes, conflictMessage) {
   try {
-    return toRecord(await model.findByIdAndUpdate(id, { $set: changes }, { new: true }).lean());
+    return toRecord(
+      await model.findByIdAndUpdate(id, { $set: changes }, { returnDocument: 'after' }).lean(),
+    );
   } catch (err) {
     if (err?.code === 11000) throw conflict(conflictMessage);
     throw err;
