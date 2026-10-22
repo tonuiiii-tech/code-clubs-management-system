@@ -33,7 +33,7 @@ Everything stays online in this sprint. The data model is designed so Sprint 3 c
 | A consent form already exists (Q41)                                               | We record participation and photo consent and upload the signed form. We need a copy of the blank form to match its wording.                                                       |
 | Facilitators use laptops and tablets (Q35)                                        | Screens are designed tablet-first, and still work on a phone.                                                                                                                      |
 | Internet at club venues is mostly none (Q36)                                      | Sprint 2 works only where there is a connection, so champions will mostly enter records after the session. Enock confirmed on 22 Oct to keep offline in Sprint 3 (D1-5 unchanged). |
-| Learner details at enrolment: "none" ticked, to confirm with HQ (Q15)             | Enock decided on 22 Oct: name, age, grade and school admission number (D2-9).                                                                                                      |
+| Learner details at enrolment: "none" ticked, to confirm with HQ (Q15)             | Enock decided on 22 Oct: name, age, gender, grade and school admission number (D2-9).                                                                                              |
 | Keep records forever after a learner leaves (Q45)                                 | Conflicts with the Data Protection Act's rule to keep personal data no longer than necessary. See R2-6; to discuss with the data protection lead.                                  |
 | Data protection lead: STEAMLabs Africa's named lead (Q44)                         | Owner of R1-13 and R2-6.                                                                                                                                                           |
 | Who uses the system and their permissions: meeting planned (Q34)                  | The four Sprint 1 roles remain an assumption until that meeting.                                                                                                                   |
@@ -76,9 +76,9 @@ All `_id`s are UUID strings (D1-21). All records get `createdAt`, `updatedAt`, `
 | `status`, `joinedAt`, `leftAt` | `active` or `left`; leaving keeps attendance history                                                                                                                              |
 | `accessibilityNeeds`           | Optional, free text, max 200 characters, visible to the club's champions and HQ only                                                                                              |
 
-Required: `firstName`, `lastName`, age (stored as `birthYear`), `grade`. `admissionNumber` is required for school clubs and optional elsewhere. `accessibilityNeeds` is optional. Gender is not collected unless HQ asks for it.
+Required: `firstName`, `lastName`, age (stored as `birthYear`), `gender` (`girl`, `boy`, `prefer_not_to_say`), `grade`. `admissionNumber` is required for school clubs and optional elsewhere. `accessibilityNeeds` is optional. Gender is used for reporting girls' participation and is shown only as totals on dashboards.
 
-Not collected: learner phone or email, gender, full date of birth, home address, national or birth certificate numbers, photos of individual learners.
+Not collected: learner phone or email, full date of birth, home address, national or birth certificate numbers, photos of individual learners.
 
 Learners join by open sign-up (Q16) up to the club's capacity of 30 (Q8); enrolling above capacity is refused.
 
@@ -191,7 +191,7 @@ Every learner, contact, consent and attendance change is written to the audit lo
 - **D2-6** `region` copied onto learners, sessions and attendance for scope queries.
 - **D2-7** Session photos (max 3, about 300 KB each) in GridFS, with a photo-consent confirmation before saving.
 - **D2-8** A learner belongs to one club for life; no club moves (questionnaire Q17).
-- **D2-9** Learner details: name, age (stored as year of birth), grade and school admission number (Enock, 22 Oct).
+- **D2-9** Learner details: name, age (stored as year of birth), gender, grade and school admission number (Enock, 22 Oct).
 
 ## 12. New risks
 
@@ -209,7 +209,7 @@ Every learner, contact, consent and attendance change is written to the audit lo
 
 Answered by the questionnaire: session report contents, who reads guardian contacts, club moves, photos. Still open:
 
-1. Does HQ also want gender, for example to report on girls' participation? (Enock chose name, age, grade and admission number; Q15 said "none", to confirm.)
+1. Can HQ confirm the learner details Enock chose: name, age, gender, grade and school admission number? (Q15 said "none", to confirm.)
 2. Can we have a copy of the blank consent form and the existing session feedback form (Q31)?
 3. Should learners without participation consent be allowed to attend and be marked present?
 4. Is consent collected once, or again every year or term?
