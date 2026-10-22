@@ -2,7 +2,7 @@
 
 A management system for STEAMLabs Africa's code clubs in Kenya: schools, clubs, club champions, and later learners, sessions, attendance, events and reports. It is one installable web app (PWA) for laptops, tablets and phones, in English and Kiswahili. Offline use with sync comes in Sprint 3.
 
-**Status:** Sprint 1. The database is MongoDB (decision D1-8, 22 Oct). Until the MongoDB data layer is built, API routes that read or save data return `501 Not Implemented`; use demo mode to click through the app.
+**Status:** Sprint 1. Data is stored in MongoDB (decision D1-8). Demo mode lets you click through the app without a database.
 
 ## Documentation
 
@@ -28,7 +28,9 @@ You need:
 
 1. **Node.js 24 LTS** from <https://nodejs.org> (choose the LTS installer). Node 22.12 or newer also works.
 2. **Git** from <https://git-scm.com/download/win>.
-3. A database is **not** needed yet. MongoDB setup steps (D1-8) will be added here with the data layer.
+3. **MongoDB** (D1-8). Either:
+   - **MongoDB Atlas free tier (recommended, D1-23):** create a free cluster at <https://www.mongodb.com/cloud/atlas>, add a database user, allow your IP address, and copy the connection string (`mongodb+srv://…`). Add `/code-clubs` before the `?` so the data goes into its own database.
+   - **MongoDB Community Server** installed on your computer: the connection string is `mongodb://localhost:27017/code-clubs`.
 
 Then, in **PowerShell**:
 
@@ -41,10 +43,16 @@ Copy-Item server\.env.example server\.env
 Copy-Item client\.env.example client\.env
 ```
 
-Open `server\.env` in a text editor and set `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` to two different long random strings. You can generate one with:
+Open `server\.env` in a text editor. Set `MONGODB_URI` to your connection string, and set `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` to two different long random strings. You can generate one with:
 
 ```powershell
 node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+```
+
+Load the fictional demo data (the same schools, clubs and people as demo mode; safe to run again):
+
+```powershell
+npm run seed
 ```
 
 Start the API and the web app together:
@@ -55,12 +63,13 @@ npm run dev
 
 - Web app: <http://localhost:5173>
 - API health check: <http://localhost:4000/api/v1/health>
+- Sign in with a seeded account, e.g. `wanjiru.kamau@demo.steamlabs.test` (System Administrator), with the demo password `demo-password-2026` (or `SEED_DEFAULT_PASSWORD` if you set one).
 
 On macOS or Linux, use `cp` instead of `Copy-Item` and `/` instead of `\`.
 
 ### Demo mode (no database needed)
 
-Until the MongoDB data layer is built (D1-8), the API answers data requests with `501 Not implemented`. To click through every screen, run the web app in demo mode:
+To click through every screen without setting up MongoDB, run the web app in demo mode:
 
 ```powershell
 npm run demo
@@ -79,7 +88,7 @@ Open <http://localhost:5173> and use the **Sign in as…** buttons to try each r
 | `npm run format`             | Format with Prettier                                                                          |
 | `npm run build`              | Production build of the PWA                                                                   |
 | `npm run test:e2e -w client` | Playwright browser tests on the demo build (run `npx playwright install chromium` once first) |
-| `npm run seed`               | Development seed data (added once the database is chosen)                                     |
+| `npm run seed`               | Load the fictional demo data into MongoDB (refuses to run in production)                      |
 
 CI runs lint, format check, tests and build on every push and pull request (`.github/workflows/ci.yml`).
 

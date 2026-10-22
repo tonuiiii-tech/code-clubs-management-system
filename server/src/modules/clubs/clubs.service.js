@@ -49,6 +49,7 @@ export async function createClub(actor, scope, input, { requestId }) {
     entityType: 'club',
     entityId: club.id,
     after: input,
+    region: club.region,
     requestId,
   });
   return club;
@@ -56,6 +57,13 @@ export async function createClub(actor, scope, input, { requestId }) {
 
 export async function updateClub(actor, scope, id, changes, { requestId }) {
   const before = await getClub(actor, scope, id);
+  // The shared schema only checks times sent together; check against the saved ones too.
+  const merged = { ...before, ...changes };
+  if (merged.endTime <= merged.startTime) {
+    throw badRequest('Some fields are not valid', [
+      { field: 'body.endTime', message: 'End time must be after start time' },
+    ]);
+  }
   const updated = await repo.updateClubById(id, {
     ...changes,
     updatedAt: new Date(),
@@ -68,6 +76,7 @@ export async function updateClub(actor, scope, id, changes, { requestId }) {
     entityId: id,
     before,
     after: changes,
+    region: updated.region,
     requestId,
   });
   return updated;
@@ -79,7 +88,7 @@ export async function listChampions(actor, scope, clubId) {
 }
 
 export async function assignChampion(actor, scope, clubId, userId, input, { requestId }) {
-  await getClub(actor, scope, clubId);
+  const club = await getClub(actor, scope, clubId);
   const champion = await findUserById(userId);
   if (!champion || champion.status !== 'active' || champion.role !== ROLES.CHAMPION) {
     throw badRequest('Only active Club Champions can be assigned to a club');
@@ -97,13 +106,14 @@ export async function assignChampion(actor, scope, clubId, userId, input, { requ
     entityType: 'club',
     entityId: clubId,
     after: { userId, role: input.role },
+    region: club.region,
     requestId,
   });
   return assignment;
 }
 
 export async function unassignChampion(actor, scope, clubId, userId, { requestId }) {
-  await getClub(actor, scope, clubId);
+  const club = await getClub(actor, scope, clubId);
   await repo.endChampionAssignment(clubId, userId, new Date().toISOString().slice(0, 10));
   await recordAudit({
     actor,
@@ -112,6 +122,7 @@ export async function unassignChampion(actor, scope, clubId, userId, { requestId
     entityId: clubId,
     before: { userId },
     after: { userId: null },
+    region: club.region,
     requestId,
   });
 }

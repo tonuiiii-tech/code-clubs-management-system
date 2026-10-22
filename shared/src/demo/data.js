@@ -1,5 +1,5 @@
 /**
- * Fictional demo data for mock mode (R1-12).
+ * Fictional demo data, used by demo mode (client mock API) and `npm run seed` (D1-22, R1-12).
  * People, schools and organisations are invented. Counties, sub-counties and wards are real places;
  * GPS points are approximate. Phone numbers use the fake +254700000xxx range and emails the
  * reserved .test domain, so nothing here can reach a real person.

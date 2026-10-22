@@ -1,16 +1,59 @@
 /**
- * Development seed data: fictional Kenyan schools, clubs and users across the four regions.
+ * Development seed: the same fictional Kenyan schools, clubs and people as demo mode (D1-22).
  *
  * Rules (R1-12): fictional names only, phone numbers in the fake +254700000xxx range,
- * real counties and sub-counties, and never run against production.
- *
- * The data set is filled in once the database is chosen (decision D1-8).
+ * and never run against production. Safe to run again: records are upserted by their ID,
+ * so it resets the demo records without touching anything else.
  */
+import bcrypt from 'bcrypt';
+import { REGION_CODE_PREFIX } from '@code-clubs/shared/enums';
+import { createSeedData, DEMO_PASSWORD } from '@code-clubs/shared/demo';
 import { env } from '../src/config/env.js';
+import { connectDatabase, disconnectDatabase } from '../src/db/index.js';
+import { Club, ClubChampion, Counter, School, User } from '../src/db/models.js';
+import { toDocument } from '../src/db/records.js';
+import { BCRYPT_COST } from '../src/modules/users/users.service.js';
 
-if (env.NODE_ENV === 'production') {
-  console.error('Refusing to seed: NODE_ENV is production.');
-  process.exit(1);
+export async function seed({ password = env.SEED_DEFAULT_PASSWORD || DEMO_PASSWORD } = {}) {
+  const { users, schools, clubs, assignments } = createSeedData();
+  const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
+  const upsertAll = (model, records) =>
+    model.bulkWrite(
+      records.map((record) => {
+        const doc = toDocument(record);
+        return { replaceOne: { filter: { _id: doc._id }, replacement: doc, upsert: true } };
+      }),
+    );
+
+  await upsertAll(
+    User,
+    users.map((u) => ({ ...u, passwordHash, tokenVersion: 0, failedLogins: 0 })),
+  );
+  await upsertAll(School, schools);
+  await upsertAll(Club, clubs);
+  await ClubChampion.deleteMany({ clubId: { $in: clubs.map((c) => c.id) } });
+  await ClubChampion.insertMany(assignments.map((a) => ({ ...a })));
+
+  // Keep club codes moving forward from the seeded ones (NAC-003 → next is NAC-004).
+  for (const prefix of Object.values(REGION_CODE_PREFIX)) {
+    const highest = clubs
+      .filter((c) => c.code.startsWith(`${prefix}-`))
+      .reduce((max, c) => Math.max(max, Number(c.code.slice(4))), 0);
+    await Counter.updateOne({ _id: prefix }, { $max: { seq: highest } }, { upsert: true });
+  }
+  return { users: users.length, schools: schools.length, clubs: clubs.length };
 }
 
-console.log('Seed script ready. Seed data is added once the database is chosen (decision D1-8).');
+if (process.argv[1]?.endsWith('seed.js')) {
+  if (env.NODE_ENV === 'production') {
+    console.error('Refusing to seed: NODE_ENV is production.');
+    process.exit(1);
+  }
+  await connectDatabase(env.MONGODB_URI);
+  const counts = await seed();
+  console.log(
+    `Seeded ${counts.users} users, ${counts.schools} schools and ${counts.clubs} clubs.`,
+    'Sign in with any demo account, e.g. wanjiru.kamau@demo.steamlabs.test.',
+  );
+  await disconnectDatabase();
+}

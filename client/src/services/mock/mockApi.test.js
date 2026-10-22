@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mockRequest, resetMockDb } from './mockApi.js';
-import { DEMO_PASSWORD, uid } from './data.js';
+import { DEMO_PASSWORD, uid } from '@code-clubs/shared/demo';
 
 const ADMIN = 'wanjiru.kamau@demo.steamlabs.test';
 const COORDINATOR_NAIROBI = 'mwende.mutua@demo.steamlabs.test';

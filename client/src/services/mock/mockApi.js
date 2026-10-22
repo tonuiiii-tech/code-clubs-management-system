@@ -1,5 +1,5 @@
 /**
- * In-browser stand-in for the API while the database is pending (D1-8).
+ * In-browser stand-in for the API, for demos without a server or database (D1-20).
  *
  * It answers the same /api/v1 URLs with the same shapes, status codes and error codes as the
  * real server, validates with the same shared Zod schemas and applies the same permission
@@ -25,7 +25,7 @@ import {
   updateUserSchema,
   updateUserStatusSchema,
 } from '@code-clubs/shared/schemas';
-import { createSeedData, DEMO_PASSWORD } from './data.js';
+import { createSeedData, DEMO_PASSWORD } from '@code-clubs/shared/demo';
 
 const STORAGE_KEY = 'cc-mock-db';
 const INVALID_LOGIN = 'Email or password is incorrect';

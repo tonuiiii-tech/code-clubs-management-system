@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Button, Separator, useToast } from 'steamlabsui';
-import { createSeedData, DEMO_ACCOUNTS, DEMO_PASSWORD, uid } from '../../services/mock/data.js';
+import { createSeedData, DEMO_ACCOUNTS, DEMO_PASSWORD, uid } from '@code-clubs/shared/demo';
 import { resetMockDb } from '../../services/mock/mockApi.js';
 
 const seedUsers = createSeedData().users;

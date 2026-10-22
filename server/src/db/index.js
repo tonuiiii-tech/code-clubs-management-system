@@ -1,18 +1,21 @@
-import { notImplemented } from '../utils/httpError.js';
+import mongoose from 'mongoose';
+import './models.js';
 
 /**
- * Database connection.
- *
- * The engine is still pending (decision D1-8: PostgreSQL or MongoDB).
- * Only repositories (modules/<name>/<name>.repository.js) talk to the database,
- * so choosing the engine changes this file and the repositories, nothing else.
+ * MongoDB connection (D1-8). Only repositories (modules/<name>/<name>.repository.js)
+ * and the files in this folder use Mongoose.
  */
-export async function connectDatabase(_databaseUrl) {
-  // Intentionally empty until D1-8 is decided.
+export async function connectDatabase(uri) {
+  mongoose.set('strictQuery', true);
+  await mongoose.connect(uri, { serverSelectionTimeoutMS: 10_000 });
+  await syncIndexes();
 }
 
-export async function disconnectDatabase() {}
+/** Builds the indexes declared in models.js (unique email, club code, duplicate school check…). */
+export async function syncIndexes() {
+  await Promise.all(Object.values(mongoose.models).map((model) => model.syncIndexes()));
+}
 
-/** Thrown by repository stubs until the database is chosen. */
-export const databasePending = () =>
-  notImplemented('Database not configured yet (decision D1-8: PostgreSQL or MongoDB)');
+export async function disconnectDatabase() {
+  await mongoose.disconnect();
+}

@@ -3,7 +3,7 @@ import { ROLES } from '@code-clubs/shared/enums';
 
 /**
  * Turns a user's scope into an engine-neutral filter that repositories apply (D1-4, D1-16).
- * Repositories translate it into SQL or a Mongo query once D1-8 is decided.
+ * Repositories turn it into a MongoDB query (server/src/db/scopeQueries.js).
  *
  * @returns {{ all: true } | { regions: string[] } | { championUserId: string } | { userId: string }}
  */

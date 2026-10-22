@@ -2,7 +2,7 @@ import { jest } from '@jest/globals';
 import request from 'supertest';
 
 /**
- * Resource-scope tests (D1-4). The database is still pending (D1-8), so the
+ * Resource-scope tests (D1-4) without a database: the
  * repositories are replaced with test doubles. The rules under test live in
  * middleware and services, which do not change when the database is chosen.
  */

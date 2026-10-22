@@ -10,7 +10,7 @@ export default defineConfig({
     }),
   },
   webServer: {
-    // Demo build: the mock API stands in for the server while the database is pending (D1-8).
+    // Demo build: the in-browser mock API stands in for the server, so no database is needed (D1-20).
     command: 'npm run build:demo && npm run preview -- --port 4173',
     port: 4173,
     reuseExistingServer: true,

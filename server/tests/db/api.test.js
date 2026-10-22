@@ -1,0 +1,201 @@
+import request from 'supertest';
+import { uid } from '@code-clubs/shared/demo';
+import { clearDatabase, useTestDatabase } from '../support/database.js';
+import { seed } from '../../scripts/seed.js';
+import { createApp } from '../../src/app.js';
+import * as authService from '../../src/modules/auth/auth.service.js';
+
+/**
+ * The real API on a real (in-memory) MongoDB with the demo data. Mirrors the rules the
+ * demo mock API is tested for (client/src/services/mock/mockApi.test.js), so both agree (R1-19).
+ */
+useTestDatabase();
+
+const app = createApp();
+const PASSWORD = 'test-password-123';
+const EMAIL = {
+  admin: 'wanjiru.kamau@demo.steamlabs.test',
+  pm: 'otieno.ouma@demo.steamlabs.test',
+  coordinator: 'mwende.mutua@demo.steamlabs.test',
+  champion: 'faith.njeri@demo.steamlabs.test',
+  champion2: 'kevin.omondi@demo.steamlabs.test',
+};
+
+/** Each sign-in uses a different email, so the login rate limit (5 per email) is not hit. */
+async function signIn(email) {
+  const res = await request(app).post('/api/v1/auth/login').send({ email, password: PASSWORD });
+  expect(res.status).toBe(200);
+  return { token: res.body.data.accessToken, cookie: res.headers['set-cookie'] };
+}
+const auth = (token) => ({ Authorization: `Bearer ${token}` });
+
+beforeAll(async () => {
+  await clearDatabase();
+  await seed({ password: PASSWORD });
+});
+
+describe('API on MongoDB', () => {
+  let admin;
+  let coordinator;
+  let champion;
+  beforeAll(async () => {
+    admin = await signIn(EMAIL.admin);
+    coordinator = await signIn(EMAIL.coordinator);
+    champion = await signIn(EMAIL.champion);
+  });
+
+  it('signs in and never returns password hashes', async () => {
+    const res = await request(app).get('/api/v1/users').set(auth(admin.token));
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(14);
+    expect(JSON.stringify(res.body)).not.toMatch(/passwordHash|tokenVersion/);
+  });
+
+  it('lets a champion see only their clubs, and 404s other clubs', async () => {
+    const list = await request(app).get('/api/v1/clubs').set(auth(champion.token));
+    expect(list.body.data.map((c) => c.code)).toEqual(['NAC-001', 'NAC-002']);
+    const other = await request(app)
+      .get(`/api/v1/clubs/${uid(204)}`)
+      .set(auth(champion.token));
+    expect(other.status).toBe(404);
+  });
+
+  it('keeps a coordinator in their region', async () => {
+    const list = await request(app).get('/api/v1/clubs').set(auth(coordinator.token));
+    expect(new Set(list.body.data.map((c) => c.region))).toEqual(new Set(['nairobi_central']));
+    const outside = await request(app).post('/api/v1/schools').set(auth(coordinator.token)).send({
+      name: 'Kondele Learning Hub',
+      type: 'community_centre',
+      region: 'western_nyanza',
+      county: 'Kisumu',
+      subCounty: 'Kisumu Central',
+    });
+    expect(outside.status).toBe(403);
+  });
+
+  it('creates a school, blocks its duplicate, then creates a club with the next code', async () => {
+    const body = {
+      name: 'Gatina Primary School',
+      type: 'primary_school',
+      region: 'nairobi_central',
+      county: 'Nairobi',
+      subCounty: 'Dagoretti North',
+      contactPhone: '+254700000999',
+    };
+    const school = await request(app)
+      .post('/api/v1/schools')
+      .set(auth(coordinator.token))
+      .send(body);
+    expect(school.status).toBe(201);
+
+    const dup = await request(app)
+      .post('/api/v1/schools')
+      .set(auth(admin.token))
+      .send({ ...body, name: 'gatina primary school' });
+    expect(dup.status).toBe(409);
+
+    const club = await request(app).post('/api/v1/clubs').set(auth(coordinator.token)).send({
+      name: 'Gatina Code Club',
+      schoolId: school.body.data.id,
+      venueType: 'primary_school',
+      meetingDay: 'wednesday',
+      startTime: '16:00',
+      endTime: '17:00',
+      mainTrack: 'scratch',
+    });
+    expect(club.status).toBe(201);
+    expect(club.body.data).toMatchObject({ code: 'NAC-004', region: 'nairobi_central' });
+
+    const badTime = await request(app)
+      .patch(`/api/v1/clubs/${club.body.data.id}`)
+      .set(auth(coordinator.token))
+      .send({ endTime: '15:00' });
+    expect(badTime.status).toBe(400);
+  });
+
+  it('assigns and ends a champion assignment, and records it in the audit log', async () => {
+    const club = uid(209);
+    const put = await request(app)
+      .put(`/api/v1/clubs/${club}/champions/${uid(16)}`)
+      .set(auth(admin.token))
+      .send({ role: 'lead' });
+    expect(put.status).toBe(200);
+    let list = await request(app).get(`/api/v1/clubs/${club}/champions`).set(auth(admin.token));
+    expect(list.body.data).toEqual([
+      expect.objectContaining({ fullName: 'Joseph Mutiso', role: 'lead' }),
+    ]);
+
+    const del = await request(app)
+      .delete(`/api/v1/clubs/${club}/champions/${uid(16)}`)
+      .set(auth(admin.token));
+    expect(del.status).toBe(204);
+    list = await request(app).get(`/api/v1/clubs/${club}/champions`).set(auth(admin.token));
+    expect(list.body.data).toEqual([]);
+
+    const log = await request(app).get('/api/v1/audit').set(auth(admin.token));
+    expect(log.body.data.map((e) => e.action)).toEqual(
+      expect.arrayContaining(['club.assignChampion', 'club.unassignChampion']),
+    );
+  });
+
+  it('returns dashboard counts within scope', async () => {
+    const res = await request(app).get('/api/v1/dashboard/summary').set(auth(champion.token));
+    expect(res.body.data).toMatchObject({ activeClubs: 2, schools: 2 });
+  });
+
+  it('creates a user with a temporary password that works once', async () => {
+    const res = await request(app)
+      .post('/api/v1/users')
+      .set(auth(admin.token))
+      .send({
+        fullName: 'Zawadi Chepngetich',
+        email: 'zawadi.chepngetich@demo.steamlabs.test',
+        role: 'champion',
+        championProfile: { type: 'volunteer' },
+      });
+    expect(res.status).toBe(201);
+    const login = await request(app).post('/api/v1/auth/login').send({
+      email: 'zawadi.chepngetich@demo.steamlabs.test',
+      password: res.body.temporaryPassword,
+    });
+    expect(login.status).toBe(200);
+  });
+});
+
+describe('Sessions on MongoDB', () => {
+  it('rotates refresh tokens and revokes the family when an old one is reused', async () => {
+    const { cookie } = await signIn(EMAIL.pm);
+    const first = await request(app).post('/api/v1/auth/refresh').set('Cookie', cookie);
+    expect(first.status).toBe(200);
+    const reused = await request(app).post('/api/v1/auth/refresh').set('Cookie', cookie);
+    expect(reused.status).toBe(401);
+    const afterReuse = await request(app)
+      .post('/api/v1/auth/refresh')
+      .set('Cookie', first.headers['set-cookie']);
+    expect(afterReuse.status).toBe(401);
+  });
+
+  it('ends existing sessions when a user is deactivated (R1-4)', async () => {
+    const admin = await signIn('wanjiru.kamau@demo.steamlabs.test');
+    const victim = await signIn(EMAIL.champion2);
+    await request(app)
+      .patch(`/api/v1/users/${uid(14)}/status`)
+      .set(auth(admin.token))
+      .send({ status: 'inactive' })
+      .expect(200);
+    const res = await request(app).get('/api/v1/clubs').set(auth(victim.token));
+    expect(res.status).toBe(401);
+  });
+
+  it('locks an account after five wrong passwords', async () => {
+    const email = 'achieng.odhiambo@demo.steamlabs.test';
+    for (let i = 0; i < 5; i += 1) {
+      await expect(authService.login({ email, password: 'wrong' }, {})).rejects.toMatchObject({
+        status: 401,
+      });
+    }
+    await expect(authService.login({ email, password: PASSWORD }, {})).rejects.toMatchObject({
+      status: 401,
+    });
+  });
+});

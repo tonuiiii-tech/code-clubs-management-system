@@ -40,6 +40,7 @@ export async function createSchool(actor, scope, input, { requestId }) {
     entityType: 'school',
     entityId: school.id,
     after: input,
+    region: school.region,
     requestId,
   });
   return school;
@@ -59,6 +60,7 @@ export async function updateSchool(actor, scope, id, changes, { requestId }) {
     entityId: id,
     before,
     after: changes,
+    region: updated.region,
     requestId,
   });
   return updated;

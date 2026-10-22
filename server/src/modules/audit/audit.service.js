@@ -22,6 +22,7 @@ export async function recordAudit({
   entityId,
   before = {},
   after = {},
+  region,
   requestId,
 }) {
   const changedFields = Object.keys(after)
@@ -38,6 +39,8 @@ export async function recordAudit({
     action,
     entityType,
     entityId,
+    // Lets coordinators see the history of their own region's schools and clubs.
+    region: region ?? null,
     changedFields,
     requestId,
   });

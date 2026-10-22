@@ -5,7 +5,7 @@
  */
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api/v1';
 
-/** Demo mode while the database is pending (D1-8). Vite removes the mock code from real builds. */
+/** Demo mode: no server or database needed (D1-20). Vite removes the mock code from real builds. */
 export const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
 
 let accessToken = null;

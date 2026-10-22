@@ -192,7 +192,7 @@ Prefix: `/api/v1`. Endpoints for Sprint 1 are listed in `docs/sprints/sprint-1.m
 - Consistent JSON responses: `{ data }` for one record, `{ data, page, pageSize, total }` for lists, `{ error: { code, message, details? } }` for errors.
 - Validate request bodies, route parameters and query parameters.
 - Never expose password hashes, tokens or stack traces.
-- **Demo mode (D1-20):** while the database is pending, `npm run demo` points the web app at an in-browser mock of this API (`client/src/services/mock/`). It reuses the shared schemas and permission policy, so the screens and their role rules can be shown and tested now. It is not part of real builds.
+- **Demo mode (D1-20):** `npm run demo` points the web app at an in-browser mock of this API (`client/src/services/mock/`). It reuses the shared schemas and permission policy, so the screens and their role rules can be shown and tested without a server or database. It is not part of real builds.
 
 ## 10. Offline strategy
 

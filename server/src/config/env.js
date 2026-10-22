@@ -8,7 +8,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
-  DATABASE_URL: z.string().optional(),
+  MONGODB_URI: z.string().optional(),
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
   SEED_DEFAULT_PASSWORD: z.string().optional(),
@@ -25,6 +25,11 @@ export function loadEnv(source = process.env) {
   if (!result.success) {
     const problems = result.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`);
     throw new Error(`Invalid environment configuration:\n${problems.join('\n')}`);
+  }
+  if (!result.data.MONGODB_URI && result.data.NODE_ENV !== 'test') {
+    throw new Error(
+      'Invalid environment configuration:\n  - MONGODB_URI: set it in server/.env (see README)',
+    );
   }
   return Object.freeze(result.data);
 }
