@@ -126,6 +126,8 @@ test('a champion registers a learner, records consent, reports a session and tak
   // US-07 and US-08: register with a guardian contact the champion cannot read back.
   await nav.getByRole('link', { name: 'Learners' }).click();
   await page.getByRole('link', { name: 'Register learner' }).click();
+  // The list page also has a "Club" filter, so wait for the form before filling it.
+  await expect(page.getByRole('heading', { name: 'Register learner' })).toBeVisible();
   await page.getByLabel(field('Club')).selectOption({ label: 'NAC-001 · Mwangaza Scratch Stars' });
   await page.getByLabel(field('First name')).fill(first);
   await page.getByLabel(field('Last name')).fill('Kamau');
@@ -161,6 +163,7 @@ test('a champion registers a learner, records consent, reports a session and tak
   // US-10: report a session. Real data persists, so pick a free day in the edit window.
   await nav.getByRole('link', { name: 'Sessions' }).click();
   await page.getByRole('link', { name: 'Report a session' }).click();
+  await expect(page.getByRole('heading', { name: 'Report a session' })).toBeVisible();
   await page.getByLabel(field('Club')).selectOption({ label: 'NAC-001 · Mwangaza Scratch Stars' });
   await page
     .getByLabel(field('Date'))

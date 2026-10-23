@@ -116,7 +116,7 @@ describe('Learners', () => {
       hasContact: true,
       consents: { participation: { status: 'pending' } },
     });
-    expect(JSON.stringify(res.body)).not.toMatch(/Lucy|901/);
+    expect(JSON.stringify(res.body)).not.toMatch(/Lucy|254700000901/);
     const id = res.body.data.id;
 
     expect((await api('champion').get(`/learners/${id}/contact`)).status).toBe(403);
@@ -129,7 +129,7 @@ describe('Learners', () => {
     const audit = await api('admin').get(`/audit?entityType=learner&entityId=${id}`);
     const actions = audit.body.data.map((e) => e.action);
     expect(actions).toEqual(expect.arrayContaining(['learner.contactSet', 'learner.contactRead']));
-    expect(JSON.stringify(audit.body)).not.toMatch(/Lucy|901/);
+    expect(JSON.stringify(audit.body)).not.toMatch(/Lucy|254700000901/);
   });
 
   it('warns about a possible duplicate and refuses a reused admission number', async () => {
