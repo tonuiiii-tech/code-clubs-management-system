@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { ATTENDANCE_STATUSES, CLUB_MAX_CAPACITY, SESSION_STATUSES } from '../enums.js';
+import {
+  ATTENDANCE_STATUSES,
+  CLUB_MAX_CAPACITY,
+  SESSION_EDIT_DAYS,
+  SESSION_STATUSES,
+} from '../enums.js';
 import { idSchema, paginationSchema, timeSchema } from './common.js';
 
 /** A session report: what the questionnaire asked for (Q20) plus the date. */
@@ -72,3 +77,12 @@ export const listSessionsQuerySchema = paginationSchema.extend({
   from: z.iso.date().optional(),
   to: z.iso.date().optional(),
 });
+
+/**
+ * True while a champion may still change a session's report: up to 7 days after its date (D2-5).
+ * Coordinators and HQ have `session:editLate` and are not limited. Dates are YYYY-MM-DD.
+ */
+export function sessionEditWindowOpen(date, now = new Date()) {
+  const earliest = new Date(now.getTime() - SESSION_EDIT_DAYS * 24 * 60 * 60 * 1000);
+  return date >= earliest.toISOString().slice(0, 10);
+}

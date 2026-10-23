@@ -37,10 +37,15 @@ import {
 } from '../../services/clubsService.js';
 import { getSchool } from '../../services/schoolsService.js';
 import { listUsers } from '../../services/usersService.js';
+import { listLearners } from '../../services/learnersService.js';
+import { listSessions } from '../../services/sessionsService.js';
+import { ConsentBadges } from '../../components/ConsentBadges.jsx';
+import { SessionTable } from '../Sessions/SessionsPage.jsx';
 
 export function ClubDetailPage() {
   const { id } = useParams();
   const { t } = useTranslation();
+  const { can } = useAuth();
   const club = useApi(getClub, id);
   const data = club.data?.data;
 
@@ -61,6 +66,8 @@ export function ClubDetailPage() {
           <div className="page-grid">
             <ClubDetails club={data} />
             <ClubChampions club={data} />
+            {can('learner:read') && <ClubLearners club={data} />}
+            {can('session:read') && <ClubSessions club={data} />}
           </div>
         )}
       </DataState>
@@ -291,5 +298,107 @@ function AssignChampionDialog({ club, current, onClose, onAssigned }) {
         )}
       </DataState>
     </Dialog>
+  );
+}
+
+const activeLearners = (clubId) => listLearners({ clubId, status: 'active', pageSize: 100 });
+const recentSessions = (clubId) => listSessions({ clubId, pageSize: 5 });
+
+/** The club's learners with their consent, so missing consent is visible here (US-09). */
+function ClubLearners({ club }) {
+  const { t } = useTranslation();
+  const { can } = useAuth();
+  const learners = useApi(activeLearners, club.id);
+  const rows = learners.data?.data ?? [];
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="row-between">
+          <div>
+            <CardTitle>{t('clubs.learners')}</CardTitle>
+            {learners.data && (
+              <small className="muted">
+                {t('clubs.learnerCount', { count: rows.length, capacity: club.capacity })}
+              </small>
+            )}
+          </div>
+          <span className="badge-row">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to={`/learners?clubId=${club.id}`}>{t('sessions.viewAll')}</Link>
+            </Button>
+            {can('learner:write') && club.status === 'active' && (
+              <Button size="sm" asChild>
+                <Link to={`/learners/new?clubId=${club.id}`}>{t('learners.add')}</Link>
+              </Button>
+            )}
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <DataState
+          loading={learners.loading}
+          error={learners.error}
+          isEmpty={rows.length === 0}
+          emptyTitle={t('clubs.noLearners')}
+          onRetry={learners.reload}
+        >
+          <List>
+            {rows.map((l) => (
+              <ListItem
+                key={l.id}
+                title={
+                  <TextLink asChild arrow={false}>
+                    <Link to={`/learners/${l.id}`}>
+                      {l.firstName} {l.lastName}
+                    </Link>
+                  </TextLink>
+                }
+                description={`${l.learnerNumber} · ${t(`grades.${l.grade}`)}`}
+                trailing={<ConsentBadges consents={l.consents} />}
+              />
+            ))}
+          </List>
+        </DataState>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ClubSessions({ club }) {
+  const { t } = useTranslation();
+  const { can } = useAuth();
+  const sessions = useApi(recentSessions, club.id);
+  const rows = sessions.data?.data ?? [];
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="row-between">
+          <CardTitle>{t('sessions.recent')}</CardTitle>
+          <span className="badge-row">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to={`/sessions?clubId=${club.id}`}>{t('sessions.viewAll')}</Link>
+            </Button>
+            {can('session:write') && club.status === 'active' && (
+              <Button size="sm" asChild>
+                <Link to={`/sessions/new?clubId=${club.id}`}>{t('sessions.add')}</Link>
+              </Button>
+            )}
+          </span>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <DataState
+          loading={sessions.loading}
+          error={sessions.error}
+          isEmpty={rows.length === 0}
+          emptyTitle={t('clubs.noSessions')}
+          onRetry={sessions.reload}
+        >
+          <SessionTable rows={rows} />
+        </DataState>
+      </CardContent>
+    </Card>
   );
 }

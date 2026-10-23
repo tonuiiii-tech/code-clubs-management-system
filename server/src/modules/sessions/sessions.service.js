@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { SESSION_EDIT_DAYS, SESSION_MAX_PHOTOS } from '@code-clubs/shared/enums';
+import { SESSION_MAX_PHOTOS } from '@code-clubs/shared/enums';
+import { sessionEditWindowOpen } from '@code-clubs/shared/schemas';
 import { scopeFor } from '@code-clubs/shared/permissions';
 import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 import { BUCKETS, deleteFile, readFile, saveFile } from '../../db/files.js';
@@ -11,16 +12,14 @@ import { getClub } from '../clubs/clubs.service.js';
 import { withoutPhotoConsent } from '../learners/learners.repository.js';
 import * as repo from './sessions.repository.js';
 
-const isoDate = (date) => date.toISOString().slice(0, 10);
-const today = () => isoDate(new Date());
-const daysAgo = (n) => isoDate(new Date(Date.now() - n * 24 * 60 * 60 * 1000));
+const today = () => new Date().toISOString().slice(0, 10);
 
 /**
  * Champions can change a session report for 7 days after the session; coordinators (in their
  * regions) and HQ at any time (D2-5).
  */
 function assertEditable(actor, date) {
-  if (date >= daysAgo(SESSION_EDIT_DAYS)) return;
+  if (sessionEditWindowOpen(date)) return;
   if (scopeFor(actor, 'session:editLate')) return;
   throw forbidden(ERROR_MESSAGES.sessionLocked);
 }

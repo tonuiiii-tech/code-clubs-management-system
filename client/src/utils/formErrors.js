@@ -12,6 +12,9 @@ const KNOWN_MESSAGES = {
   'Use HH:mm': 'validation.time',
   'Password is required': 'validation.required',
   'Current password is incorrect': 'validation.currentPassword',
+  'Add the topic covered': 'validation.topicRequired',
+  'A session in the future can only be planned': 'validation.futurePlanned',
+  'Admission number is required for school clubs': 'validation.admissionRequired',
 };
 
 function translateIssue(t, issue) {

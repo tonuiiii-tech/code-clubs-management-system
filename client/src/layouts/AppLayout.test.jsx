@@ -29,6 +29,8 @@ describe('navigation follows the permission policy', () => {
     expect(renderAs('system_admin')).toEqual([
       'Dashboard',
       'Clubs',
+      'Learners',
+      'Sessions',
       'Schools',
       'Users',
       'My profile',
@@ -36,6 +38,13 @@ describe('navigation follows the permission policy', () => {
   });
 
   it('hides user management from a Club Champion', () => {
-    expect(renderAs('champion')).toEqual(['Dashboard', 'Clubs', 'Schools', 'My profile']);
+    expect(renderAs('champion')).toEqual([
+      'Dashboard',
+      'Clubs',
+      'Learners',
+      'Sessions',
+      'Schools',
+      'My profile',
+    ]);
   });
 });

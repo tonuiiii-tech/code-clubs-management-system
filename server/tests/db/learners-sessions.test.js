@@ -57,12 +57,11 @@ const api = (role) => ({
   put: (url, body) => request(app).put(`/api/v1${url}`).set(auth(tokens[role])).send(body),
   patch: (url, body) => request(app).patch(`/api/v1${url}`).set(auth(tokens[role])).send(body),
   delete: (url) => request(app).delete(`/api/v1${url}`).set(auth(tokens[role])),
-  upload: (method, url, buffer, type) =>
-    request(app)
-      [method](`/api/v1${url}`)
-      .set(auth(tokens[role]))
-      .set('Content-Type', type)
-      .send(buffer),
+  upload: (method, url, buffer, type) => {
+    const agent = request(app);
+    const call = method === 'put' ? agent.put(`/api/v1${url}`) : agent.post(`/api/v1${url}`);
+    return call.set(auth(tokens[role])).set('Content-Type', type).send(buffer);
+  },
 });
 
 const newLearner = (extra = {}) => ({
