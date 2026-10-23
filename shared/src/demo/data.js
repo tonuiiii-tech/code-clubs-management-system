@@ -270,7 +270,153 @@ export function createSeedData() {
     assign(12, 14, 'assistant'),
   ];
 
-  return { users, schools, clubs, assignments, sessions: {} };
+  return {
+    users,
+    schools,
+    clubs,
+    assignments,
+    ...createLearnerData(clubs),
+  };
+}
+
+/**
+ * Sprint 2: fictional learners, guardian contacts, consent, sessions and attendance (R2-1).
+ * Session dates are counted back from today, so the 7-day edit window (D2-5) always has one
+ * open and one locked session to show.
+ */
+function createLearnerData(clubs, today = new Date()) {
+  const byCode = Object.fromEntries(clubs.map((c) => [c.code, c]));
+  const year = today.getFullYear();
+  const learner = (n, code, firstName, lastName, age, gender, grade, extra = {}) => {
+    const club = byCode[code];
+    return {
+      id: uid(1000 + n),
+      learnerNumber: `${code}-${String(n % 100).padStart(3, '0')}`,
+      firstName,
+      lastName,
+      birthYear: year - age,
+      gender,
+      grade,
+      ...(club.venueType === 'primary_school' && { admissionNumber: `ADM-${4100 + n}` }),
+      clubId: club.id,
+      schoolId: club.schoolId,
+      region: club.region,
+      status: 'active',
+      joinedAt: '2026-01-20',
+      leftAt: null,
+      ...stamp,
+      ...extra,
+    };
+  };
+  const learners = [
+    learner(1, 'NAC-001', 'Zawadi', 'Mwangi', 11, 'girl', 'grade_6'),
+    learner(2, 'NAC-001', 'Baraka', 'Otieno', 12, 'boy', 'grade_6'),
+    learner(3, 'NAC-001', 'Imani', 'Wekesa', 10, 'girl', 'grade_5'),
+    learner(4, 'NAC-001', 'Tumaini', 'Kiplagat', 13, 'boy', 'grade_7'),
+    learner(5, 'NAC-001', 'Neema', 'Achieng', 9, 'girl', 'grade_4', {
+      accessibilityNeeds: 'Sits near the front to see the screen',
+    }),
+    learner(6, 'NAC-001', 'Jabari', 'Mutua', 11, 'prefer_not_to_say', 'grade_6', {
+      status: 'left',
+      leftAt: '2026-09-30',
+    }),
+    learner(7, 'NAC-002', 'Amani', 'Njoroge', 12, 'girl', 'grade_7'),
+    learner(8, 'NAC-002', 'Kamau', 'Gitau', 14, 'boy', 'grade_8'),
+    learner(9, 'NAC-002', 'Wairimu', 'Karanja', 10, 'girl', 'grade_5'),
+    learner(10, 'WNY-001', 'Akinyi', 'Ouma', 11, 'girl', 'grade_6'),
+    learner(11, 'WNY-001', 'Odhiambo', 'Ochieng', 12, 'boy', 'grade_7'),
+    learner(12, 'CST-001', 'Mwanaisha', 'Bakari', 13, 'girl', 'grade_8'),
+  ];
+
+  const guardians = [
+    ['Rehema Mwangi', 'mother'],
+    ['Samuel Otieno', 'father'],
+    ['Esther Wekesa', 'mother'],
+    ['Daniel Kiplagat', 'guardian'],
+  ];
+  const learnerContacts = guardians.map(([guardianName, relationship], i) => ({
+    id: uid(1301 + i),
+    learnerId: uid(1001 + i),
+    guardianName,
+    relationship,
+    phone: phone(500 + i),
+  }));
+
+  const consent = (n, type, status) => {
+    const l = learners[n - 1];
+    return {
+      id: uid(1400 + n * 2 + (type === 'photo' ? 1 : 0)),
+      learnerId: l.id,
+      clubId: l.clubId,
+      region: l.region,
+      type,
+      status,
+      signedOn: '2026-01-20',
+      fileId: null,
+      ...stamp,
+    };
+  };
+  // Learner 3 has no photo consent and learner 5 none at all, so the warnings can be seen.
+  const consents = [
+    consent(1, 'participation', 'given'),
+    consent(1, 'photo', 'given'),
+    consent(2, 'participation', 'given'),
+    consent(2, 'photo', 'given'),
+    consent(3, 'participation', 'given'),
+    consent(3, 'photo', 'refused'),
+    consent(4, 'participation', 'given'),
+    consent(4, 'photo', 'given'),
+    consent(7, 'participation', 'given'),
+    consent(8, 'participation', 'given'),
+    consent(10, 'participation', 'given'),
+    consent(10, 'photo', 'given'),
+  ];
+
+  const daysAgo = (n) => new Date(today.getTime() - n * 86_400_000).toISOString().slice(0, 10);
+  const session = (n, code, days, topic, notes) => {
+    const club = byCode[code];
+    return {
+      id: uid(1600 + n),
+      clubId: club.id,
+      region: club.region,
+      date: daysAgo(days),
+      status: 'held',
+      topic,
+      notes,
+      startTime: club.startTime,
+      endTime: club.endTime,
+      photoIds: [],
+      reportedBy: uid(11),
+      reportedAt: created,
+      ...stamp,
+    };
+  };
+  const sessions = [
+    session(1, 'NAC-001', 15, 'Scratch: moving sprites', 'Two laptops would not start.'),
+    session(2, 'NAC-001', 8, 'Scratch: loops and repeat blocks', 'Everyone finished the maze.'),
+    session(3, 'NAC-001', 1, 'Scratch: variables and scores', 'Learners asked for a quiz game.'),
+    session(4, 'WNY-001', 6, 'Scratch: drawing with the pen', 'Power cut for 20 minutes.'),
+  ];
+  const marks = {
+    1: { 1: 'present', 2: 'present', 3: 'absent', 4: 'present', 5: 'late' },
+    2: { 1: 'present', 2: 'excused', 3: 'present', 4: 'present', 5: 'present' },
+    3: { 1: 'present', 2: 'present', 3: 'present', 4: 'absent', 5: 'present' },
+    4: { 10: 'present', 11: 'present' },
+  };
+  const attendance = sessions.flatMap((s, i) =>
+    Object.entries(marks[i + 1]).map(([n, status]) => ({
+      id: uid(1700 + (i + 1) * 20 + Number(n)),
+      sessionId: s.id,
+      learnerId: uid(1000 + Number(n)),
+      clubId: s.clubId,
+      region: s.region,
+      date: s.date,
+      status,
+      ...stamp,
+    })),
+  );
+
+  return { learners, learnerContacts, consents, sessions, attendance };
 }
 
 /** One account per role for the "Sign in as" buttons on the login page (mock mode only). */

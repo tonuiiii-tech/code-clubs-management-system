@@ -36,6 +36,31 @@ export const ERROR_MESSAGES = Object.freeze({
   clubOwnRegion: 'You can only add clubs in your own region',
   onlineClubsNotSupported: 'Online clubs are not supported yet',
   onlyActiveChampions: 'Only active Club Champions can be assigned to a club',
+  clubInactive: 'The club is not active',
+  clubFull: 'This club is full',
+  // Learners
+  learnerNotFound: 'Learner not found',
+  duplicateLearner: 'A learner with this name and age is already in this club',
+  duplicateAdmissionNumber:
+    'A learner with this admission number is already registered at this school',
+  admissionNumberRequired: 'Admission number is required for school clubs',
+  contactNotFound: 'No guardian contact has been recorded',
+  consentFileNotFound: 'No consent form has been uploaded',
+  // Files
+  fileTypeNotAllowed: 'Upload a JPG, PNG or PDF file',
+  photoTypeNotAllowed: 'Upload a JPG or PNG photo',
+  fileTooLarge: 'The file is larger than 5 MB',
+  // Sessions
+  sessionNotFound: 'Session not found',
+  duplicateSession: 'This club already has a session on this date',
+  sessionLocked: 'This session report is older than 7 days. Ask your coordinator to change it.',
+  futureSessionPlanned: 'A session in the future can only be planned',
+  attendanceHeldOnly: 'Attendance can only be taken for a session that was held',
+  attendanceNotInClub: 'Some learners are not active members of this club',
+  tooManyPhotos: 'A session can have at most 3 photos',
+  photoConsentMissing:
+    'Some learners present have no photo consent. Confirm they are not in the photo.',
+  photoNotFound: 'Photo not found',
 });
 
 const KEY_BY_MESSAGE = new Map(Object.entries(ERROR_MESSAGES).map(([key, text]) => [text, key]));

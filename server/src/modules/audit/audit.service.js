@@ -9,6 +9,10 @@ const REDACTED = new Set([
   'refreshToken',
   'contactPhone',
   'phone',
+  // Guardian contacts and learner details that are not needed to follow a change (D2-1).
+  'guardianName',
+  'altPhone',
+  'accessibilityNeeds',
 ]);
 
 /**

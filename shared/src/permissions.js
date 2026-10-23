@@ -52,8 +52,51 @@ export const POLICY = Object.freeze({
 
   'audit:read': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL, [COORDINATOR]: ASSIGNED },
 
-  // Sprint 2: guardian contacts are HQ-only unless granted to one person.
+  // Sprint 2. Learners belong to a club, so "assigned" means the coordinator's regions or the
+  // champion's clubs, as for clubs.
+  'learner:read': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+    [CHAMPION]: ASSIGNED,
+  },
+  'learner:write': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+    [CHAMPION]: ASSIGNED,
+  },
+  // Guardian contacts: anyone who registers a learner can enter one, but only STEAMLabs HQ can
+  // read it back (questionnaire Q43, D2-1), unless granted to one person.
+  'learnerContact:write': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+    [CHAMPION]: ASSIGNED,
+  },
   'learnerContact:read': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL },
+  // Consent: champions record it and upload the signed form; only HQ and coordinators open it.
+  'consent:write': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+    [CHAMPION]: ASSIGNED,
+  },
+  'consentFile:read': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL, [COORDINATOR]: ASSIGNED },
+  'session:read': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+    [CHAMPION]: ASSIGNED,
+  },
+  'session:write': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+    [CHAMPION]: ASSIGNED,
+  },
+  // Changing a session report after the edit window (D2-5).
+  'session:editLate': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL, [COORDINATOR]: ASSIGNED },
 });
 
 export const PERMISSIONS = Object.freeze(Object.keys(POLICY));

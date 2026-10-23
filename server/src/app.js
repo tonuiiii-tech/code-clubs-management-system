@@ -9,6 +9,8 @@ import { authRouter } from './modules/auth/auth.routes.js';
 import { usersRouter } from './modules/users/users.routes.js';
 import { schoolsRouter } from './modules/schools/schools.routes.js';
 import { clubsRouter } from './modules/clubs/clubs.routes.js';
+import { learnersRouter } from './modules/learners/learners.routes.js';
+import { sessionsRouter } from './modules/sessions/sessions.routes.js';
 import { auditRouter } from './modules/audit/audit.routes.js';
 import { dashboardRouter } from './modules/dashboard/dashboard.routes.js';
 
@@ -30,6 +32,8 @@ export function createApp() {
   api.use('/users', usersRouter);
   api.use('/schools', schoolsRouter);
   api.use('/clubs', clubsRouter);
+  api.use('/learners', learnersRouter);
+  api.use('/sessions', sessionsRouter);
   api.use('/audit', auditRouter);
   api.use('/dashboard', dashboardRouter);
   app.use('/api/v1', api);

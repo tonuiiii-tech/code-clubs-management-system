@@ -1,5 +1,9 @@
 import {
+  attendanceSchema,
+  birthYearFromAge,
   createClubSchema,
+  createLearnerSchema,
+  createSessionSchema,
   createSchoolSchema,
   createUserSchema,
   updateOwnProfileSchema,
@@ -76,5 +80,59 @@ describe('User schemas', () => {
   it('does not let users change their own role or status', () => {
     expect(updateOwnProfileSchema.safeParse({ role: 'system_admin' }).success).toBe(false);
     expect(updateOwnProfileSchema.safeParse({ status: 'active' }).success).toBe(false);
+  });
+});
+
+const validLearner = {
+  clubId: '0f8fad5b-d9cb-469f-a165-70867728950e',
+  firstName: 'Zawadi',
+  lastName: 'Mwangi',
+  age: 11,
+  gender: 'girl',
+  grade: 'grade_6',
+};
+
+describe('Learner schema (D2-2, D2-9)', () => {
+  it('accepts only the agreed fields', () => {
+    expect(createLearnerSchema.safeParse(validLearner).success).toBe(true);
+    expect(
+      createLearnerSchema.safeParse({ ...validLearner, dateOfBirth: '2015-01-01' }).success,
+    ).toBe(false);
+    expect(createLearnerSchema.safeParse({ ...validLearner, phone: '+254700000001' }).success).toBe(
+      false,
+    );
+  });
+
+  it('keeps ages between 9 and 14 and uses Kenyan numbers for guardians', () => {
+    expect(createLearnerSchema.safeParse({ ...validLearner, age: 8 }).success).toBe(false);
+    expect(createLearnerSchema.safeParse({ ...validLearner, age: 15 }).success).toBe(false);
+    const contact = { guardianName: 'Rehema Mwangi', relationship: 'mother', phone: '0712345678' };
+    expect(createLearnerSchema.safeParse({ ...validLearner, contact }).success).toBe(false);
+    expect(
+      createLearnerSchema.safeParse({
+        ...validLearner,
+        contact: { ...contact, phone: '+254712345678' },
+      }).success,
+    ).toBe(true);
+  });
+
+  it('works out the year of birth from the age', () => {
+    expect(birthYearFromAge(11, new Date('2026-10-23'))).toBe(2015);
+  });
+});
+
+describe('Session and attendance schemas', () => {
+  const session = { clubId: validLearner.clubId, date: '2026-10-20' };
+
+  it('needs a topic when the session was held', () => {
+    expect(createSessionSchema.safeParse(session).success).toBe(false);
+    expect(createSessionSchema.parse({ ...session, topic: 'Loops' }).status).toBe('held');
+    expect(createSessionSchema.safeParse({ ...session, status: 'planned' }).success).toBe(true);
+  });
+
+  it('lists each learner once', () => {
+    const record = { learnerId: validLearner.clubId, status: 'present' };
+    expect(attendanceSchema.safeParse({ records: [record] }).success).toBe(true);
+    expect(attendanceSchema.safeParse({ records: [record, record] }).success).toBe(false);
   });
 });
