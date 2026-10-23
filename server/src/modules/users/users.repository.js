@@ -1,6 +1,7 @@
 import { User } from '../../db/models.js';
 import { insertUnique, paginate, textSearch, toRecord, updateUnique } from '../../db/records.js';
 import { userScopeQuery } from '../../db/scopeQueries.js';
+import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 
 /** Only this file talks to the database for users (D1-16). */
 
@@ -37,9 +38,9 @@ export async function listUsers(scopeFilter, query) {
 }
 
 export async function insertUser(user) {
-  return insertUnique(User, user, 'A user with this email already exists');
+  return insertUnique(User, user, ERROR_MESSAGES.duplicateEmail);
 }
 
 export async function updateUserById(id, changes) {
-  return updateUnique(User, id, changes, 'A user with this email already exists');
+  return updateUnique(User, id, changes, ERROR_MESSAGES.duplicateEmail);
 }

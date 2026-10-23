@@ -6,6 +6,7 @@ import { recordAudit } from '../audit/audit.service.js';
 import { getSchool } from '../schools/schools.service.js';
 import { findUserById } from '../users/users.repository.js';
 import * as repo from './clubs.repository.js';
+import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 
 export function listClubs(actor, scope, query) {
   return repo.listClubs(scopeFilter(actor, scope), query);
@@ -14,7 +15,7 @@ export function listClubs(actor, scope, query) {
 /** Out-of-scope clubs look exactly like missing ones (404). A champion changing the ID in the URL gets 404. */
 export async function getClub(actor, scope, id) {
   const club = await repo.findClubInScope(id, scopeFilter(actor, scope));
-  if (!club) throw notFound('Club not found');
+  if (!club) throw notFound(ERROR_MESSAGES.clubNotFound);
   return club;
 }
 
@@ -23,12 +24,12 @@ export async function getClub(actor, scope, id) {
  * Online clubs have no school; their region must come from an explicit choice later (open question).
  */
 export async function createClub(actor, scope, input, { requestId }) {
-  if (!input.schoolId) throw badRequest('Online clubs are not supported yet');
+  if (!input.schoolId) throw badRequest(ERROR_MESSAGES.onlineClubsNotSupported);
   const school = await getSchool(actor, scope, input.schoolId);
-  if (school.status !== 'active') throw badRequest('The school is inactive');
+  if (school.status !== 'active') throw badRequest(ERROR_MESSAGES.schoolInactive);
   const filter = scopeFilter(actor, scope);
   if (filter.regions && !filter.regions.includes(school.region)) {
-    throw forbidden('You can only add clubs in your own region');
+    throw forbidden(ERROR_MESSAGES.clubOwnRegion);
   }
   const now = new Date();
   const club = {
@@ -60,7 +61,7 @@ export async function updateClub(actor, scope, id, changes, { requestId }) {
   // The shared schema only checks times sent together; check against the saved ones too.
   const merged = { ...before, ...changes };
   if (merged.endTime <= merged.startTime) {
-    throw badRequest('Some fields are not valid', [
+    throw badRequest(ERROR_MESSAGES.invalidFields, [
       { field: 'body.endTime', message: 'End time must be after start time' },
     ]);
   }
@@ -91,7 +92,7 @@ export async function assignChampion(actor, scope, clubId, userId, input, { requ
   const club = await getClub(actor, scope, clubId);
   const champion = await findUserById(userId);
   if (!champion || champion.status !== 'active' || champion.role !== ROLES.CHAMPION) {
-    throw badRequest('Only active Club Champions can be assigned to a club');
+    throw badRequest(ERROR_MESSAGES.onlyActiveChampions);
   }
   const assignment = await repo.upsertChampionAssignment({
     clubId,

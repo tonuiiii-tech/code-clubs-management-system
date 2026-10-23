@@ -3,6 +3,9 @@
  * In Sprint 3 the services built on this read and write the local database first
  * and sync later, so pages do not change (D1-5).
  */
+import { ERROR_MESSAGES, errorMessageKey } from '@code-clubs/shared/errors';
+import i18n from '../i18n/index.js';
+
 export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api/v1';
 
 /** Demo mode: no server or database needed (D1-20). Vite removes the mock code from real builds. */
@@ -13,9 +16,15 @@ export const setAccessToken = (token) => {
   accessToken = token;
 };
 
+/** Shows a known API error text in the user's language; other texts are shown as sent. */
+function localise(message) {
+  const key = errorMessageKey(message);
+  return key ? i18n.t(`apiErrors.${key}`, { defaultValue: message }) : message;
+}
+
 export class ApiError extends Error {
   constructor(status, code, message, details) {
-    super(message);
+    super(localise(message));
     this.status = status;
     this.code = code;
     this.details = details;
@@ -55,7 +64,7 @@ async function send(path, options = {}) {
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new ApiError(0, 'NETWORK_ERROR', 'Cannot reach the server');
+    throw new ApiError(0, 'NETWORK_ERROR', ERROR_MESSAGES.network);
   }
   if (res.status === 204) return null;
   const payload = await res.json().catch(() => ({}));

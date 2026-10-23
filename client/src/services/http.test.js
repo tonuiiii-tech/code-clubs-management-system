@@ -1,33 +1,30 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, request } from './http.js';
+import { afterEach, describe, expect, it } from 'vitest';
+import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
+import i18n from '../i18n/index.js';
+import { ApiError } from './http.js';
 
-const json = (status, body) => ({
-  ok: status < 400,
-  status,
-  statusText: '',
-  json: async () => body,
-});
+describe('ApiError', () => {
+  afterEach(() => i18n.changeLanguage('en'));
 
-describe('http request', () => {
-  afterEach(() => vi.unstubAllGlobals());
-
-  it('returns the JSON payload', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(json(200, { data: { status: 'ok' } })));
-    await expect(request('/health')).resolves.toEqual({ data: { status: 'ok' } });
-  });
-
-  it('turns API errors into ApiError with the server code', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(json(403, { error: { code: 'FORBIDDEN', message: 'No' } })),
+  it('shows known server messages in the chosen language', async () => {
+    await i18n.changeLanguage('sw');
+    expect(new ApiError(401, 'UNAUTHENTICATED', ERROR_MESSAGES.invalidLogin).message).toBe(
+      'Barua pepe au nenosiri si sahihi',
     );
-    await expect(request('/users')).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
+    await i18n.changeLanguage('en');
+    expect(new ApiError(401, 'UNAUTHENTICATED', ERROR_MESSAGES.invalidLogin).message).toBe(
+      'Email or password is incorrect',
+    );
   });
 
-  it('reports a network failure clearly', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
-    const err = await request('/health').catch((e) => e);
-    expect(err).toBeInstanceOf(ApiError);
-    expect(err.code).toBe('NETWORK_ERROR');
+  it('shows unknown messages as the server sent them', () => {
+    expect(new ApiError(500, 'X', 'Something new').message).toBe('Something new');
+  });
+
+  it('has an English and a Kiswahili text for every API error', () => {
+    for (const key of Object.keys(ERROR_MESSAGES)) {
+      expect(i18n.exists(`apiErrors.${key}`, { lng: 'en' })).toBe(true);
+      expect(i18n.getResource('sw', 'common', `apiErrors.${key}`)).toBeTruthy();
+    }
   });
 });

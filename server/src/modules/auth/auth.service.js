@@ -7,13 +7,14 @@ import { recordAudit } from '../audit/audit.service.js';
 import { findUserByEmail, findUserById, updateUserById } from '../users/users.repository.js';
 import { BCRYPT_COST, toPublicUser } from '../users/users.service.js';
 import * as repo from './auth.repository.js';
+import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 
 export const ACCESS_TOKEN_TTL = '15m';
 export const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_FAILED_LOGINS = 5;
 const LOCKOUT_MS = 15 * 60 * 1000;
 
-const INVALID_LOGIN = 'Email or password is incorrect';
+const INVALID_LOGIN = ERROR_MESSAGES.invalidLogin;
 const hashToken = (token) => createHash('sha256').update(token).digest('hex');
 
 export function signAccessToken(user) {
@@ -101,8 +102,8 @@ export async function refresh(refreshToken) {
 export async function changePassword(user, { currentPassword, newPassword }, { requestId }) {
   const full = await findUserById(user.id);
   if (!(await bcrypt.compare(currentPassword, full.passwordHash))) {
-    throw badRequest('Current password is incorrect', [
-      { field: 'body.currentPassword', message: 'Current password is incorrect' },
+    throw badRequest(ERROR_MESSAGES.currentPasswordIncorrect, [
+      { field: 'body.currentPassword', message: ERROR_MESSAGES.currentPasswordIncorrect },
     ]);
   }
   await updateUserById(user.id, {

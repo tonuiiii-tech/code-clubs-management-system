@@ -1,4 +1,5 @@
 import { badRequest } from '../utils/httpError.js';
+import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 
 /**
  * Validates body, query and route params with shared Zod schemas.
@@ -17,7 +18,7 @@ export function validate(schemas) {
           field: [part, ...i.path].join('.'),
           message: i.message,
         }));
-        return next(badRequest('Some fields are not valid', details));
+        return next(badRequest(ERROR_MESSAGES.invalidFields, details));
       }
       req.valid[part] = result.data;
     }

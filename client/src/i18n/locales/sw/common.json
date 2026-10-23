@@ -262,5 +262,32 @@
     "notFoundTitle": "Ukurasa haukupatikana",
     "notFound": "Ukurasa unaoutafuta haupo au huna ruhusa ya kuuona.",
     "home": "Nenda kwenye dashibodi"
+  },
+  "apiErrors": {
+    "signIn": "Tafadhali ingia",
+    "sessionExpired": "Muda wa kuingia umeisha. Tafadhali ingia tena.",
+    "forbidden": "Huna ruhusa ya kufanya hivi",
+    "notFound": "Haikupatikana",
+    "invalidFields": "Baadhi ya sehemu si sahihi",
+    "invalidJson": "Ombi si sahihi",
+    "internal": "Hitilafu imetokea",
+    "network": "Imeshindikana kufikia seva",
+    "invalidLogin": "Barua pepe au nenosiri si sahihi",
+    "tooManyAttempts": "Majaribio mengi mno ya kuingia. Jaribu tena baada ya dakika 15.",
+    "currentPasswordIncorrect": "Nenosiri la sasa si sahihi",
+    "userNotFound": "Mtumiaji hakupatikana",
+    "duplicateEmail": "Tayari kuna mtumiaji mwenye barua pepe hii",
+    "ownRole": "Huwezi kubadilisha jukumu lako mwenyewe",
+    "ownStatus": "Huwezi kubadilisha hali ya akaunti yako mwenyewe",
+    "schoolNotFound": "Shule haikupatikana",
+    "duplicateSchool": "Tayari kuna shule yenye jina hili katika kaunti ndogo hii",
+    "schoolOwnRegion": "Unaweza kuongeza shule katika kanda yako tu",
+    "schoolMoveOwnRegion": "Unaweza kuhamisha shule ndani ya kanda yako tu",
+    "schoolInactive": "Shule hii imezimwa",
+    "clubNotFound": "Klabu haikupatikana",
+    "duplicateClubCode": "Tayari kuna klabu yenye msimbo huu",
+    "clubOwnRegion": "Unaweza kuongeza vilabu katika kanda yako tu",
+    "onlineClubsNotSupported": "Vilabu vya mtandaoni bado havitumiki",
+    "onlyActiveChampions": "Ni Viongozi wa Klabu walio hai tu wanaoweza kupangiwa klabu"
   }
 }

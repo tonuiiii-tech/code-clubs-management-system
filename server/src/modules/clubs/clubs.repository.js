@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Club, ClubChampion, Counter, User } from '../../db/models.js';
 import { insertUnique, paginate, textSearch, toDocument, toRecord } from '../../db/records.js';
 import { clubScopeQuery } from '../../db/scopeQueries.js';
+import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 
 /** Only this file talks to the database for clubs and champion assignments (D1-16). */
 
@@ -37,7 +38,7 @@ export async function nextClubCode(regionPrefix) {
 }
 
 export async function insertClub(club) {
-  return insertUnique(Club, club, 'A club with this code already exists');
+  return insertUnique(Club, club, ERROR_MESSAGES.duplicateClubCode);
 }
 
 export async function updateClubById(id, changes) {

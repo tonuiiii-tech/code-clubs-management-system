@@ -4,6 +4,7 @@ import { conflict, forbidden, notFound } from '../../utils/httpError.js';
 import { scopeFilter } from '../scope.js';
 import { recordAudit } from '../audit/audit.service.js';
 import * as repo from './users.repository.js';
+import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 
 export const BCRYPT_COST = 12;
 
@@ -21,7 +22,7 @@ export async function listUsers(actor, scope, query) {
 
 export async function getUser(actor, scope, id) {
   const user = await repo.findUserInScope(id, scopeFilter(actor, scope));
-  if (!user) throw notFound('User not found');
+  if (!user) throw notFound(ERROR_MESSAGES.userNotFound);
   return toPublicUser(user);
 }
 
@@ -45,8 +46,7 @@ export async function updateOwnProfile(actor, changes, { requestId }) {
 }
 
 export async function createUser(actor, input, { temporaryPassword, requestId }) {
-  if (await repo.findUserByEmail(input.email))
-    throw conflict('A user with this email already exists');
+  if (await repo.findUserByEmail(input.email)) throw conflict(ERROR_MESSAGES.duplicateEmail);
   const now = new Date();
   const user = {
     id: randomUUID(),
@@ -74,8 +74,7 @@ export async function createUser(actor, input, { temporaryPassword, requestId })
 }
 
 export async function updateUser(actor, id, changes, { requestId }) {
-  if (id === actor.id && changes.role !== undefined)
-    throw forbidden('You cannot change your own role');
+  if (id === actor.id && changes.role !== undefined) throw forbidden(ERROR_MESSAGES.ownRole);
   const before = await repo.findUserById(id);
   if (!before) throw notFound();
   const updated = await repo.updateUserById(id, {
@@ -97,7 +96,7 @@ export async function updateUser(actor, id, changes, { requestId }) {
 
 /** Deactivation also bumps tokenVersion so existing sessions stop working at once (R1-4). */
 export async function setUserStatus(actor, id, status, { requestId }) {
-  if (id === actor.id) throw forbidden('You cannot change your own account status');
+  if (id === actor.id) throw forbidden(ERROR_MESSAGES.ownStatus);
   const before = await repo.findUserById(id);
   if (!before) throw notFound();
   const changes = {

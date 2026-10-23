@@ -26,9 +26,10 @@ import {
   updateUserStatusSchema,
 } from '@code-clubs/shared/schemas';
 import { createSeedData, DEMO_PASSWORD } from '@code-clubs/shared/demo';
+import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 
 const STORAGE_KEY = 'cc-mock-db';
-const INVALID_LOGIN = 'Email or password is incorrect';
+const INVALID_LOGIN = ERROR_MESSAGES.invalidLogin;
 
 class MockHttpError extends Error {
   constructor(status, code, message, details) {
@@ -38,12 +39,14 @@ class MockHttpError extends Error {
     this.details = details;
   }
 }
-const badRequest = (message, details) => new MockHttpError(400, 'BAD_REQUEST', message, details);
-const unauthorized = (message = 'Sign in to continue') =>
-  new MockHttpError(401, 'UNAUTHORIZED', message);
-const forbidden = (message = 'You do not have permission to do this') =>
+const badRequest = (message, details) =>
+  new MockHttpError(400, 'VALIDATION_ERROR', message, details);
+const unauthorized = (message = ERROR_MESSAGES.signIn) =>
+  new MockHttpError(401, 'UNAUTHENTICATED', message);
+const forbidden = (message = ERROR_MESSAGES.forbidden) =>
   new MockHttpError(403, 'FORBIDDEN', message);
-const notFound = (message = 'Not found') => new MockHttpError(404, 'NOT_FOUND', message);
+const notFound = (message = ERROR_MESSAGES.notFound) =>
+  new MockHttpError(404, 'NOT_FOUND', message);
 const conflict = (message) => new MockHttpError(409, 'CONFLICT', message);
 
 // ---------------------------------------------------------------------------
@@ -98,7 +101,7 @@ function validate(schema, input, part) {
   const result = schema.safeParse(input ?? {});
   if (result.success) return result.data;
   throw badRequest(
-    'Some fields are not valid',
+    ERROR_MESSAGES.invalidFields,
     result.error.issues.map((i) => ({ field: [part, ...i.path].join('.'), message: i.message })),
   );
 }
@@ -209,8 +212,8 @@ function logout() {
 function changePassword(actor, body) {
   const { currentPassword, newPassword } = validate(changePasswordSchema, body, 'body');
   if (actor.password !== currentPassword) {
-    throw badRequest('Current password is incorrect', [
-      { field: 'body.currentPassword', message: 'Current password is incorrect' },
+    throw badRequest(ERROR_MESSAGES.currentPasswordIncorrect, [
+      { field: 'body.currentPassword', message: ERROR_MESSAGES.currentPasswordIncorrect },
     ]);
   }
   Object.assign(actor, { password: newPassword, tokenVersion: actor.tokenVersion + 1 });
@@ -221,14 +224,14 @@ function changePassword(actor, body) {
 function findSchool(actor, scope, id) {
   const filter = scopeFilter(actor, scope);
   const school = db.schools.find((s) => s.id === id);
-  if (!school || !schoolInFilter(school, filter)) throw notFound('School not found');
+  if (!school || !schoolInFilter(school, filter)) throw notFound(ERROR_MESSAGES.schoolNotFound);
   return school;
 }
 
 function findClub(actor, scope, id) {
   const filter = scopeFilter(actor, scope);
   const club = db.clubs.find((c) => c.id === id);
-  if (!club || !clubInFilter(club, filter)) throw notFound('Club not found');
+  if (!club || !clubInFilter(club, filter)) throw notFound(ERROR_MESSAGES.clubNotFound);
   return club;
 }
 
@@ -271,7 +274,7 @@ const routes = [
     ({ actor, params }) => {
       const filter = scopeFilter(actor, authorize(actor, 'user:read'));
       const user = db.users.find((u) => u.id === idParam(params.id));
-      if (!user || !userInFilter(user, filter)) throw notFound('User not found');
+      if (!user || !userInFilter(user, filter)) throw notFound(ERROR_MESSAGES.userNotFound);
       return [200, { data: toPublicUser(user) }];
     },
   ],
@@ -282,7 +285,7 @@ const routes = [
       authorize(actor, 'user:manage');
       const input = validate(createUserSchema, body, 'body');
       if (db.users.some((u) => u.email === input.email)) {
-        throw conflict('A user with this email already exists');
+        throw conflict(ERROR_MESSAGES.duplicateEmail);
       }
       const temporaryPassword = `Temp-${crypto.randomUUID().slice(0, 8)}`;
       const user = {
@@ -308,7 +311,7 @@ const routes = [
       authorize(actor, 'user:manage');
       const id = idParam(params.id);
       const { status } = validate(updateUserStatusSchema, body, 'body');
-      if (id === actor.id) throw forbidden('You cannot change your own account status');
+      if (id === actor.id) throw forbidden(ERROR_MESSAGES.ownStatus);
       const user = db.users.find((u) => u.id === id);
       if (!user) throw notFound();
       Object.assign(user, {
@@ -328,7 +331,7 @@ const routes = [
       const id = idParam(params.id);
       const changes = validate(updateUserSchema, body, 'body');
       if (id === actor.id && changes.role !== undefined) {
-        throw forbidden('You cannot change your own role');
+        throw forbidden(ERROR_MESSAGES.ownRole);
       }
       const user = db.users.find((u) => u.id === id);
       if (!user) throw notFound();
@@ -364,7 +367,7 @@ const routes = [
       const filter = scopeFilter(actor, authorize(actor, 'school:write'));
       const input = validate(createSchoolSchema, body, 'body');
       if (filter.regions && !filter.regions.includes(input.region)) {
-        throw forbidden('You can only add schools in your own region');
+        throw forbidden(ERROR_MESSAGES.schoolOwnRegion);
       }
       const duplicate = db.schools.some(
         (s) =>
@@ -372,7 +375,7 @@ const routes = [
           s.county === input.county &&
           s.subCounty.toLowerCase() === input.subCounty.toLowerCase(),
       );
-      if (duplicate) throw conflict('A school with this name already exists in this sub-county');
+      if (duplicate) throw conflict(ERROR_MESSAGES.duplicateSchool);
       const school = {
         id: crypto.randomUUID(),
         ...input,
@@ -403,7 +406,7 @@ const routes = [
       const changes = validate(updateSchoolSchema, body, 'body');
       const filter = scopeFilter(actor, scope);
       if (changes.region && filter.regions && !filter.regions.includes(changes.region)) {
-        throw forbidden('You can only move schools within your own region');
+        throw forbidden(ERROR_MESSAGES.schoolMoveOwnRegion);
       }
       Object.assign(school, changes, { updatedAt: now(), updatedBy: actor.id });
       return [200, { data: school }];
@@ -436,12 +439,12 @@ const routes = [
     ({ actor, body }) => {
       const scope = authorize(actor, 'club:write');
       const input = validate(createClubSchema, body, 'body');
-      if (!input.schoolId) throw badRequest('Online clubs are not supported yet');
+      if (!input.schoolId) throw badRequest(ERROR_MESSAGES.onlineClubsNotSupported);
       const school = findSchool(actor, scope, input.schoolId);
-      if (school.status !== 'active') throw badRequest('The school is inactive');
+      if (school.status !== 'active') throw badRequest(ERROR_MESSAGES.schoolInactive);
       const filter = scopeFilter(actor, scope);
       if (filter.regions && !filter.regions.includes(school.region)) {
-        throw forbidden('You can only add clubs in your own region');
+        throw forbidden(ERROR_MESSAGES.clubOwnRegion);
       }
       const prefix = REGION_CODE_PREFIX[school.region];
       const used = db.clubs.filter((c) => c.code.startsWith(`${prefix}-`)).length;
@@ -476,7 +479,7 @@ const routes = [
       const changes = validate(updateClubSchema, body, 'body');
       const merged = { ...club, ...changes };
       if (merged.endTime <= merged.startTime) {
-        throw badRequest('Some fields are not valid', [
+        throw badRequest(ERROR_MESSAGES.invalidFields, [
           { field: 'body.endTime', message: 'End time must be after start time' },
         ]);
       }
@@ -505,7 +508,7 @@ const routes = [
       const input = validate(assignChampionSchema, body, 'body');
       const champion = db.users.find((u) => u.id === userId);
       if (!champion || champion.status !== 'active' || champion.role !== ROLES.CHAMPION) {
-        throw badRequest('Only active Club Champions can be assigned to a club');
+        throw badRequest(ERROR_MESSAGES.onlyActiveChampions);
       }
       let assignment = currentAssignments(club.id).find((a) => a.userId === userId);
       if (assignment) {

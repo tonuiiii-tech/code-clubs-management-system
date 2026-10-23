@@ -1,11 +1,12 @@
 import { School } from '../../db/models.js';
 import { insertUnique, paginate, textSearch, toRecord, updateUnique } from '../../db/records.js';
 import { schoolScopeQuery } from '../../db/scopeQueries.js';
+import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 
 /** Only this file talks to the database for schools (D1-16). */
 
 const caseInsensitive = { locale: 'en', strength: 2 };
-const DUPLICATE = 'A school with this name already exists in this sub-county';
+const DUPLICATE = ERROR_MESSAGES.duplicateSchool;
 
 export async function listSchools(scopeFilter, query) {
   const filter = {

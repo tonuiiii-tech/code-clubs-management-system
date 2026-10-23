@@ -73,6 +73,15 @@ describe('API on MongoDB', () => {
     expect(outside.status).toBe(403);
   });
 
+  it('stops a coordinator moving a school out of their region', async () => {
+    const res = await request(app)
+      .patch(`/api/v1/schools/${uid(101)}`)
+      .set(auth(coordinator.token))
+      .send({ region: 'coast' });
+    expect(res.status).toBe(403);
+    expect(res.body.error.message).toBe('You can only move schools within your own region');
+  });
+
   it('creates a school, blocks its duplicate, then creates a club with the next code', async () => {
     const body = {
       name: 'Gatina Primary School',
@@ -185,6 +194,15 @@ describe('Sessions on MongoDB', () => {
       .expect(200);
     const res = await request(app).get('/api/v1/clubs').set(auth(victim.token));
     expect(res.status).toBe(401);
+  });
+
+  it('counts only failed sign-ins towards the rate limit', async () => {
+    for (let i = 0; i < 6; i += 1) {
+      const res = await request(app)
+        .post('/api/v1/auth/login')
+        .send({ email: EMAIL.champion2, password: PASSWORD });
+      expect(res.status).toBe(200);
+    }
   });
 
   it('locks an account after five wrong passwords', async () => {

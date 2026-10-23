@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import { unauthorized } from '../utils/httpError.js';
 import { findUserById } from '../modules/users/users.repository.js';
+import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 
 /**
  * Verifies the access token and loads the current user (D1-12).
@@ -17,7 +18,7 @@ export async function authenticate(req, _res, next) {
   try {
     payload = jwt.verify(token, env.JWT_ACCESS_SECRET);
   } catch {
-    return next(unauthorized('Your session has expired. Please sign in again.'));
+    return next(unauthorized(ERROR_MESSAGES.sessionExpired));
   }
 
   const user = await findUserById(payload.sub);
