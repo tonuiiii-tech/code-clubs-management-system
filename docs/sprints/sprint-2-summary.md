@@ -23,7 +23,7 @@ Also: every new screen in English and Kiswahili, the same rules in demo mode, fi
 
 | Test                                         | Where                                                      | Result                         |
 | -------------------------------------------- | ---------------------------------------------------------- | ------------------------------ |
-| Server unit and API tests (Jest + Supertest) | Cloud workspace, on a real MongoDB 7.0; GitHub Actions     | 83 pass, 49 of them on MongoDB |
+| Server unit and API tests (Jest + Supertest) | Cloud workspace, on a real MongoDB 7.0; GitHub Actions     | 83 pass, 42 of them on MongoDB |
 | Client tests (Vitest), incl. demo mock rules | Cloud workspace; GitHub Actions                            | 34 pass                        |
 | Browser flows on the demo build (Playwright) | Cloud workspace                                            | 5 pass                         |
 | Browser flows on the real API + MongoDB      | Cloud workspace (local MongoDB); GitHub Actions `e2e-real` | 5 pass                         |
