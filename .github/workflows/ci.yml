@@ -27,6 +27,8 @@ jobs:
         image: mongo:7
         ports:
           - 27017:27017
+        # Keep MongoDB's own log out of the job output so test results stay readable.
+        options: --log-driver none
     env:
       CI: true
       E2E_TARGET: real

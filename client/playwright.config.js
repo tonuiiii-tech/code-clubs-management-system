@@ -24,6 +24,7 @@ export default defineConfig({
   testDir: './e2e',
   // Real data is shared between tests, so run them one at a time there.
   workers: REAL ? 1 : undefined,
+  reporter: process.env.CI ? [['list'], ['github']] : 'list',
   use: {
     baseURL: 'http://localhost:4173',
     // Optional: point at an already-installed Chromium instead of `npx playwright install`.
