@@ -21,6 +21,7 @@ import {
 import { useAuth } from '../../context/AuthContext.jsx';
 import { Detail } from '../../components/Detail.jsx';
 import { EnumSelect } from '../../components/EnumSelect.jsx';
+import { PasswordInput } from '../../components/PasswordInput.jsx';
 import { useForm, withoutEmpty } from '../../utils/useForm.js';
 
 /** Everyone can change their own name, phone, language and password; never their role. */
@@ -127,7 +128,7 @@ function PasswordForm() {
         <form className="stack" onSubmit={form.handleSubmit} noValidate>
           {form.formError && <Alert tone="danger">{form.formError.message}</Alert>}
           <Field label={t('profile.currentPassword')} error={errors.currentPassword} required>
-            <Input {...bind('currentPassword')} type="password" autoComplete="current-password" />
+            <PasswordInput {...bind('currentPassword')} autoComplete="current-password" />
           </Field>
           <Field
             label={t('profile.newPassword')}
@@ -135,7 +136,7 @@ function PasswordForm() {
             hint={t('profile.newPasswordHint', { min: PASSWORD_MIN_LENGTH })}
             required
           >
-            <Input {...bind('newPassword')} type="password" autoComplete="new-password" />
+            <PasswordInput {...bind('newPassword')} autoComplete="new-password" />
           </Field>
           <div>
             <Button type="submit" loading={form.submitting}>

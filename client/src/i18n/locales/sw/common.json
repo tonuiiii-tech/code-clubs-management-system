@@ -178,7 +178,9 @@
     "none": "—",
     "close": "Funga",
     "optional": "Si lazima",
-    "details": "Maelezo"
+    "details": "Maelezo",
+    "showPassword": "Onyesha nenosiri",
+    "hidePassword": "Ficha nenosiri"
   },
   "status": {
     "active": "Inaendelea",

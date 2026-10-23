@@ -16,6 +16,7 @@ import { loginSchema } from '@code-clubs/shared/schemas';
 import { issuesToFieldErrors } from '../../utils/formErrors.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { LanguageSwitcher } from '../../components/LanguageSwitcher.jsx';
+import { PasswordInput } from '../../components/PasswordInput.jsx';
 
 // Loaded only in mock mode, so the demo accounts and mock data never ship in a real build.
 const DemoAccounts =
@@ -90,9 +91,8 @@ export function LoginPage() {
             />
           </Field>
           <Field label={t('login.password')} error={fieldErrors.password} required>
-            <Input
+            <PasswordInput
               name="password"
-              type="password"
               autoComplete="current-password"
               value={form.password}
               onChange={onChange}

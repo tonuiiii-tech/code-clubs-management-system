@@ -178,7 +178,9 @@
     "none": "—",
     "close": "Close",
     "optional": "Optional",
-    "details": "Details"
+    "details": "Details",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "status": {
     "active": "Active",
