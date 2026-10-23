@@ -104,6 +104,6 @@ test('the app works in Kiswahili', async ({ page }) => {
     .getByRole('navigation', { name: 'Menyu kuu' })
     .getByRole('link', { name: 'Vilabu' })
     .click();
-  await expect(page.getByRole('heading', { name: 'Vilabu' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Vilabu', exact: true })).toBeVisible();
   await expect(page.getByText('Kanda zote')).toBeAttached();
 });
