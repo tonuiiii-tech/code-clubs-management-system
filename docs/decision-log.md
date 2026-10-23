@@ -225,6 +225,87 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Decision:** Developers use a free MongoDB Atlas cluster by default; a local MongoDB Community Server is also supported. Tests use mongodb-memory-server.
 - **Consequences:** No local install needed; Atlas is a replica set, so transactions are available when needed. The connection string goes only in `server/.env` as `MONGODB_URI`.
 
+## D2-1: Guardian contacts in their own collection; champions can write but not read them
+
+- **Status:** Accepted (Enock approved the Sprint 2 plan, 2026-10-23)
+- **Date:** 2026-10-23
+- **Context:** Questionnaire Q43: learner contact details are seen by STEAMLabs Africa only.
+- **Decision:** `learnerContacts` is a separate collection. `learnerContact:read` is System Administrator and Programme Manager only (or a per-person grant); coordinators and champions have `learnerContact:write`. Learner responses carry only `hasContact`. Reading a contact is audited, and guardian names and phones are redacted in the audit log.
+- **Alternatives considered:** Contact fields on the learner record, hidden by projection.
+- **Consequences:** One query can never leak a contact by mistake; HQ needs one extra request to see it.
+
+## D2-2: Age is stored as a year of birth, never a full date of birth
+
+- **Status:** Accepted (Enock approved the Sprint 2 plan, 2026-10-23)
+- **Date:** 2026-10-23
+- **Context:** The form asks for age; ages change every year and a full date of birth is more personal data than needed.
+- **Decision:** The API takes `age` (9–14) and stores `birthYear`; responses give `age` back.
+- **Alternatives considered:** Storing age; storing date of birth.
+- **Consequences:** Age stays right without edits; it can be off by one before a birthday, which is fine for grouping.
+
+## D2-3: Consent forms and session photos in MongoDB GridFS, sent as the raw request body
+
+- **Status:** Accepted (Enock approved the Sprint 2 plan, 2026-10-23)
+- **Date:** 2026-10-23
+- **Context:** Signed forms must be stored, never public, and Atlas is the only storage we have.
+- **Decision:** GridFS buckets `consentFiles` and `sessionPhotos`. Uploads are the raw body (no multipart library), max 5 MB; the server checks the real type from the first bytes (JPG, PNG, PDF). Files are only served through authorised endpoints as downloads with `Cache-Control: no-store`.
+- **Alternatives considered:** Object storage (S3, Cloudinary); multer for multipart uploads.
+- **Consequences:** No new service or dependency; watch Atlas storage (R2-4) and move to object storage later if needed.
+
+## D2-4: Attendance as its own collection, one record per learner per session
+
+- **Status:** Accepted (Enock approved the Sprint 2 plan, 2026-10-23)
+- **Date:** 2026-10-23
+- **Context:** Attendance will be edited offline in Sprint 3.
+- **Decision:** `attendance` has a unique `sessionId + learnerId`. The API saves the whole list at once (`PUT /sessions/:id/attendance`); learners left out are removed.
+- **Alternatives considered:** An array inside the session.
+- **Consequences:** Two devices editing different learners will not overwrite each other in Sprint 3.
+
+## D2-5: Champions can change a session report for 7 days
+
+- **Status:** Accepted (Enock approved the Sprint 2 plan, 2026-10-23)
+- **Date:** 2026-10-23
+- **Context:** Reports should be final, but champions often enter them after the session because venues have no internet.
+- **Decision:** Champions can create or change a session, its attendance and photos only up to 7 days after its date. Coordinators (in their regions) and HQ have `session:editLate`. The rule lives in `shared` (`sessionEditWindowOpen`) and is used by the server, the demo mock and the screens.
+- **Alternatives considered:** No limit; a lock after the end of the month.
+- **Consequences:** Old reports stay reliable; a coordinator fixes late mistakes.
+
+## D2-6: `clubId` and `region` copied onto learners, sessions, attendance and consents
+
+- **Status:** Accepted (Enock approved the Sprint 2 plan, 2026-10-23)
+- **Date:** 2026-10-23
+- **Context:** Scope queries for coordinators (regions) and champions (clubs) should not need joins.
+- **Decision:** Copied from the club when the record is created. Learners cannot move clubs (D2-8), so the copy never goes stale.
+- **Alternatives considered:** Looking up the club on every query.
+- **Consequences:** One shared scope query (`clubRecordScopeQuery`) for all four collections.
+
+## D2-7: Up to 3 session photos, shrunk on the device, with a photo-consent check
+
+- **Status:** Accepted (Enock approved the Sprint 2 plan, 2026-10-23)
+- **Date:** 2026-10-23
+- **Context:** Questionnaire Q20 and Q42: photos are part of the session report, under the consent form's conditions.
+- **Decision:** Photos are shrunk to about 300 KB in the browser. If any learner marked present has no photo consent, the API answers 409 `PHOTO_CONSENT_MISSING` with their names until the champion confirms they are not in the photo; the confirmation is audited. Anyone who can still edit the session can remove a photo.
+- **Alternatives considered:** No photos; blocking photos whenever a learner lacks consent.
+- **Consequences:** Photos are possible without exposing children whose guardians said no (R2-7).
+
+## D2-8: A learner belongs to one club; no club moves
+
+- **Status:** Accepted (Enock approved the Sprint 2 plan, 2026-10-23)
+- **Date:** 2026-10-23
+- **Context:** Questionnaire Q17: learners cannot move between clubs.
+- **Decision:** `clubId` cannot be changed. A learner who leaves is marked `left` (with `leftAt`) and keeps their attendance history; re-activating needs a free place.
+- **Alternatives considered:** Enrolment history across clubs.
+- **Consequences:** Simpler model; revisit if STEAMLabs changes the rule.
+
+## D2-9: Learner details: name, age, gender, grade and school admission number
+
+- **Status:** Accepted (Enock approved the Sprint 2 plan, 2026-10-23)
+- **Date:** 2026-10-23
+- **Context:** Questionnaire Q15 left this open; Enock decided on 22 Oct.
+- **Decision:** Required: first and last name, age, gender (girl, boy, prefer not to say), grade (CBC Grade 4–9). Admission number is required at primary-school clubs and unique per school; accessibility needs are optional (max 200 characters). Nothing else is accepted (the schemas are strict). Gender appears only as totals on the dashboard.
+- **Alternatives considered:** More fields (address, date of birth, learner phone).
+- **Consequences:** Minimal personal data; still to confirm with STEAMLabs HQ (sprint-2 open question 1).
+
 ## Decision template
 
 Copy this template for future entries:

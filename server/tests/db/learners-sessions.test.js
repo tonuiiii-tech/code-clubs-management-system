@@ -411,6 +411,29 @@ describe('Session photos', () => {
   });
 });
 
+describe('Every write is refused outside scope', () => {
+  it('answers 404 to another club’s champion and 403 without the permission', async () => {
+    const other = api('otherChampion');
+    const learner = `/learners/${ZAWADI}`;
+    const session = `/sessions/${RECENT_SESSION}`;
+    const contact = { guardianName: 'Someone Else', relationship: 'other', phone: '+254700000902' };
+    const refused = [
+      await other.patch(learner, { grade: 'grade_9' }),
+      await other.patch(`${learner}/status`, { status: 'left' }),
+      await other.put(`${learner}/contact`, contact),
+      await other.put(`${learner}/consents/photo`, { status: 'given' }),
+      await other.upload('put', `${learner}/consents/photo/file`, PNG, 'image/png'),
+      await other.patch(session, { notes: 'x' }),
+      await other.put(`${session}/attendance`, { records: [] }),
+      await other.upload('post', `${session}/photos?confirmConsent=true`, PNG, 'image/png'),
+      await other.post('/sessions', { clubId: NAC_001, date: daysAgo(3), topic: 'x' }),
+    ];
+    expect(refused.map((r) => r.status)).toEqual(Array(refused.length).fill(404));
+    // Coordinators can read learners but never guardian contacts.
+    expect((await api('coordinator').get(`${learner}/contact`)).status).toBe(403);
+  });
+});
+
 describe('Dashboard', () => {
   it('adds learner, session and attendance counts within scope', async () => {
     const champion = await api('champion').get('/dashboard/summary');

@@ -83,6 +83,8 @@ Each business module has routes, controllers, services and a repository.
 - `users`: account creation, role assignment, activation/deactivation, school/club/region assignments, champion profile (type, skills, safeguarding clearance).
 - `schools`: school and host organisation registration, editing, listing, deactivation.
 - `clubs`: club registration, school association, champion assignments, schedule, track, capacity, status.
+- `learners`: learner registration, status (active or left), guardian contacts (HQ-only reading), consent and signed consent forms (Sprint 2).
+- `sessions`: session reports, attendance, session photos and the 7-day edit window (Sprint 2).
 - `audit`: recording and reviewing sensitive administrative events.
 - `sync`: reserved for Sprint 3; no offline synchronisation in Sprints 1–2.
 
@@ -94,7 +96,9 @@ Routes define HTTP endpoints. Controllers translate requests and responses. Serv
 
 - `enums.js`: roles, regions, counties, venue types, tracks, statuses.
 - `permissions.js`: the role → permission → scope policy, in one place so roles can change after STEAMLabs confirms them.
-- `schemas/`: Zod schemas for auth, users, schools and clubs.
+- `schemas/`: Zod schemas for auth, users, schools, clubs, learners and sessions.
+- `errors.js`: every API error text, shared by the server and the demo mock and translated by the client.
+- `demo/`: the fictional dataset used by demo mode and `npm run seed` (D1-22).
 
 Shared permission definitions are not a security boundary. The server independently authenticates users and enforces permissions and resource scope. Client-side permission checks only decide what to show.
 
@@ -158,9 +162,20 @@ A club can have several champions and a champion can run several clubs. Each ass
 
 `at`, `actorId`, `actorRole`, `action`, `entityType`, `entityId`, `changedFields` (names, with sensitive values redacted), `requestId`. Append-only. No passwords, tokens or full request bodies.
 
+### Sprint 2: learners, consent, sessions and attendance
+
+Built in Sprint 2; the full field list and reasons are in `docs/sprints/sprint-2.md` section 5, the decisions in D2-1 to D2-9.
+
+- `learners`: `learnerNumber` (e.g. `NAC-001-007`), names, `birthYear` (D2-2), gender, grade, admission number (unique per school), accessibility needs, `clubId`, `schoolId`, `region`, `status`, `joinedAt`, `leftAt`.
+- `learnerContacts`: one per learner, readable by HQ only (D2-1).
+- `consents`: one per learner and type (`participation`, `photo`), with status, `signedOn` and the GridFS `fileId` of the signed form.
+- `sessions`: one per club per date; status, topic, notes, times, `photoIds` (max 3).
+- `attendance`: one per learner per session (D2-4).
+- GridFS buckets `consentFiles` and `sessionPhotos` (D2-3, D2-7).
+
 ### Later sprints (designed now, built later)
 
-Learner and a separate LearnerContact record (guardian contacts visible only to HQ unless granted), Session and Attendance, consent attachments, Events, Announcements, Equipment, Resources, Progress and, later, Certificates. See `docs/sprints/sprint-1.md` for the outline.
+Events, Announcements, Equipment, Resources, Progress and, later, Certificates. See `docs/sprints/sprint-1.md` for the outline.
 
 ## 8. RBAC and resource scope
 
