@@ -18,3 +18,37 @@ jobs:
       - run: npm run format:check
       - run: npm test
       - run: npm run build
+
+  # The browser flows against the real API and a real MongoDB (closes R1-19).
+  e2e-real:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+    env:
+      CI: true
+      E2E_TARGET: real
+      MONGODB_URI: mongodb://localhost:27017/code-clubs-e2e
+      # Throwaway values for this test run only; real secrets live in server/.env, never in git.
+      JWT_ACCESS_SECRET: ci-only-access-secret-not-used-anywhere-else-0001
+      JWT_REFRESH_SECRET: ci-only-refresh-secret-not-used-anywhere-else-0002
+      CORS_ORIGIN: http://localhost:4173
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+        working-directory: client
+      - run: npm run seed
+      - run: npx playwright test
+        working-directory: client
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: client/playwright-report
