@@ -200,7 +200,7 @@ describe('Sessions on MongoDB', () => {
     for (let i = 0; i < 6; i += 1) {
       const res = await request(app)
         .post('/api/v1/auth/login')
-        .send({ email: EMAIL.champion2, password: PASSWORD });
+        .send({ email: EMAIL.pm, password: PASSWORD });
       expect(res.status).toBe(200);
     }
   });

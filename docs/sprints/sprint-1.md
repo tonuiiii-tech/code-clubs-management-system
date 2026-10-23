@@ -2,8 +2,8 @@
 
 **Project:** STEAMLabs Africa Code Clubs Management System  
 **Sprint duration:** 2 weeks (Tue 21 Oct – Mon 3 Nov 2026), with a stakeholder checkpoint on Fri 23 Oct  
-**Status:** In progress (scaffold created 21 Oct)  
-**Last updated:** 2026-10-21  
+**Status:** Done, pending the stakeholder demo (Definition of Done met 23 Oct; see `sprint-1-summary.md`)  
+**Last updated:** 2026-10-23  
 **Sprint goal:** Establish the application foundation and deliver secure, online management of users, schools, and clubs, with architecture ready for offline-first capabilities in Sprint 3.
 
 ## 1. Background
@@ -309,21 +309,21 @@ Until the database is chosen (D1-8), the web app can run in **demo mode** (`npm 
 
 Sprint 1 is complete when:
 
-- [ ] Client, server, and shared workspaces install and run from documented setup steps.
-- [ ] CI runs lint, tests, and builds on pushes and pull requests.
-- [ ] Active users can log in and log out.
-- [ ] Inactive users cannot authenticate or continue accessing protected resources.
-- [ ] All four roles are implemented.
-- [ ] Server-side permission and resource-scope checks are tested.
-- [ ] Authorized users can create and manage schools.
-- [ ] Authorized users can create clubs under schools and assign champions.
-- [ ] User, school, and club data persists in MongoDB (D1-8).
-- [ ] Sensitive administrative actions are audited.
-- [ ] UI uses steamlabsui; all text exists in English and Kiswahili files.
-- [ ] Seed script creates fictional Kenyan data and refuses to run in production.
-- [ ] Automated tests cover core success and failure cases.
-- [ ] Architecture and setup documentation match the implementation.
-- [ ] No secrets or real personal data are committed.
+- [x] Client, server, and shared workspaces install and run from documented setup steps.
+- [x] CI runs lint, tests, and builds on pushes and pull requests.
+- [x] Active users can log in and log out.
+- [x] Inactive users cannot authenticate or continue accessing protected resources.
+- [x] All four roles are implemented.
+- [x] Server-side permission and resource-scope checks are tested.
+- [x] Authorized users can create and manage schools.
+- [x] Authorized users can create clubs under schools and assign champions.
+- [x] User, school, and club data persists in MongoDB (D1-8).
+- [x] Sensitive administrative actions are audited.
+- [x] UI uses steamlabsui; all text exists in English and Kiswahili files.
+- [x] Seed script creates fictional Kenyan data and refuses to run in production.
+- [x] Automated tests cover core success and failure cases.
+- [x] Architecture and setup documentation match the implementation.
+- [x] No secrets or real personal data are committed.
 
 ## 10. Dependencies and open questions
 
