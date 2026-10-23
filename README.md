@@ -67,6 +67,17 @@ npm run dev
 
 On macOS or Linux, use `cp` instead of `Copy-Item` and `/` instead of `\`.
 
+In **Git Bash**, use `cp` and `/` the same way, and the project folder is `/c/Users/<you>/…`.
+
+### If something goes wrong
+
+| What you see                                                            | Cause and fix                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Invalid environment configuration … JWT_ACCESS_SECRET`                 | A secret is missing or shorter than 32 characters. Generate a new one with the command above. Older `.env` files used `JWT_SECRET`; the names are now `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET`.                                                                                                                                                               |
+| `Invalid scheme, expected connection string to start with "mongodb://"` | The `MONGODB_URI` line is wrong, e.g. the name typed twice (`MONGODB_URI=MONGODB_URI=…`) or the old name `MONGO_URI`.                                                                                                                                                                                                                                             |
+| `MongooseServerSelectionError … IP that isn't whitelisted`              | Atlas does not allow your IP address. Add it in Atlas under Security → Network Access. Home and mobile internet in Kenya often change IP; for development only you can allow `0.0.0.0/0`, and remove it before going live.                                                                                                                                        |
+| "Cannot reach the server" on the sign-in page                           | The API is not running, or is still starting. Keep the `npm run dev` window open and wait for `Code Clubs API listening on http://localhost:4000/api/v1`. Check `PORT=4000` in `server\.env` (the web app calls port 4000), and that nothing else is using port 4000. Open the app at exactly `http://localhost:5173`, which is the address `CORS_ORIGIN` allows. |
+
 ### Demo mode (no database needed)
 
 To click through every screen without setting up MongoDB, run the web app in demo mode:
@@ -79,16 +90,17 @@ Open <http://localhost:5173> and use the **Sign in as…** buttons to try each r
 
 ## Commands
 
-| Command                      | What it does                                                                                  |
-| ---------------------------- | --------------------------------------------------------------------------------------------- |
-| `npm run dev`                | API and web app with live reload                                                              |
-| `npm run demo`               | Web app only, on the mock API with fictional demo data                                        |
-| `npm test`                   | Server tests (Jest + Supertest) and client tests (Vitest)                                     |
-| `npm run lint`               | ESLint across all workspaces                                                                  |
-| `npm run format`             | Format with Prettier                                                                          |
-| `npm run build`              | Production build of the PWA                                                                   |
-| `npm run test:e2e -w client` | Playwright browser tests on the demo build (run `npx playwright install chromium` once first) |
-| `npm run seed`               | Load the fictional demo data into MongoDB (refuses to run in production)                      |
+| Command                                      | What it does                                                                                                                               |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm run dev`                                | API and web app with live reload                                                                                                           |
+| `npm run demo`                               | Web app only, on the mock API with fictional demo data                                                                                     |
+| `npm test`                                   | Server tests (Jest + Supertest) and client tests (Vitest)                                                                                  |
+| `npm run lint`                               | ESLint across all workspaces                                                                                                               |
+| `npm run format`                             | Format with Prettier                                                                                                                       |
+| `npm run build`                              | Production build of the PWA                                                                                                                |
+| `npm run test:e2e -w client`                 | Playwright browser tests on the demo build (run `npx playwright install chromium` once first)                                              |
+| `E2E_TARGET=real npm run test:e2e -w client` | The same browser tests against the real API and the MongoDB in `MONGODB_URI` (seed it first; Git Bash syntax). CI runs this on every push. |
+| `npm run seed`                               | Load the fictional demo data into MongoDB (refuses to run in production)                                                                   |
 
 CI runs lint, format check, tests and build on every push and pull request (`.github/workflows/ci.yml`).
 
