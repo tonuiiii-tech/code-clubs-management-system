@@ -102,3 +102,23 @@ export const SAFEGUARDING_STATUSES = ['pending', 'cleared', 'expired'];
 export const ASSIGNMENT_ROLES = ['lead', 'assistant'];
 
 export const LANGUAGES = ['en', 'sw'];
+
+// Sprint 2: learners, consent, sessions and attendance.
+export const LEARNER_STATUSES = ['active', 'left'];
+export const GENDERS = ['girl', 'boy', 'prefer_not_to_say'];
+/** CBC grades 4 to 9; code clubs serve learners aged 9 to 14 (questionnaire Q14). */
+export const GRADES = ['grade_4', 'grade_5', 'grade_6', 'grade_7', 'grade_8', 'grade_9'];
+export const LEARNER_MIN_AGE = 9;
+export const LEARNER_MAX_AGE = 14;
+export const GUARDIAN_RELATIONSHIPS = ['mother', 'father', 'guardian', 'other'];
+export const CONSENT_TYPES = ['participation', 'photo'];
+export const CONSENT_STATUSES = ['pending', 'given', 'refused', 'withdrawn'];
+export const SESSION_STATUSES = ['planned', 'held', 'cancelled'];
+export const ATTENDANCE_STATUSES = ['present', 'absent', 'late', 'excused'];
+/** Champions can change a session report for this many days after the session (D2-5). */
+export const SESSION_EDIT_DAYS = 7;
+export const SESSION_MAX_PHOTOS = 3;
+/** Uploads: signed consent forms and session photos (D2-3, D2-7). */
+export const UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
+export const UPLOAD_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+export const PHOTO_TYPES = ['image/jpeg', 'image/png'];

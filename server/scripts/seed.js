@@ -10,12 +10,23 @@ import { REGION_CODE_PREFIX } from '@code-clubs/shared/enums';
 import { createSeedData, DEMO_PASSWORD } from '@code-clubs/shared/demo';
 import { env } from '../src/config/env.js';
 import { connectDatabase, disconnectDatabase } from '../src/db/index.js';
-import { Club, ClubChampion, Counter, School, User } from '../src/db/models.js';
+import {
+  Attendance,
+  Club,
+  ClubChampion,
+  Consent,
+  Counter,
+  Learner,
+  LearnerContact,
+  School,
+  Session,
+  User,
+} from '../src/db/models.js';
 import { toDocument } from '../src/db/records.js';
 import { BCRYPT_COST } from '../src/modules/users/users.service.js';
 
 export async function seed({ password = env.SEED_DEFAULT_PASSWORD || DEMO_PASSWORD } = {}) {
-  const { users, schools, clubs, assignments } = createSeedData();
+  const { users, schools, clubs, assignments, ...sprint2 } = createSeedData();
   const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
   const upsertAll = (model, records) =>
     model.bulkWrite(
@@ -34,6 +45,28 @@ export async function seed({ password = env.SEED_DEFAULT_PASSWORD || DEMO_PASSWO
   await ClubChampion.deleteMany({ clubId: { $in: clubs.map((c) => c.id) } });
   await ClubChampion.insertMany(assignments.map((a) => ({ ...a })));
 
+  // Sprint 2: fictional learners only (R2-1).
+  await upsertAll(Learner, sprint2.learners);
+  await upsertAll(LearnerContact, sprint2.learnerContacts);
+  await upsertAll(Consent, sprint2.consents);
+  // Session dates follow today's date, so replace the demo sessions rather than upsert them.
+  await Session.deleteMany({ _id: { $in: sprint2.sessions.map((s) => s.id) } });
+  await Attendance.deleteMany({ sessionId: { $in: sprint2.sessions.map((s) => s.id) } });
+  await upsertAll(Session, sprint2.sessions);
+  await upsertAll(Attendance, sprint2.attendance);
+  for (const club of clubs) {
+    const numbers = sprint2.learners
+      .filter((l) => l.clubId === club.id)
+      .map((l) => Number(l.learnerNumber.slice(-3)));
+    if (numbers.length) {
+      await Counter.updateOne(
+        { _id: `learner:${club.code}` },
+        { $max: { seq: Math.max(...numbers) } },
+        { upsert: true },
+      );
+    }
+  }
+
   // Keep club codes moving forward from the seeded ones (NAC-003 → next is NAC-004).
   for (const prefix of Object.values(REGION_CODE_PREFIX)) {
     const highest = clubs
@@ -41,7 +74,12 @@ export async function seed({ password = env.SEED_DEFAULT_PASSWORD || DEMO_PASSWO
       .reduce((max, c) => Math.max(max, Number(c.code.slice(4))), 0);
     await Counter.updateOne({ _id: prefix }, { $max: { seq: highest } }, { upsert: true });
   }
-  return { users: users.length, schools: schools.length, clubs: clubs.length };
+  return {
+    users: users.length,
+    schools: schools.length,
+    clubs: clubs.length,
+    learners: sprint2.learners.length,
+  };
 }
 
 if (process.argv[1]?.endsWith('seed.js')) {
@@ -52,7 +90,8 @@ if (process.argv[1]?.endsWith('seed.js')) {
   await connectDatabase(env.MONGODB_URI);
   const counts = await seed();
   console.log(
-    `Seeded ${counts.users} users, ${counts.schools} schools and ${counts.clubs} clubs.`,
+    `Seeded ${counts.users} users, ${counts.schools} schools, ${counts.clubs} clubs`,
+    `and ${counts.learners} fictional learners.`,
     'Sign in with any demo account, e.g. wanjiru.kamau@demo.steamlabs.test.',
   );
   await disconnectDatabase();

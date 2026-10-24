@@ -1,8 +1,8 @@
 # STEAMLabs Code Clubs
 
-A management system for STEAMLabs Africa's code clubs in Kenya: schools, clubs, club champions, and later learners, sessions, attendance, events and reports. It is one installable web app (PWA) for laptops, tablets and phones, in English and Kiswahili. Offline use with sync comes in Sprint 3.
+A management system for STEAMLabs Africa's code clubs in Kenya: schools, clubs, club champions, learners, consent, session reports and attendance, and later events and reports. It is one installable web app (PWA) for laptops, tablets and phones, in English and Kiswahili. Offline use with sync comes in Sprint 3.
 
-**Status:** Sprint 1. Data is stored in MongoDB (decision D1-8). Demo mode lets you click through the app without a database.
+**Status:** Sprint 2 (learners, consent, sessions and attendance) built and in review. Data is stored in MongoDB (decision D1-8). Demo mode lets you click through the app without a database. Use fictional learners only until STEAMLabs confirms its data protection registration (R2-1).
 
 ## Documentation
 
@@ -12,6 +12,7 @@ A management system for STEAMLabs Africa's code clubs in Kenya: schools, clubs, 
 - [Risk register](docs/risk-register.md) (`R<sprint>-<n>`)
 - [Sprint 1 plan](docs/sprints/sprint-1.md): user stories, permissions, API, definition of done
 - [Sprint 1 data layer](docs/sprints/sprint-1-data-layer.md): MongoDB collections, indexes and scope queries
+- [Sprint 2 plan](docs/sprints/sprint-2.md) and [summary](docs/sprints/sprint-2-summary.md): learners, consent, sessions and attendance
 
 ## Project layout
 

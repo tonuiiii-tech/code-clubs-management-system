@@ -9,6 +9,8 @@ import { DemoBanner } from '../components/DemoBanner.jsx';
 export const NAV = [
   { to: '/', key: 'nav.dashboard', end: true },
   { to: '/clubs', key: 'nav.clubs', permission: 'club:read' },
+  { to: '/learners', key: 'nav.learners', permission: 'learner:read' },
+  { to: '/sessions', key: 'nav.sessions', permission: 'session:read' },
   { to: '/schools', key: 'nav.schools', permission: 'school:read' },
   { to: '/users', key: 'nav.users', permission: 'user:manage' },
   { to: '/profile', key: 'nav.profile' },

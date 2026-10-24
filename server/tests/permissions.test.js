@@ -47,4 +47,18 @@ describe('Permission policy', () => {
     const granted = user(ROLES.CHAMPION, { permissionGrants: ['learnerContact:read'] });
     expect(scopeFor(granted, 'learnerContact:read')).toBe('assigned');
   });
+
+  it('lets champions enter guardian contacts and consent, but not open consent forms', () => {
+    const champion = user(ROLES.CHAMPION);
+    expect(scopeFor(champion, 'learnerContact:write')).toBe('assigned');
+    expect(scopeFor(champion, 'consent:write')).toBe('assigned');
+    expect(can(champion, 'consentFile:read')).toBe(false);
+    expect(scopeFor(user(ROLES.COORDINATOR), 'consentFile:read')).toBe('assigned');
+  });
+
+  it('lets only coordinators and HQ change a session report after 7 days (D2-5)', () => {
+    expect(can(user(ROLES.CHAMPION), 'session:editLate')).toBe(false);
+    expect(scopeFor(user(ROLES.COORDINATOR), 'session:editLate')).toBe('assigned');
+    expect(scopeFor(user(ROLES.PROGRAMME_MANAGER), 'session:editLate')).toBe('all');
+  });
 });

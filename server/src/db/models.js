@@ -4,8 +4,15 @@ import {
   ASSIGNMENT_ROLES,
   CHAMPION_TYPES,
   CLUB_MAX_CAPACITY,
+  ATTENDANCE_STATUSES,
   CLUB_STATUSES,
+  CONSENT_STATUSES,
+  CONSENT_TYPES,
   COUNTIES,
+  GENDERS,
+  GRADES,
+  GUARDIAN_RELATIONSHIPS,
+  LEARNER_STATUSES,
   LANGUAGES,
   MEETING_DAYS,
   MEETING_FREQUENCIES,
@@ -14,6 +21,7 @@ import {
   ROLE_VALUES,
   SAFEGUARDING_STATUSES,
   SCHOOL_TYPES,
+  SESSION_STATUSES,
   TRACKS,
   USER_STATUSES,
   VENUE_TYPES,
@@ -150,6 +158,123 @@ clubChampionSchema.index(
 );
 clubChampionSchema.index({ userId: 1, endDate: 1 });
 
+/**
+ * Sprint 2. Learners, sessions and attendance copy `clubId` and `region` from their club,
+ * so scope queries need no join (D2-6).
+ */
+const learnerSchema = new Schema(
+  {
+    _id: uuid,
+    learnerNumber: { type: String, required: true },
+    firstName: { type: String, required: true, trim: true },
+    lastName: { type: String, required: true, trim: true },
+    // Age is asked for; the year of birth keeps it right each year (D2-2).
+    birthYear: { type: Number, required: true },
+    gender: { type: String, enum: GENDERS, required: true },
+    grade: { type: String, enum: GRADES, required: true },
+    admissionNumber: String,
+    accessibilityNeeds: String,
+    clubId: { type: String, required: true },
+    schoolId: String,
+    region: { type: String, enum: REGION_VALUES, required: true },
+    status: { type: String, enum: LEARNER_STATUSES, default: 'active' },
+    joinedAt: { type: String, required: true },
+    leftAt: { type: String, default: null },
+    ...audited,
+  },
+  options,
+);
+learnerSchema.index({ learnerNumber: 1 }, { unique: true });
+learnerSchema.index({ clubId: 1, status: 1 });
+learnerSchema.index({ region: 1, status: 1 });
+// Admission numbers are unique within a school (D2-9).
+learnerSchema.index(
+  { schoolId: 1, admissionNumber: 1 },
+  {
+    unique: true,
+    collation: { locale: 'en', strength: 2 },
+    partialFilterExpression: {
+      schoolId: { $type: 'string' },
+      admissionNumber: { $type: 'string' },
+    },
+  },
+);
+
+/** Guardian contacts, kept apart from learners and readable by HQ only (D2-1). */
+const learnerContactSchema = new Schema(
+  {
+    _id: uuid,
+    learnerId: { type: String, required: true },
+    guardianName: { type: String, required: true, trim: true },
+    relationship: { type: String, enum: GUARDIAN_RELATIONSHIPS, required: true },
+    phone: { type: String, required: true },
+    altPhone: String,
+    ...audited,
+  },
+  options,
+);
+learnerContactSchema.index({ learnerId: 1 }, { unique: true });
+
+const consentSchema = new Schema(
+  {
+    _id: uuid,
+    learnerId: { type: String, required: true },
+    clubId: { type: String, required: true },
+    region: { type: String, enum: REGION_VALUES, required: true },
+    type: { type: String, enum: CONSENT_TYPES, required: true },
+    status: { type: String, enum: CONSENT_STATUSES, required: true },
+    signedOn: String,
+    // The signed form, in the consentFiles GridFS bucket (D2-3).
+    fileId: { type: String, default: null },
+    ...audited,
+  },
+  options,
+);
+consentSchema.index({ learnerId: 1, type: 1 }, { unique: true });
+consentSchema.index({ clubId: 1, type: 1, status: 1 });
+
+const sessionSchema = new Schema(
+  {
+    _id: uuid,
+    clubId: { type: String, required: true },
+    region: { type: String, enum: REGION_VALUES, required: true },
+    date: { type: String, required: true },
+    status: { type: String, enum: SESSION_STATUSES, required: true },
+    topic: String,
+    notes: String,
+    startTime: String,
+    endTime: String,
+    cancellationReason: String,
+    // Up to 3 photos, in the sessionPhotos GridFS bucket (D2-7).
+    photoIds: { type: [String], default: [] },
+    reportedBy: String,
+    reportedAt: Date,
+    ...audited,
+  },
+  options,
+);
+// One session per club per day.
+sessionSchema.index({ clubId: 1, date: 1 }, { unique: true });
+sessionSchema.index({ region: 1, date: -1 });
+
+/** One record per learner per session (D2-4). */
+const attendanceSchema = new Schema(
+  {
+    _id: uuid,
+    sessionId: { type: String, required: true },
+    learnerId: { type: String, required: true },
+    clubId: { type: String, required: true },
+    region: { type: String, enum: REGION_VALUES, required: true },
+    date: { type: String, required: true },
+    status: { type: String, enum: ATTENDANCE_STATUSES, required: true },
+    ...audited,
+  },
+  options,
+);
+attendanceSchema.index({ sessionId: 1, learnerId: 1 }, { unique: true });
+attendanceSchema.index({ learnerId: 1, date: -1 });
+attendanceSchema.index({ region: 1, date: -1 });
+
 /** Atomic sequences, e.g. the next club number for a region prefix. */
 const counterSchema = new Schema(
   { _id: String, seq: { type: Number, default: 0 } },
@@ -184,3 +309,8 @@ export const Club = define('Club', clubSchema, 'clubs');
 export const ClubChampion = define('ClubChampion', clubChampionSchema, 'clubChampions');
 export const Counter = define('Counter', counterSchema, 'counters');
 export const AuditEntry = define('AuditEntry', auditEntrySchema, 'auditEntries');
+export const Learner = define('Learner', learnerSchema, 'learners');
+export const LearnerContact = define('LearnerContact', learnerContactSchema, 'learnerContacts');
+export const Consent = define('Consent', consentSchema, 'consents');
+export const Session = define('Session', sessionSchema, 'sessions');
+export const Attendance = define('Attendance', attendanceSchema, 'attendance');

@@ -12,6 +12,12 @@ import { SchoolFormPage } from '../pages/Schools/SchoolFormPage.jsx';
 import { ClubsPage } from '../pages/Clubs/ClubsPage.jsx';
 import { ClubDetailPage } from '../pages/Clubs/ClubDetailPage.jsx';
 import { ClubFormPage } from '../pages/Clubs/ClubFormPage.jsx';
+import { LearnersPage } from '../pages/Learners/LearnersPage.jsx';
+import { LearnerDetailPage } from '../pages/Learners/LearnerDetailPage.jsx';
+import { LearnerFormPage } from '../pages/Learners/LearnerFormPage.jsx';
+import { SessionsPage } from '../pages/Sessions/SessionsPage.jsx';
+import { SessionDetailPage } from '../pages/Sessions/SessionDetailPage.jsx';
+import { SessionFormPage } from '../pages/Sessions/SessionFormPage.jsx';
 import { ProfilePage } from '../pages/Profile/ProfilePage.jsx';
 import { NotFoundPage } from '../pages/NotFound/NotFoundPage.jsx';
 
@@ -21,6 +27,14 @@ const PROTECTED = [
   ['/clubs/new', 'club:write', ClubFormPage],
   ['/clubs/:id', 'club:read', ClubDetailPage],
   ['/clubs/:id/edit', 'club:write', ClubFormPage],
+  ['/learners', 'learner:read', LearnersPage],
+  ['/learners/new', 'learner:write', LearnerFormPage],
+  ['/learners/:id', 'learner:read', LearnerDetailPage],
+  ['/learners/:id/edit', 'learner:write', LearnerFormPage],
+  ['/sessions', 'session:read', SessionsPage],
+  ['/sessions/new', 'session:write', SessionFormPage],
+  ['/sessions/:id', 'session:read', SessionDetailPage],
+  ['/sessions/:id/edit', 'session:write', SessionFormPage],
   ['/schools', 'school:read', SchoolsPage],
   ['/schools/new', 'school:write', SchoolFormPage],
   ['/schools/:id', 'school:read', SchoolDetailPage],

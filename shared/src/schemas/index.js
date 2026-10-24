@@ -3,3 +3,5 @@ export * from './auth.js';
 export * from './user.js';
 export * from './school.js';
 export * from './club.js';
+export * from './learner.js';
+export * from './session.js';

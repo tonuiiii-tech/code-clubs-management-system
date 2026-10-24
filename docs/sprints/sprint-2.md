@@ -2,8 +2,8 @@
 
 **Project:** STEAMLabs Africa Code Clubs Management System  
 **Sprint duration:** 2 weeks (Tue 4 Nov – Mon 17 Nov 2026)  
-**Status:** Proposed, awaiting Enock's approval  
-**Last updated:** 2026-10-22 (updated with the Head of Code Clubs questionnaire answers)  
+**Status:** Built and tested on 23 Oct 2026, ahead of the planned dates; in review as a pull request into `main`  
+**Last updated:** 2026-10-23  
 **Sprint goal:** Champions can register the learners in their clubs, record guardian consent, report each session and take attendance, online, with children's personal data minimised and restricted by role.
 
 ## 1. Background
@@ -129,27 +129,27 @@ As in Sprint 1, out-of-scope records return 404 and every rule is enforced on th
 
 Prefix: `/api/v1`
 
-| Method | Endpoint                        | Purpose                                         |
-| ------ | ------------------------------- | ----------------------------------------------- |
-| GET    | `/learners`                     | List learners in scope (filter by club, status) |
-| POST   | `/learners`                     | Register a learner (with optional contact)      |
-| GET    | `/learners/:id`                 | Get a learner                                   |
-| PATCH  | `/learners/:id`                 | Update a learner                                |
-| PATCH  | `/learners/:id/status`          | Mark as left or re-activate                     |
-| GET    | `/learners/:id/contact`         | Guardian contact (HQ or grant only)             |
-| PUT    | `/learners/:id/contact`         | Enter or replace guardian contact               |
-| POST   | `/learners/:id/consent`         | Upload consent form, set status received        |
-| GET    | `/learners/:id/consent/file`    | Download consent form                           |
-| PATCH  | `/learners/:id/consent`         | Mark consent withdrawn                          |
-| GET    | `/sessions`                     | List sessions in scope (filter by club, month)  |
-| POST   | `/sessions`                     | Plan or report a session                        |
-| GET    | `/sessions/:id`                 | Get a session with attendance                   |
-| PATCH  | `/sessions/:id`                 | Update report, status                           |
-| PUT    | `/sessions/:id/attendance`      | Save the whole attendance list at once          |
-| POST   | `/sessions/:id/photos`          | Add a photo (photo consent check)               |
-| GET    | `/sessions/:id/photos/:photoId` | View a photo in scope                           |
-| DELETE | `/sessions/:id/photos/:photoId` | Remove a photo                                  |
-| GET    | `/dashboard/summary`            | Adds learner, session and attendance counts     |
+| Method | Endpoint                               | Purpose                                              |
+| ------ | -------------------------------------- | ---------------------------------------------------- |
+| GET    | `/learners`                            | List learners in scope (filter by club, status)      |
+| POST   | `/learners`                            | Register a learner (with optional contact)           |
+| GET    | `/learners/:id`                        | Get a learner                                        |
+| PATCH  | `/learners/:id`                        | Update a learner                                     |
+| PATCH  | `/learners/:id/status`                 | Mark as left or re-activate                          |
+| GET    | `/learners/:id/contact`                | Guardian contact (HQ or grant only)                  |
+| PUT    | `/learners/:id/contact`                | Enter or replace guardian contact                    |
+| PUT    | `/learners/:id/consents/:type`         | Record consent status for `participation` or `photo` |
+| PUT    | `/learners/:id/consents/:type/file`    | Upload the signed form (raw body, D2-3)              |
+| GET    | `/learners/:id/consents/:type/file`    | Download the signed form (HQ and coordinators)       |
+| GET    | `/sessions`                            | List sessions in scope (filter by club, month)       |
+| POST   | `/sessions`                            | Plan or report a session                             |
+| GET    | `/sessions/:id`                        | Get a session with attendance                        |
+| PATCH  | `/sessions/:id`                        | Update report, status                                |
+| PUT    | `/sessions/:id/attendance`             | Save the whole attendance list at once               |
+| POST   | `/sessions/:id/photos?confirmConsent=` | Add a photo (photo consent check, raw body)          |
+| GET    | `/sessions/:id/photos/:photoId`        | View a photo in scope                                |
+| DELETE | `/sessions/:id/photos/:photoId`        | Remove a photo                                       |
+| GET    | `/dashboard/summary`                   | Adds learner, session and attendance counts          |
 
 Every learner, contact, consent and attendance change is written to the audit log. Reading a guardian contact or a consent file is also audited, because it is access to a child's personal data.
 
@@ -216,15 +216,17 @@ Answered by the questionnaire: session report contents, who reads guardian conta
 5. How long after a learner leaves should their name and contacts be kept? (Q45 said forever; see R2-6.)
 6. The roles and permissions meeting (Q34): when is it, and can we join with the Sprint 1 permission matrix?
 
+As built, consent is recorded per type (`/consents/:type`) instead of one consent endpoint, so participation and photo consent each have their own status and signed form.
+
 ## 14. Definition of Done
 
-- [ ] All six user stories meet their criteria, online.
-- [ ] Guardian contacts never appear in responses for roles without permission (tested).
-- [ ] Consent files are type checked, size limited and only downloadable in scope (tested).
-- [ ] Every new endpoint has allowed and denied scope tests.
-- [ ] Reads of contacts and consent files are audited.
-- [ ] New screens work on a tablet and a phone, in English and Kiswahili.
-- [ ] Session photos are refused or confirmed when a present learner has no photo consent (tested).
-- [ ] Demo mode and the real server pass the same Playwright flow.
-- [ ] Seed and demo data contain only fictional learners.
-- [ ] Docs, decision log and risk register updated.
+- [x] All six user stories meet their criteria, online.
+- [x] Guardian contacts never appear in responses for roles without permission (tested).
+- [x] Consent files are type checked, size limited and only downloadable in scope (tested).
+- [x] Every new endpoint has allowed and denied scope tests.
+- [x] Reads of contacts and consent files are audited.
+- [x] New screens work on a tablet and a phone, in English and Kiswahili.
+- [x] Session photos are refused or confirmed when a present learner has no photo consent (tested).
+- [x] Demo mode and the real server pass the same Playwright flow.
+- [x] Seed and demo data contain only fictional learners.
+- [x] Docs, decision log and risk register updated.

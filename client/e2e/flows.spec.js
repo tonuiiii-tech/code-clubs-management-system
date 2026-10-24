@@ -107,3 +107,91 @@ test('the app works in Kiswahili', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Vilabu', exact: true })).toBeVisible();
   await expect(page.getByText('Kanda zote')).toBeAttached();
 });
+
+// A real 1×1 PNG, so the browser can shrink it before upload like a camera photo.
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  'base64',
+);
+const isoDaysAgo = (n) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+
+test('a champion registers a learner, records consent, reports a session and takes attendance', async ({
+  page,
+}) => {
+  const first = `Wanjiku${RUN.replace(' ', '-')}`;
+  const name = `${first} Kamau`;
+  await signInAs(page, 'Club Champion');
+  const nav = page.getByRole('navigation', { name: 'Main navigation' });
+
+  // US-07 and US-08: register with a guardian contact the champion cannot read back.
+  await nav.getByRole('link', { name: 'Learners' }).click();
+  await page.getByRole('link', { name: 'Register learner' }).click();
+  // The list page also has a "Club" filter, so wait for the form before filling it.
+  await expect(page.getByRole('heading', { name: 'Register learner' })).toBeVisible();
+  await page.getByLabel(field('Club')).selectOption({ label: 'NAC-001 · Mwangaza Scratch Stars' });
+  await page.getByLabel(field('First name')).fill(first);
+  await page.getByLabel(field('Last name')).fill('Kamau');
+  await page.getByLabel(field('Age')).fill('7');
+  await page.getByLabel(field('Gender')).selectOption('girl');
+  await page.getByLabel(field('Grade')).selectOption('grade_6');
+  await page.getByLabel(field('School admission number')).fill(`E2E-${Date.now()}`);
+  await page.getByLabel(field('Guardian name')).fill('Lucy Kamau');
+  await page.getByLabel(field('Relationship')).selectOption('mother');
+  await page.getByLabel(field('Phone')).fill('+254700000901');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('Must be at least 9')).toBeVisible();
+  await page.getByLabel(field('Age')).fill('11');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('heading', { name })).toBeVisible();
+  await expect(page.getByText('A guardian contact is on file.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Show contact' })).toHaveCount(0);
+  await expect(page.getByText('Lucy Kamau')).toHaveCount(0);
+
+  // US-09: participation consent with the signed form.
+  await page.getByRole('button', { name: 'Record consent' }).first().click();
+  const consent = page.getByRole('dialog');
+  await consent.getByLabel(field('Consent status')).selectOption('given');
+  await consent
+    .getByLabel(field('Signed form \\(photo or PDF\\)'))
+    .setInputFiles({ name: 'form.png', mimeType: 'image/png', buffer: PNG });
+  await consent.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('Participation: Given')).toBeVisible();
+  await expect(page.getByText(/· Signed form uploaded/)).toBeVisible();
+  // Champions record consent but cannot open the form (D2-1).
+  await expect(page.getByRole('button', { name: 'Download form' })).toHaveCount(0);
+
+  // US-10: report a session. Real data persists, so pick a free day in the edit window.
+  await nav.getByRole('link', { name: 'Sessions' }).click();
+  await page.getByRole('link', { name: 'Report a session' }).click();
+  await expect(page.getByRole('heading', { name: 'Report a session' })).toBeVisible();
+  await page.getByLabel(field('Club')).selectOption({ label: 'NAC-001 · Mwangaza Scratch Stars' });
+  await page
+    .getByLabel(field('Date'))
+    .fill(isoDaysAgo(REAL ? [0, 2, 3, 4, 5, 6][Date.now() % 6] : 0));
+  await page.getByLabel(field('Topic covered')).fill(`Scratch: broadcast messages${RUN}`);
+  await page.getByLabel('What was done and any challenges').fill('Built a chat between sprites.');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText(`Scratch: broadcast messages${RUN}`).first()).toBeVisible();
+
+  // US-11: attendance in one step.
+  await page.getByRole('button', { name: 'All present' }).click();
+  await page.getByRole('radiogroup', { name }).getByRole('radio', { name: 'Late' }).click();
+  await page.getByRole('button', { name: 'Save attendance' }).click();
+  await expect(page.getByText('Attendance saved')).toBeVisible();
+  await expect(
+    page.getByRole('radiogroup', { name }).getByRole('radio', { name: 'Late' }),
+  ).toHaveAttribute('aria-checked', 'true');
+
+  // D2-7: the new learner has no photo consent, so the photo needs a confirmation.
+  await page.getByLabel('Add photo').setInputFiles({
+    name: 'session.png',
+    mimeType: 'image/png',
+    buffer: PNG,
+  });
+  const check = page.getByRole('dialog');
+  await expect(check.getByText(name)).toBeVisible();
+  await expect(check.getByRole('button', { name: 'Add photo' })).toBeDisabled();
+  await check.getByLabel('I confirm none of these learners can be seen in the photo').check();
+  await check.getByRole('button', { name: 'Add photo' }).click();
+  await expect(page.getByRole('img', { name: 'Session photo 1' })).toBeVisible();
+});

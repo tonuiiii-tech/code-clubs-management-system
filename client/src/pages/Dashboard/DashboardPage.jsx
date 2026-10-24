@@ -14,7 +14,7 @@ import { DataState } from '../../components/DataState.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { getDashboardSummary } from '../../services/dashboardService.js';
 
-/** Sprint 1: counts inside the user's own scope. Charts and reports come in Sprint 4. */
+/** Counts inside the user's own scope (US-06, US-12). Charts and reports come in Sprint 4. */
 export function DashboardPage() {
   const { t } = useTranslation();
   const { loading, error, data, reload } = useApi(getDashboardSummary);
@@ -31,6 +31,35 @@ export function DashboardPage() {
               <Stat variant="tile" value={summary.schools} label={t('dashboard.schools')} />
               <Stat variant="tile" value={summary.champions} label={t('dashboard.champions')} />
             </div>
+            {summary.learners !== undefined && (
+              <div className="stat-grid">
+                <Stat
+                  variant="tile"
+                  value={summary.learners}
+                  label={t('dashboard.learners')}
+                  delta={`${t('dashboard.girls')} ${summary.learnersByGender.girl ?? 0} · ${t('dashboard.boys')} ${summary.learnersByGender.boy ?? 0}`}
+                />
+                <Stat
+                  variant="tile"
+                  value={summary.sessionsThisMonth}
+                  label={t('dashboard.sessionsThisMonth')}
+                />
+                <Stat
+                  variant="tile"
+                  value={
+                    summary.attendanceRate === null
+                      ? t('dashboard.noRate')
+                      : `${summary.attendanceRate}%`
+                  }
+                  label={t('dashboard.attendanceRate')}
+                />
+                <Stat
+                  variant="tile"
+                  value={summary.learnersMissingConsent}
+                  label={t('dashboard.missingConsent')}
+                />
+              </div>
+            )}
             <div className="form-grid">
               <Breakdown
                 title={t('dashboard.byRegion')}

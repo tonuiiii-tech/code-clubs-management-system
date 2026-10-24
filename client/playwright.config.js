@@ -27,6 +27,9 @@ export default defineConfig({
   reporter: process.env.CI ? [['list'], ['github']] : 'list',
   use: {
     baseURL: 'http://localhost:4173',
+    // Kept only for failed tests, so CI failures can be inspected from the uploaded artifact.
+    screenshot: 'only-on-failure',
+    trace: 'retain-on-failure',
     // Optional: point at an already-installed Chromium instead of `npx playwright install`.
     ...(process.env.PW_CHROMIUM_PATH && {
       launchOptions: { executablePath: process.env.PW_CHROMIUM_PATH },

@@ -20,6 +20,16 @@ export async function clubScopeQuery(filter) {
   return NOTHING;
 }
 
+/** Learners, sessions, attendance and consents carry their club's id and region (D2-6). */
+export async function clubRecordScopeQuery(filter) {
+  if (filter.all) return {};
+  if (filter.regions) return { region: { $in: filter.regions } };
+  if (filter.championUserId) {
+    return { clubId: { $in: await championClubIds(filter.championUserId) } };
+  }
+  return NOTHING;
+}
+
 export async function schoolScopeQuery(filter) {
   if (filter.all) return {};
   if (filter.regions) return { region: { $in: filter.regions } };
