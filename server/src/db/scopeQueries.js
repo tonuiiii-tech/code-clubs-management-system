@@ -71,3 +71,16 @@ export function auditScopeQuery(filter) {
   if (filter.userId) return { actorId: filter.userId };
   return NOTHING;
 }
+
+/**
+ * Events (Sprint 4): coordinators see their regions' events and national ones, champions the
+ * events their clubs are invited to.
+ */
+export async function eventScopeQuery(filter) {
+  if (filter.all) return {};
+  if (filter.regions) return { region: { $in: [...filter.regions, null] } };
+  if (filter.championUserId) {
+    return { clubIds: { $in: await championClubIds(filter.championUserId) } };
+  }
+  return NOTHING;
+}

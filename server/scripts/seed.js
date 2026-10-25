@@ -11,22 +11,42 @@ import { createSeedData, DEMO_PASSWORD } from '@code-clubs/shared/demo';
 import { env } from '../src/config/env.js';
 import { connectDatabase, disconnectDatabase } from '../src/db/index.js';
 import {
+  Announcement,
+  AnnouncementRead,
   Attendance,
   Club,
   ClubChampion,
   Consent,
   Counter,
+  Event,
+  EventConsent,
+  EventParticipant,
+  EventProject,
   Learner,
   LearnerContact,
   School,
   Session,
+  Term,
   User,
 } from '../src/db/models.js';
 import { toDocument } from '../src/db/records.js';
 import { BCRYPT_COST } from '../src/modules/users/users.service.js';
 
 export async function seed({ password = env.SEED_DEFAULT_PASSWORD || DEMO_PASSWORD } = {}) {
-  const { users, schools, clubs, assignments, ...sprint2 } = createSeedData();
+  const {
+    users,
+    schools,
+    clubs,
+    assignments,
+    terms,
+    events,
+    eventParticipants,
+    eventConsents,
+    eventProjects,
+    announcements,
+    announcementReads,
+    ...sprint2
+  } = createSeedData();
   const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
   const upsertAll = (model, records) =>
     model.bulkWrite(
@@ -66,6 +86,20 @@ export async function seed({ password = env.SEED_DEFAULT_PASSWORD || DEMO_PASSWO
       );
     }
   }
+
+  // Sprint 4: dates follow today's date, so replace the demo records (fictional learners only).
+  const replaceAll = async (model, records) => {
+    await model.deleteMany({ _id: { $in: records.map((r) => r.id) } });
+    await upsertAll(model, records);
+  };
+  await Term.deleteMany({ year: { $in: [...new Set(terms.map((t) => t.year))] } });
+  await upsertAll(Term, terms);
+  await replaceAll(Event, events);
+  await replaceAll(EventParticipant, eventParticipants);
+  await replaceAll(EventConsent, eventConsents);
+  await replaceAll(EventProject, eventProjects);
+  await replaceAll(Announcement, announcements);
+  await replaceAll(AnnouncementRead, announcementReads);
 
   // Keep club codes moving forward from the seeded ones (NAC-003 → next is NAC-004).
   for (const prefix of Object.values(REGION_CODE_PREFIX)) {

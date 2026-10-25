@@ -106,6 +106,34 @@ export const POLICY = Object.freeze({
     [PROGRAMME_MANAGER]: ALL,
     [COORDINATOR]: ASSIGNED,
   },
+
+  // Sprint 4 (docs/sprints/sprint-4.md, section 8).
+  'dashboard:hq': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL, [COORDINATOR]: ASSIGNED },
+  'report:read': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL, [COORDINATOR]: ASSIGNED },
+  // Who gets the termly email, and the log of messages the stub providers recorded (D4-5).
+  'report:schedule': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL },
+  'term:manage': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL },
+  // Champions see events their clubs are invited to; coordinators manage their regions' events.
+  'event:read': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+    [CHAMPION]: ASSIGNED,
+  },
+  'event:manage': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL, [COORDINATOR]: ASSIGNED },
+  'eventParticipant:manage': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+    [CHAMPION]: ASSIGNED,
+  },
+  'announcement:send': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL, [COORDINATOR]: ASSIGNED },
+  'announcement:read': {
+    [SYSTEM_ADMIN]: SELF,
+    [PROGRAMME_MANAGER]: SELF,
+    [COORDINATOR]: SELF,
+    [CHAMPION]: SELF,
+  },
 });
 
 export const PERMISSIONS = Object.freeze(Object.keys(POLICY));

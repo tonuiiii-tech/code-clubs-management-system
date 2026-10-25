@@ -12,8 +12,9 @@ import { clubsRouter } from './modules/clubs/clubs.routes.js';
 import { learnersRouter } from './modules/learners/learners.routes.js';
 import { sessionsRouter } from './modules/sessions/sessions.routes.js';
 import { auditRouter } from './modules/audit/audit.routes.js';
-import { dashboardRouter } from './modules/dashboard/dashboard.routes.js';
+import { alertsRouter, dashboardRouter } from './modules/dashboard/dashboard.routes.js';
 import { syncRouter } from './modules/sync/sync.routes.js';
+import { termsRouter } from './modules/terms/terms.routes.js';
 
 /** Builds the Express app without listening, so tests can use it with Supertest. */
 export function createApp() {
@@ -40,6 +41,8 @@ export function createApp() {
   api.use('/audit', auditRouter);
   api.use('/dashboard', dashboardRouter);
   api.use('/sync', syncRouter);
+  api.use('/terms', termsRouter);
+  api.use('/alerts', alertsRouter);
   app.use('/api/v1', api);
 
   app.use(notFoundHandler);
