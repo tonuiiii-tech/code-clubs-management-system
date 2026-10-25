@@ -122,3 +122,21 @@ export const SESSION_MAX_PHOTOS = 3;
 export const UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
 export const UPLOAD_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
 export const PHOTO_TYPES = ['image/jpeg', 'image/png'];
+
+// Sprint 3: working offline and syncing (docs/sync-protocol.md).
+/** Changes a device can make offline and send with POST /sync/push. */
+export const SYNC_OPERATION_TYPES = [
+  'learner.create',
+  'learner.update',
+  'learner.status',
+  'learner.contact',
+  'consent.set',
+  'session.create',
+  'session.update',
+  'session.attendance',
+];
+export const SYNC_PUSH_MAX_OPERATIONS = 50;
+/** Devices hold sessions and attendance from this many days back (and future sessions). */
+export const SYNC_SESSION_DAYS = 120;
+/** Local data is deleted after this many days without a successful sync (D3-2). */
+export const OFFLINE_MAX_DAYS = 14;

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { Attendance, Learner, Session } from '../../db/models.js';
+import { Attendance, Learner, Session, Tombstone } from '../../db/models.js';
 import { insertUnique, paginate, toRecord, updateUnique } from '../../db/records.js';
 import { clubRecordScopeQuery } from '../../db/scopeQueries.js';
 import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
@@ -46,6 +46,15 @@ export async function findSessionInScope(id, scopeFilter) {
   );
 }
 
+export async function sessionExists(id) {
+  return (await Session.countDocuments({ _id: id })) > 0;
+}
+
+/** The session a club already has on a date, if any (one per club per day). */
+export async function findSessionByClubDate(clubId, date) {
+  return toRecord(await Session.findOne({ clubId, date }).lean());
+}
+
 export async function insertSession(session) {
   return insertUnique(Session, session, ERROR_MESSAGES.duplicateSession);
 }
@@ -74,10 +83,31 @@ export async function learnerIdsInClub(clubId, learnerIds) {
   return Learner.distinct('_id', { _id: { $in: learnerIds }, clubId });
 }
 
-/** Saves the whole list at once: one record per learner (D2-4); learners left out are removed. */
-export async function replaceAttendance(session, records, actorId) {
+/**
+ * Saves the whole list at once: one record per learner (D2-4); learners left out are removed,
+ * leaving a tombstone so devices remove them too. With `merge`, nobody's mark is removed.
+ */
+export async function replaceAttendance(session, records, actorId, { merge = false } = {}) {
   const now = new Date();
-  await Attendance.bulkWrite([
+  const keep = records.map((r) => r.learnerId);
+  if (!merge) {
+    const removed = await Attendance.find({ sessionId: session.id, learnerId: { $nin: keep } })
+      .select('_id')
+      .lean();
+    if (removed.length) {
+      await Tombstone.insertMany(
+        removed.map((r) => ({
+          _id: randomUUID(),
+          entityType: 'attendance',
+          recordId: r._id,
+          clubId: session.clubId,
+          region: session.region,
+          updatedAt: now,
+        })),
+      );
+    }
+  }
+  const writes = [
     ...records.map(({ learnerId, status }) => ({
       updateOne: {
         filter: { sessionId: session.id, learnerId },
@@ -95,17 +125,16 @@ export async function replaceAttendance(session, records, actorId) {
         upsert: true,
       },
     })),
-    {
-      deleteMany: {
-        filter: { sessionId: session.id, learnerId: { $nin: records.map((r) => r.learnerId) } },
-      },
-    },
-  ]);
+    ...(merge
+      ? []
+      : [{ deleteMany: { filter: { sessionId: session.id, learnerId: { $nin: keep } } } }]),
+  ];
+  if (writes.length) await Attendance.bulkWrite(writes);
 }
 
 /** Keeps attendance dates in step when a session's date changes. */
 export async function moveAttendanceDate(sessionId, date) {
-  await Attendance.updateMany({ sessionId }, { $set: { date } });
+  await Attendance.updateMany({ sessionId }, { $set: { date, updatedAt: new Date() } });
 }
 
 /** Learner ids marked present or late in a session. */

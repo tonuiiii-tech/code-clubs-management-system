@@ -6,8 +6,10 @@ import {
   createSessionSchema,
   createSchoolSchema,
   createUserSchema,
+  syncPushSchema,
   updateOwnProfileSchema,
 } from '@code-clubs/shared/schemas';
+import { deviceTime } from '../src/utils/deviceTime.js';
 
 const validClub = {
   name: 'Kibera Coders',
@@ -134,5 +136,42 @@ describe('Session and attendance schemas', () => {
     const record = { learnerId: validLearner.clubId, status: 'present' };
     expect(attendanceSchema.safeParse({ records: [record] }).success).toBe(true);
     expect(attendanceSchema.safeParse({ records: [record, record] }).success).toBe(false);
+  });
+});
+
+describe('Sync schemas and device time', () => {
+  const op = {
+    opId: '0f8fad5b-d9cb-469f-a165-70867728950e',
+    type: 'learner.status',
+    recordId: '7c9e6679-7425-40de-944b-e07fc1f90ae7',
+    recordedAt: '2026-11-20T09:41:00.000Z',
+    data: { status: 'left' },
+  };
+
+  it('accepts known changes only, at most 50 at a time', () => {
+    expect(syncPushSchema.safeParse({ operations: [op] }).success).toBe(true);
+    expect(
+      syncPushSchema.safeParse({ operations: [{ ...op, type: 'learner.delete' }] }).success,
+    ).toBe(false);
+    expect(syncPushSchema.safeParse({ operations: [{ ...op, opId: 'x' }] }).success).toBe(false);
+    expect(syncPushSchema.safeParse({ operations: Array(51).fill(op) }).success).toBe(false);
+    expect(syncPushSchema.safeParse({ operations: [] }).success).toBe(false);
+  });
+
+  it('uses the device time when it is recent, and refuses one in the future (D3-7)', () => {
+    const now = new Date('2026-11-20T12:00:00.000Z');
+    expect(deviceTime('2026-11-15T09:00:00.000Z', now)).toEqual(new Date('2026-11-15T09:00:00Z'));
+    expect(deviceTime('2026-11-01T09:00:00.000Z', now)).toBeUndefined();
+    expect(deviceTime('2026-11-20T12:03:00.000Z', now)).toEqual(now);
+    expect(() => deviceTime('2026-11-20T13:00:00.000Z', now)).toThrow(/future/);
+    expect(deviceTime(undefined, now)).toBeUndefined();
+  });
+
+  it('lets a device choose the id of a new learner or session', () => {
+    const id = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
+    expect(createLearnerSchema.safeParse({ ...validLearner, id }).success).toBe(true);
+    expect(createLearnerSchema.safeParse({ ...validLearner, id: 'abc' }).success).toBe(false);
+    const session = { id, clubId: validLearner.clubId, date: '2026-10-20', topic: 'Loops' };
+    expect(createSessionSchema.safeParse(session).success).toBe(true);
   });
 });

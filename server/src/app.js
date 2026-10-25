@@ -13,6 +13,7 @@ import { learnersRouter } from './modules/learners/learners.routes.js';
 import { sessionsRouter } from './modules/sessions/sessions.routes.js';
 import { auditRouter } from './modules/audit/audit.routes.js';
 import { dashboardRouter } from './modules/dashboard/dashboard.routes.js';
+import { syncRouter } from './modules/sync/sync.routes.js';
 
 /** Builds the Express app without listening, so tests can use it with Supertest. */
 export function createApp() {
@@ -23,6 +24,8 @@ export function createApp() {
   app.use(requestId);
   app.use(helmet());
   app.use(cors({ origin: env.CORS_ORIGIN.split(','), credentials: true }));
+  // A device can send up to 50 changes at once (docs/sync-protocol.md).
+  app.use('/api/v1/sync/push', express.json({ limit: '1mb' }));
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());
 
@@ -36,6 +39,7 @@ export function createApp() {
   api.use('/sessions', sessionsRouter);
   api.use('/audit', auditRouter);
   api.use('/dashboard', dashboardRouter);
+  api.use('/sync', syncRouter);
   app.use('/api/v1', api);
 
   app.use(notFoundHandler);

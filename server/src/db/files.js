@@ -39,6 +39,12 @@ export async function readFile(bucketName, id) {
   };
 }
 
+/** The id of a file uploaded by a syncing device with this opId, or null. */
+export async function findFileByOpId(bucketName, opId) {
+  const [file] = await bucket(bucketName).find({ 'metadata.opId': opId }).limit(1).toArray();
+  return file?._id ?? null;
+}
+
 export async function deleteFile(bucketName, id) {
   try {
     await bucket(bucketName).delete(id);

@@ -61,4 +61,13 @@ describe('Permission policy', () => {
     expect(scopeFor(user(ROLES.COORDINATOR), 'session:editLate')).toBe('assigned');
     expect(scopeFor(user(ROLES.PROGRAMME_MANAGER), 'session:editLate')).toBe('all');
   });
+
+  it('lets only champions and coordinators sync, and coordinators and HQ read conflicts (D3-1)', () => {
+    expect(scopeFor(user(ROLES.CHAMPION), 'sync:use')).toBe('assigned');
+    expect(scopeFor(user(ROLES.COORDINATOR), 'sync:use')).toBe('assigned');
+    expect(can(user(ROLES.SYSTEM_ADMIN), 'sync:use')).toBe(false);
+    expect(can(user(ROLES.PROGRAMME_MANAGER), 'sync:use')).toBe(false);
+    expect(can(user(ROLES.CHAMPION), 'syncConflict:read')).toBe(false);
+    expect(scopeFor(user(ROLES.COORDINATOR), 'syncConflict:read')).toBe('assigned');
+  });
 });

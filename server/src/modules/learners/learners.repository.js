@@ -35,6 +35,10 @@ export async function findLearnerInScope(id, scopeFilter) {
   );
 }
 
+export async function learnerExists(id) {
+  return (await Learner.countDocuments({ _id: id })) > 0;
+}
+
 export async function activeLearnersInClub(clubId) {
   const docs = await Learner.find({ clubId, status: 'active' })
     .sort({ lastName: 1, firstName: 1 })

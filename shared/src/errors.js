@@ -61,6 +61,11 @@ export const ERROR_MESSAGES = Object.freeze({
   photoConsentMissing:
     'Some learners present have no photo consent. Confirm they are not in the photo.',
   photoNotFound: 'Photo not found',
+  // Sync (Sprint 3)
+  duplicateId: 'A record with this ID already exists',
+  invalidRecordedAt: 'The time of this change is in the future. Check the device clock.',
+  syncNotAvailable: 'Offline sync is for Club Champions and Coordinators',
+  needsConnection: 'This needs an internet connection',
 });
 
 const KEY_BY_MESSAGE = new Map(Object.entries(ERROR_MESSAGES).map(([key, text]) => [text, key]));
