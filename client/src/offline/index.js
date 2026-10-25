@@ -20,8 +20,19 @@ export function useSyncState() {
   return useSyncExternalStore(subscribe, getSyncState, getSyncState);
 }
 
-/** Calls the device's copy of an API function once it is synced, the server otherwise. */
+/**
+ * Calls the device's copy of an API function once it is synced, the server otherwise. A record
+ * missing on the device while online is asked from the server: it can be one saved online while
+ * the first sync was still running, which the device only gets on the next pull.
+ */
 export const localFirst =
   (local, online) =>
-  (...args) =>
-    isLocalReady() ? local(...args) : online(...args);
+  async (...args) => {
+    if (!isLocalReady()) return online(...args);
+    try {
+      return await local(...args);
+    } catch (err) {
+      if (err?.status === 404 && navigator.onLine) return online(...args);
+      throw err;
+    }
+  };

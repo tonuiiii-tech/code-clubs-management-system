@@ -100,6 +100,30 @@ describe('the device copy', () => {
   });
 });
 
+describe('records saved online during the first sync', () => {
+  it('asks the server for a record the device does not have yet', async () => {
+    const { localFirst } = await import('./index.js');
+    const { getLearner } = await import('../services/learnersService.js');
+    // Saved straight on the server, as when the first pull was still running.
+    const created = await mockRequest({
+      method: 'POST',
+      path: '/learners',
+      body: newLearner(),
+      token: net.token,
+    });
+    const id = created.body.data.id;
+    await expect(local.getLearner(id)).rejects.toMatchObject({ status: 404 });
+    expect((await getLearner(id)).data.id).toBe(id);
+
+    // Offline, a missing record stays missing instead of failing on the network.
+    net.offline = true;
+    const missing = localFirst(local.getLearner, () => Promise.reject(new Error('online')));
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    await expect(missing(id)).rejects.toMatchObject({ status: 404 });
+    vi.restoreAllMocks();
+  });
+});
+
 describe('working offline', () => {
   it('saves changes on the device and sends them once when back online (US-14, US-15)', async () => {
     net.offline = true;
