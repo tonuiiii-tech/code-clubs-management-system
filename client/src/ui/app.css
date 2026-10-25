@@ -5,7 +5,6 @@
  * uppercase eyebrows, soft rounded cards and big numbers. Same palette and Poppins as the kit.
  */
 :root {
-  --brand-navy: #1b2a4a;
   --heading: #161616;
   --card-radius: 20px;
   --card-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
@@ -131,9 +130,7 @@ body {
   justify-content: space-between;
   gap: 2rem;
   padding: 2.5rem;
-  background:
-    radial-gradient(circle at 85% 15%, rgb(240 169 36 / 0.22), transparent 45%),
-    linear-gradient(160deg, var(--clover) 0%, var(--brand-navy) 75%);
+  background: var(--clover);
   color: #fff;
 }
 
@@ -159,7 +156,11 @@ body {
 .auth-hero__motto {
   margin: 0;
   font-weight: 700;
-  color: var(--fuel);
+}
+
+/* Orange on green is hard to read at small sizes, so text on the panel stays white. */
+.auth-hero .sla-eyebrow {
+  color: #fff;
 }
 
 .auth-form {
