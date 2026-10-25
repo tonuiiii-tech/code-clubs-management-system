@@ -14,6 +14,8 @@ import { sessionsRouter } from './modules/sessions/sessions.routes.js';
 import { auditRouter } from './modules/audit/audit.routes.js';
 import { alertsRouter, dashboardRouter } from './modules/dashboard/dashboard.routes.js';
 import { syncRouter } from './modules/sync/sync.routes.js';
+import { notificationsRouter } from './modules/notifications/notifications.routes.js';
+import { reportsRouter } from './modules/reports/reports.routes.js';
 import { termsRouter } from './modules/terms/terms.routes.js';
 
 /** Builds the Express app without listening, so tests can use it with Supertest. */
@@ -43,6 +45,8 @@ export function createApp() {
   api.use('/sync', syncRouter);
   api.use('/terms', termsRouter);
   api.use('/alerts', alertsRouter);
+  api.use('/reports', reportsRouter);
+  api.use('/notifications', notificationsRouter);
   app.use('/api/v1', api);
 
   app.use(notFoundHandler);

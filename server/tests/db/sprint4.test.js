@@ -3,6 +3,8 @@ import { uid } from '@code-clubs/shared/demo';
 import { clearDatabase, useTestDatabase } from '../support/database.js';
 import { seed } from '../../scripts/seed.js';
 import { createApp } from '../../src/app.js';
+import { OutboundMessage, ReportRun, Term } from '../../src/db/models.js';
+import { runTermlyReports } from '../../src/modules/reports/reports.service.js';
 
 /**
  * Sprint 4 on a real (in-memory) MongoDB with the demo data: terms, the HQ dashboard, alerts,
@@ -140,5 +142,81 @@ describe('Alerts', () => {
     expect(champion.body.data.every((a) => a.clubId !== NAC_001)).toBe(true);
     const coordinator = await api('otherCoordinator').get('/alerts');
     expect(coordinator.body.data.every((a) => a.region === 'western_nyanza')).toBe(true);
+  });
+});
+
+describe('Termly report', () => {
+  const NAMES = ['Zawadi', 'Mwangi', 'Imani', 'Akinyi', '+254700000'];
+
+  it('gives counts only, with small groups hidden (D4-3, R4-1)', async () => {
+    const res = await api('pm').get(`/reports/termly?termId=${CURRENT_TERM}`);
+    expect(res.status).toBe(200);
+    const text = JSON.stringify(res.body.data);
+    for (const name of NAMES) expect(text).not.toContain(name);
+    expect(res.body.data.summary.sessionsHeld).toBe(4);
+    // Seven girls and five boys are active in the demo, but the age groups are small.
+    expect(res.body.data.byAge.some((row) => row.girl === '<5')).toBe(true);
+  });
+
+  it('keeps coordinators to their regions and refuses champions', async () => {
+    const res = await api('coordinator').get(`/reports/termly?termId=${CURRENT_TERM}`);
+    expect(res.body.data.byRegion.map((r) => r.region)).toEqual(['nairobi_central']);
+    expect(res.body.data.scope.regions).toEqual(['nairobi_central']);
+    const other = await api('otherCoordinator').get(
+      `/reports/termly?termId=${CURRENT_TERM}&clubId=${NAC_001}`,
+    );
+    expect(other.status).toBe(404);
+    expect((await api('champion').get(`/reports/termly?termId=${CURRENT_TERM}`)).status).toBe(403);
+    expect((await api('pm').get('/reports/termly')).status).toBe(400);
+  });
+
+  it('downloads a PDF', async () => {
+    const res = await api('pm')
+      .get(`/reports/termly.pdf?termId=${CURRENT_TERM}&clubId=${NAC_001}`)
+      .buffer(true)
+      .parse((r, cb) => {
+        const chunks = [];
+        r.on('data', (c) => chunks.push(c));
+        r.on('end', () => cb(null, Buffer.concat(chunks)));
+      });
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toBe('application/pdf');
+    expect(res.headers['content-disposition']).toContain('nac-001.pdf');
+    expect(res.body.subarray(0, 5).toString()).toBe('%PDF-');
+  });
+
+  it('lets only HQ keep the recipients list', async () => {
+    const recipients = [{ name: 'Funder Contact', email: 'reports@funder.steamlabs.test' }];
+    expect((await api('coordinator').put('/reports/recipients', { recipients })).status).toBe(403);
+    expect(
+      (await api('pm').put('/reports/recipients', { recipients: [{ name: 'X', email: 'no' }] }))
+        .status,
+    ).toBe(400);
+    expect((await api('pm').put('/reports/recipients', { recipients })).status).toBe(200);
+    expect((await api('admin').get('/reports/recipients')).body.data).toEqual(recipients);
+  });
+
+  it('emails each ended term once, even when two servers run at the same time (R4-2)', async () => {
+    const ended = await Term.findById(uid(2402)).lean();
+    const dayAfter = new Date(`${ended.endDate}T06:00:00Z`);
+    dayAfter.setUTCDate(dayAfter.getUTCDate() + 1);
+
+    const [a, b] = await Promise.all([
+      runTermlyReports({ today: dayAfter }),
+      runTermlyReports({ today: dayAfter }),
+    ]);
+    expect([...a, ...b]).toHaveLength(1);
+    expect(await runTermlyReports({ today: dayAfter })).toEqual([]);
+
+    const sent = await OutboundMessage.find({ channel: 'email', termId: uid(2402) }).lean();
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ provider: 'stub', status: 'recorded' });
+    expect(sent[0].to).toBe('reports@funder.steamlabs.test');
+    expect(sent[0].attachments.length).toBeGreaterThan(1);
+    expect((await ReportRun.findById(`termly:${uid(2402)}`).lean()).state).toBe('sent');
+
+    const outbox = await api('pm').get('/notifications/outbox');
+    expect(outbox.body.total).toBeGreaterThanOrEqual(1);
+    expect((await api('coordinator').get('/notifications/outbox')).status).toBe(403);
   });
 });

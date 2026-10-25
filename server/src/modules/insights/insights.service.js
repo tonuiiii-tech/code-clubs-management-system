@@ -97,7 +97,11 @@ export async function getTermReport(actor, scope, { termId, region, clubId }) {
   );
   return buildTermReport({
     term,
-    scope: { region: region ?? null, club: clubId ? data.clubs[0] : null },
+    scope: {
+      region: region ?? null,
+      regions: filter.regions ?? null,
+      club: clubId ? data.clubs[0] : null,
+    },
     ...data,
     events,
     participants,
