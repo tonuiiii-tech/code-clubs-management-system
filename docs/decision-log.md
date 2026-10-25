@@ -306,6 +306,87 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Alternatives considered:** More fields (address, date of birth, learner phone).
 - **Consequences:** Minimal personal data; still to confirm with STEAMLabs HQ (sprint-2 open question 1).
 
+## D3-1: Offline is for Club Champions and Coordinators only
+
+- **Status:** Accepted (Enock approved the Sprint 3 plan, 2026-10-25)
+- **Date:** 2026-10-25
+- **Context:** Champions run sessions at venues with mostly no internet (questionnaire Q36). HQ roles work with internet and have national scope, too large and too sensitive to keep on a device.
+- **Decision:** Champions and coordinators keep their own scope on the device and sync it (`sync:use`). System Administrators and Programme Managers keep using the API directly. Coordinators and HQ can read the conflict log (`syncConflict:read`).
+- **Alternatives considered:** Offline for every role.
+- **Consequences:** Less data on devices; HQ screens are online-only.
+
+## D3-2: One local database per user, deleted on sign-out and after 14 days without sync
+
+- **Status:** Accepted (Enock, 2026-10-25)
+- **Date:** 2026-10-25
+- **Context:** Clubs often share one laptop or tablet (R1-8, R3-2).
+- **Decision:** Dexie (IndexedDB) database `cc-offline-<userId>`. Signing out deletes it, after a warning if changes are unsent. Every start deletes databases that have not synced for 14 days, and the app opens offline only within those 14 days. No PIN encryption in Sprint 3.
+- **Alternatives considered:** A device PIN that encrypts local data (about 3 extra days); a longer offline limit.
+- **Consequences:** A stolen, unlocked device can still show learner names for up to 14 days; PIN encryption remains a later option.
+
+## D3-3: Push through the existing services with a device-made operation id
+
+- **Status:** Accepted (Enock, 2026-10-25)
+- **Date:** 2026-10-25
+- **Context:** Retries after a lost reply must not create duplicates (R1-5), and offline must not bypass any rule.
+- **Decision:** `POST /sync/push` takes up to 50 operations in order. Each runs through the same service function, schema and permission as its online endpoint. Each `opId` is stored with its result for 30 days; a repeat returns the stored result. After a refused operation, later ones for the same record are skipped. Photos carry their `opId` to the upload endpoint, which adds a repeated photo once.
+- **Alternatives considered:** A separate sync code path; replaying raw HTTP requests.
+- **Consequences:** One set of rules for online and offline. A refused operation needs a new `opId` to be tried again.
+
+## D3-4: Pull by (updatedAt, id) with a 2-minute overlap, tombstones and scope resets
+
+- **Status:** Accepted (changed from the plan's single `syncSeq` counter, 2026-10-25)
+- **Date:** 2026-10-25
+- **Context:** The plan proposed a `syncSeq` number stamped on every write. Mongoose writes records in several ways (create, update, bulk write), and a missed stamp would hide a change from devices.
+- **Decision:** Devices pull records in `(updatedAt, _id)` order per kind, 500 at a time, with an opaque cursor. Every pull starts 2 minutes before the saved cursor, so saves that finished out of order are never missed; repeats are saved again harmlessly. Removed attendance marks leave a tombstone for 30 days. A hash of the clubs in scope tells the device when to start again from scratch.
+- **Alternatives considered:** A global `syncSeq` counter; MongoDB change streams.
+- **Consequences:** No extra write per save and nothing to forget in new code. Relies on the server clock, which all writes share.
+
+## D3-5: Field-level merge; the last write wins and the overwritten value is logged
+
+- **Status:** Accepted (Enock, 2026-10-25)
+- **Date:** 2026-10-25
+- **Context:** Two people can change the same record offline (R1-6).
+- **Decision:** An update only sets the fields it carries, so changes to different fields are both kept. Each operation sends the values it saw (`base`); if someone changed the same field since, the later change wins and the replaced value goes to `syncConflicts`. Values of fields never written to the audit log (accessibility needs, contact details) are logged as "changed" only.
+- **Alternatives considered:** Rejecting conflicting changes; asking the user to merge.
+- **Consequences:** No change is blocked; coordinators can see and correct what was overwritten on the Sync page.
+
+## D3-6: Two offline sessions for the same club and date are joined
+
+- **Status:** Accepted (Enock, 2026-10-25)
+- **Date:** 2026-10-25
+- **Context:** A champion and a coordinator might both report the same session offline; only one session per club per day is allowed.
+- **Decision:** The second report is joined to the first: its empty fields are filled in, its attendance is merged, and the device renames its record to the server's id.
+- **Alternatives considered:** Rejecting the second report.
+- **Consequences:** No attendance taken offline is lost.
+
+## D3-7: The 7-day edit window uses the time the change was made on the device
+
+- **Status:** Accepted (Enock, 2026-10-25)
+- **Date:** 2026-10-25
+- **Context:** A champion editing a report offline on day 6 might only sync on day 9 (D2-5).
+- **Decision:** The window is checked against `recordedAt` when it is at most 14 days old and against server time otherwise. A time more than 5 minutes in the future is refused (`INVALID_RECORDED_AT`).
+- **Alternatives considered:** Server time only.
+- **Consequences:** Fair to champions without connection; a wrong device clock can stretch the window by at most 14 days (R3-3).
+
+## D3-8: Guardian contacts, consent forms and photos stay on the device only until sent
+
+- **Status:** Accepted (Enock, 2026-10-25)
+- **Date:** 2026-10-25
+- **Context:** These are the most sensitive records (D2-1, R2-2, R2-7).
+- **Decision:** They can be entered offline but are kept only in the outbox, then deleted from the device once the server has them. They are never pulled to a device; consent forms and photos are viewed online only.
+- **Alternatives considered:** Online-only entry of these records.
+- **Consequences:** Champions can complete the whole registration offline.
+
+## D3-9: Attendance taken offline is merged learner by learner
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** The online endpoint replaces the whole list. An offline list could remove marks another device added.
+- **Decision:** Pushed attendance only adds or changes the marks it carries and never removes others. Marks removed online leave a tombstone so devices remove them too.
+- **Alternatives considered:** Replacing the list on push.
+- **Consequences:** Builds on D2-4 (one record per learner per session).
+
 ## Decision template
 
 Copy this template for future entries:

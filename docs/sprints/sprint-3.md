@@ -2,8 +2,8 @@
 
 **Project:** STEAMLabs Africa Code Clubs Management System  
 **Sprint duration:** 2 weeks (Tue 18 Nov – Mon 1 Dec 2026)  
-**Status:** Plan, awaiting Enock's approval  
-**Last updated:** 2026-10-24  
+**Status:** Built and tested, in review (see [summary](sprint-3-summary.md)). Plan approved by Enock on 2026-10-24 with the recommended answers to section 14.  
+**Last updated:** 2026-10-25  
 **Sprint goal:** A Club Champion can open the app at a venue with no internet, register learners, record consent, report a session and take attendance, and everything reaches the server safely the next time the device is online, without duplicates or lost changes.
 
 ## 1. Background
@@ -86,6 +86,8 @@ The device sends its outbox in order, in batches of up to 50 operations:
 - Files (consent forms, photos) are uploaded after the record they belong to, through the existing upload endpoints, and also carry an `opId`.
 
 ### 5.2 Pull
+
+> **Changed while building (D3-4):** the pull uses each record's `updatedAt` and ID as the cursor, with a 2-minute overlap, instead of a separate `syncSeq` counter. Attendance from a device is merged, never replaced (D3-9). The protocol as built is in [sync-protocol.md](../sync-protocol.md).
 
 - Every write to a syncable record stamps it with `syncSeq`, a number from one counter that only goes up (a Mongoose plugin, so no service can forget).
 - `GET /sync/pull?cursor=<last syncSeq>` returns everything in the user's scope with a higher `syncSeq`, in pages of 500, plus the new cursor.
@@ -202,13 +204,13 @@ My recommendation is listed first in each.
 
 ## 15. Definition of Done
 
-- [ ] All six user stories meet their criteria.
-- [ ] A change pushed twice is saved once (tested on real MongoDB).
-- [ ] Every sync operation is refused outside the user's scope (tested).
-- [ ] No refused change is dropped silently; each appears on "Needs attention".
-- [ ] Conflicts follow section 5.3 and are logged (tested).
-- [ ] Signing out deletes local data; a second user sees none of it (tested).
-- [ ] Guardian contacts, consent forms and photos are not on the device after they are sent (tested).
-- [ ] The Playwright offline flow passes on the demo build and the real server.
-- [ ] Sync status and "Needs attention" work on a tablet and a phone, in English and Kiswahili.
-- [ ] `docs/sync-protocol.md`, architecture, decision log and risk register updated.
+- [x] All six user stories meet their criteria.
+- [x] A change pushed twice is saved once (tested on real MongoDB).
+- [x] Every sync operation is refused outside the user's scope (tested).
+- [x] No refused change is dropped silently; each appears on "Needs attention".
+- [x] Conflicts follow section 5.3 and are logged (tested).
+- [x] Signing out deletes local data; a second user sees none of it (tested).
+- [x] Guardian contacts, consent forms and photos are not on the device after they are sent (tested).
+- [x] The Playwright offline flow passes on the demo build and the real server.
+- [ ] Sync status and "Needs attention" work on a tablet and a phone, in English and Kiswahili. (Built and translated; still to check on a real tablet and phone.)
+- [x] `docs/sync-protocol.md`, architecture, decision log and risk register updated.

@@ -12,7 +12,7 @@ This document describes the initial architecture for the STEAMLabs Africa Code C
 
 Two constraints shape the design:
 
-- Most club venues have little or no internet. The app must eventually work fully offline and sync later (Sprint 3).
+- Most club venues have little or no internet. Since Sprint 3, champions and coordinators work offline and sync later (D3-1).
 - Learners are children aged 9–14, so personal data must be minimised and restricted, in line with the Kenya Data Protection Act 2019.
 
 ## 2. Architecture principles
@@ -22,7 +22,7 @@ Two constraints shape the design:
 - Keep business rules in backend services, not only in React components.
 - Reuse shared schemas and stable enums; never treat shared code as a security boundary.
 - Put data access behind repositories, so the database engine (MongoDB, D1-8) stays in one layer.
-- Keep Sprints 1–2 online-first; add real offline-first workflows in Sprint 3.
+- Sprints 1–2 were online-first; Sprint 3 added offline-first workflows for champions and coordinators.
 - Minimise personal data, particularly information about children.
 - Record sensitive administrative changes in an audit log.
 - Test authorisation boundaries as well as successful workflows.
@@ -30,23 +30,23 @@ Two constraints shape the design:
 
 ## 3. Technology stack
 
-| Layer                      | Technology                                                                                           | Purpose                                                                 | Status           |
-| -------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ---------------- |
-| Frontend                   | React + Vite                                                                                         | User interface                                                          | Accepted         |
-| UI components and styling  | `steamlabsui` (STEAMLabs Africa UI kit): components, tokens, logo                                    | Consistent STEAMLabs branding                                           | Accepted (D1-9)  |
-| Fonts                      | Poppins, self-hosted                                                                                 | Works without internet                                                  | Accepted (D1-10) |
-| Routing                    | React Router                                                                                         | Pages and role-aware navigation                                         | Accepted         |
-| Languages                  | react-i18next (`en`, `sw`)                                                                           | English and Kiswahili                                                   | Accepted (D1-11) |
-| Installable app            | vite-plugin-pwa                                                                                      | Installs on laptops, tablets and phones; offline data comes in Sprint 3 | Accepted         |
-| Backend                    | Node.js 24 LTS + Express                                                                             | REST API                                                                | Accepted         |
-| Database                   | **MongoDB with Mongoose**                                                                            | Persistent records                                                      | Accepted (D1-8)  |
-| Shared validation          | Zod                                                                                                  | Request and data-shape validation, shared by client and server          | Accepted         |
-| Authentication             | Short-lived JWT access token + rotating refresh token in an httpOnly cookie; bcrypt password hashing | Authenticated requests                                                  | Proposed (D1-12) |
-| Backend tests              | Jest + Supertest                                                                                     | API and service tests                                                   | Accepted         |
-| Test database              | mongodb-memory-server (in-process MongoDB)                                                           | Isolated tests, no install needed                                       | Follows D1-8     |
-| Frontend tests             | Vitest; Playwright for end-to-end                                                                    | Units and browser workflows                                             | Accepted         |
-| CI                         | GitHub Actions                                                                                       | Lint, test and build on every push and pull request                     | Accepted         |
-| Offline storage (Sprint 3) | Dexie / IndexedDB + outbox                                                                           | Local-first data and sync                                               | Planned          |
+| Layer                      | Technology                                                                                           | Purpose                                                                               | Status           |
+| -------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ---------------- |
+| Frontend                   | React + Vite                                                                                         | User interface                                                                        | Accepted         |
+| UI components and styling  | `steamlabsui` (STEAMLabs Africa UI kit): components, tokens, logo                                    | Consistent STEAMLabs branding                                                         | Accepted (D1-9)  |
+| Fonts                      | Poppins, self-hosted                                                                                 | Works without internet                                                                | Accepted (D1-10) |
+| Routing                    | React Router                                                                                         | Pages and role-aware navigation                                                       | Accepted         |
+| Languages                  | react-i18next (`en`, `sw`)                                                                           | English and Kiswahili                                                                 | Accepted (D1-11) |
+| Installable app            | vite-plugin-pwa                                                                                      | Installs on laptops, tablets and phones; the service worker caches the app shell only | Accepted         |
+| Backend                    | Node.js 24 LTS + Express                                                                             | REST API                                                                              | Accepted         |
+| Database                   | **MongoDB with Mongoose**                                                                            | Persistent records                                                                    | Accepted (D1-8)  |
+| Shared validation          | Zod                                                                                                  | Request and data-shape validation, shared by client and server                        | Accepted         |
+| Authentication             | Short-lived JWT access token + rotating refresh token in an httpOnly cookie; bcrypt password hashing | Authenticated requests                                                                | Proposed (D1-12) |
+| Backend tests              | Jest + Supertest                                                                                     | API and service tests                                                                 | Accepted         |
+| Test database              | mongodb-memory-server (in-process MongoDB)                                                           | Isolated tests, no install needed                                                     | Follows D1-8     |
+| Frontend tests             | Vitest; Playwright for end-to-end                                                                    | Units and browser workflows                                                           | Accepted         |
+| CI                         | GitHub Actions                                                                                       | Lint, test and build on every push and pull request                                   | Accepted         |
+| Offline storage (Sprint 3) | Dexie / IndexedDB + outbox                                                                           | Local-first data and sync                                                             | Accepted (D3-2)  |
 
 ## 4. High-level architecture
 
@@ -66,7 +66,7 @@ flowchart TD
     SHARED -.-> API
 ```
 
-In Sprint 3 the client services layer gains a local database (Dexie) and an outbox; pages do not change.
+Since Sprint 3, for champions and coordinators the client services read and write a local database (Dexie) with an outbox; pages call the same service functions (D3-1, `docs/sync-protocol.md`).
 
 ```mermaid
 flowchart LR
@@ -86,7 +86,7 @@ Each business module has routes, controllers, services and a repository.
 - `learners`: learner registration, status (active or left), guardian contacts (HQ-only reading), consent and signed consent forms (Sprint 2).
 - `sessions`: session reports, attendance, session photos and the 7-day edit window (Sprint 2).
 - `audit`: recording and reviewing sensitive administrative events.
-- `sync`: reserved for Sprint 3; no offline synchronisation in Sprints 1–2.
+- `sync`: push of offline changes through the other modules' services, pull of changes in scope, and the conflict log (Sprint 3, `docs/sync-protocol.md`).
 
 Routes define HTTP endpoints. Controllers translate requests and responses. Services enforce business rules and access scope. Repositories are the only code that talks to the database.
 
@@ -211,19 +211,16 @@ Prefix: `/api/v1`. Endpoints for Sprint 1 are listed in `docs/sprints/sprint-1.m
 
 ## 10. Offline strategy
 
-Sprints 1–2 are online-first. The client services layer isolates API access so Sprint 3 can introduce Dexie without rewriting pages. Records already use device-generatable UUIDs and are never hard-deleted.
+Built in Sprint 3; the full protocol is in `docs/sync-protocol.md` and the decisions are D3-1 to D3-9.
 
-Sprint 3 will define and test:
-
-- an outbox queue and idempotent push operations (a repeated push never creates duplicates);
-- scoped pull operations with a change cursor;
-- conflict detection and resolution (last write wins per field, with conflicts logged);
-- deletion tombstones;
-- retry and failure states, and a visible sync status ("Saved on this device · 3 changes waiting to sync");
-- cursor recovery and full resynchronisation;
-- protection of personal data stored on shared devices.
-
-A change sequence alone does not make a sync protocol; Sprint 3 designs the full protocol in `docs/sync-protocol.md`.
+- **Who:** Club Champions and Coordinators keep their own scope on the device. HQ roles stay online (D3-1).
+- **Device:** one Dexie database per user with the scope's schools, clubs, learners, consent status, sessions (last 120 days and future) and attendance, plus an outbox and files waiting to upload. Deleted on sign-out and after 14 days without sync (D3-2).
+- **Writes:** saved on the device first, checked with the same shared schemas and rules, and queued. `POST /sync/push` runs each change through the same service as its online endpoint and stores its result by `opId`, so repeats change nothing (D3-3).
+- **Reads:** from the device once the first pull has finished. `GET /sync/pull` sends changes after a cursor in `(updatedAt, id)` order with a 2-minute overlap, tombstones for removed attendance, and a full reset when the user's clubs change (D3-4). Unsent changes are applied again after every pull.
+- **Conflicts:** field-level merge; the later change wins and the replaced value is logged for coordinators and HQ (D3-5). Same-day sessions are joined (D3-6); attendance is merged per learner (D3-9).
+- **Time:** the 7-day edit window uses the time on the device for changes up to 14 days old (D3-7).
+- **Sensitive records:** guardian contacts, consent forms and photos stay on the device only until sent and are never pulled (D3-8).
+- **Visible state:** a status pill on every screen ("Offline · 3 changes waiting to sync") and a Sync page with refused changes (try again, confirm, or discard) and the conflict log.
 
 ## 11. Security and privacy
 
@@ -265,4 +262,4 @@ Friday is a checkpoint, not the end of the sprint. Stakeholders should see:
 3. **Coding principles applied:** `docs/coding-principles.md`, shown in the running repo: workspaces, shared Zod schemas, permission and scope middleware with passing negative tests, the steamlabsui screens in English and Kiswahili, and CI running on every push.
 4. **Clickable demo:** `npm run demo`, signing in as each of the four roles to show that a Club Champion sees only their own clubs and a Coordinator only their region.
 
-Offline synchronisation is presented as a planned Sprint 3 capability, not a finished feature.
+Offline use and sync were added in Sprint 3 (`docs/sync-protocol.md`).
