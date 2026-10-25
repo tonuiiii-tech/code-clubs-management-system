@@ -23,22 +23,9 @@ const EMAIL = {
 // Demo records: NAC-001 and NAC-002 are Faith's clubs in Nairobi; WNY-001 is Amina's in Kisumu.
 const NAC_001 = uid(201);
 const NAC_002 = uid(202);
-const WNY_001 = uid(204);
-const ZAWADI = uid(1001); // NAC-001
-const IMANI = uid(1003); // NAC-001, registered for the showcase without event consent
-const NEEMA = uid(1005); // NAC-001
-const JABARI = uid(1006); // NAC-001, left the club
-const AKINYI = uid(1010); // WNY-001
 const CURRENT_TERM = uid(2403);
 const SHOWCASE = uid(1801); // Nairobi, in 5 days, NAC-001 and NAC-002 invited
 const HACKATHON = uid(1802); // national, in 30 days
-const GAME_JAM = uid(1803); // Kisumu, held 20 days ago
-
-const PNG = Buffer.concat([
-  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-  Buffer.from('fake image data'),
-]);
-const PDF = Buffer.from('%PDF-1.4 signed consent form');
 
 async function signIn(email) {
   const res = await request(app).post('/api/v1/auth/login').send({ email, password: PASSWORD });
