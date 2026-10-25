@@ -70,4 +70,22 @@ describe('Permission policy', () => {
     expect(can(user(ROLES.CHAMPION), 'syncConflict:read')).toBe(false);
     expect(scopeFor(user(ROLES.COORDINATOR), 'syncConflict:read')).toBe('assigned');
   });
+
+  it('matches the Sprint 4 table (docs/sprints/sprint-4.md, section 8)', () => {
+    const table = {
+      'dashboard:hq': ['all', 'all', 'assigned', null],
+      'report:read': ['all', 'all', 'assigned', null],
+      'report:schedule': ['all', 'all', null, null],
+      'term:manage': ['all', 'all', null, null],
+      'event:read': ['all', 'all', 'assigned', 'assigned'],
+      'event:manage': ['all', 'all', 'assigned', null],
+      'eventParticipant:manage': ['all', 'all', 'assigned', 'assigned'],
+      'announcement:send': ['all', 'all', 'assigned', null],
+      'announcement:read': ['self', 'self', 'self', 'self'],
+    };
+    const roles = [ROLES.SYSTEM_ADMIN, ROLES.PROGRAMME_MANAGER, ROLES.COORDINATOR, ROLES.CHAMPION];
+    for (const [permission, scopes] of Object.entries(table)) {
+      expect(roles.map((role) => scopeFor(user(role), permission))).toEqual(scopes);
+    }
+  });
 });
