@@ -2,7 +2,7 @@
 
 **Project:** STEAMLabs Africa Code Clubs Management System  
 **Sprint duration:** 2 weeks (Tue 2 Dec – Mon 15 Dec 2026)  
-**Status:** Approved by Enock on 2026-10-25 with the recommended answers to section 15; in progress  
+**Status:** Approved by Enock on 2026-10-25 with the recommended answers to section 15; built and in review (see the [summary](sprint-4-summary.md))  
 **Last updated:** 2026-10-25  
 **Sprint goal:** STEAMLabs HQ can see at a glance which clubs need help, send a termly PDF report to funders, run events with the right consent, and reach champions with one announcement instead of many WhatsApp messages.
 
