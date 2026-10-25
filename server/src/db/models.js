@@ -537,6 +537,7 @@ for (const schema of [
   attendanceSchema,
   eventSchema,
   eventParticipantSchema,
+  eventConsentSchema,
   announcementSchema,
 ]) {
   schema.index({ updatedAt: 1, _id: 1 });

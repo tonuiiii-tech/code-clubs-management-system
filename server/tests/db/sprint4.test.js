@@ -489,3 +489,45 @@ describe('Announcements', () => {
     expect((await api('champion').get('/announcements?box=sent')).body.data).toEqual([]);
   });
 });
+
+describe('Offline (D4-8)', () => {
+  it('pulls the events, participants and announcements in scope, without other recipients', async () => {
+    const res = await api('otherChampion').get('/sync/pull');
+    expect(res.status).toBe(200);
+    const { events, eventParticipants, eventConsents, announcements, announcementReads } =
+      res.body.data.changes;
+    expect(events.map((e) => e.id).sort()).toEqual([HACKATHON, GAME_JAM].sort());
+    expect(eventParticipants.every((p) => p.clubId === WNY_001)).toBe(true);
+    expect(eventParticipants.length).toBeGreaterThan(0);
+    expect(eventConsents.every((c) => c.clubId === WNY_001 && !('fileId' in c))).toBe(true);
+    expect(announcements.length).toBeGreaterThan(0);
+    expect(announcements.every((a) => a.recipientIds === undefined)).toBe(true);
+    expect(announcementReads).toEqual([]);
+  });
+
+  it('marks an announcement read from the device once', async () => {
+    const op = (opId) => ({
+      opId,
+      type: 'announcement.read',
+      recordId: TERM_REPORTS_NOTE,
+      data: {},
+      recordedAt: new Date(Date.now() - 60_000).toISOString(),
+    });
+    const opId = '00000000-0000-4000-8000-000000009901';
+    const first = await api('otherChampion').post('/sync/push', { operations: [op(opId)] });
+    expect(first.body.data.results[0].status).toBe('applied');
+    const again = await api('otherChampion').post('/sync/push', {
+      operations: [op('00000000-0000-4000-8000-000000009902')],
+    });
+    expect(again.body.data.results[0].status).toBe('applied');
+    const pulled = await api('otherChampion').get('/sync/pull');
+    expect(pulled.body.data.changes.announcementReads.map((r) => r.announcementId)).toEqual([
+      TERM_REPORTS_NOTE,
+    ]);
+    // Someone who did not receive it cannot mark it.
+    const refused = await api('coordinator').post('/sync/push', {
+      operations: [{ ...op('00000000-0000-4000-8000-000000009903') }],
+    });
+    expect(refused.body.data.results[0].status).toBe('rejected');
+  });
+});
