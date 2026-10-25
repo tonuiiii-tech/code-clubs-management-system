@@ -16,6 +16,7 @@ import { alertsRouter, dashboardRouter } from './modules/dashboard/dashboard.rou
 import { syncRouter } from './modules/sync/sync.routes.js';
 import { notificationsRouter } from './modules/notifications/notifications.routes.js';
 import { reportsRouter } from './modules/reports/reports.routes.js';
+import { eventsRouter } from './modules/events/events.routes.js';
 import { termsRouter } from './modules/terms/terms.routes.js';
 
 /** Builds the Express app without listening, so tests can use it with Supertest. */
@@ -46,6 +47,7 @@ export function createApp() {
   api.use('/terms', termsRouter);
   api.use('/alerts', alertsRouter);
   api.use('/reports', reportsRouter);
+  api.use('/events', eventsRouter);
   api.use('/notifications', notificationsRouter);
   app.use('/api/v1', api);
 

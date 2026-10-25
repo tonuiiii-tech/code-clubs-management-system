@@ -25,9 +25,26 @@ const EMAIL = {
 // Demo records: NAC-001 and NAC-002 are Faith's clubs in Nairobi; WNY-001 is Amina's in Kisumu.
 const NAC_001 = uid(201);
 const NAC_002 = uid(202);
+const NAC_003 = uid(203); // Brian's club in Nairobi, not invited
+const WNY_001 = uid(204);
+const ZAWADI = uid(1001); // NAC-001
+const BARAKA = uid(1002); // NAC-001
+const IMANI = uid(1003); // NAC-001, photo consent refused, no event consent
+const NEEMA = uid(1005); // NAC-001
+const JABARI = uid(1006); // NAC-001, left the club
+const AMANI = uid(1007); // NAC-002
+const AKINYI = uid(1010); // WNY-001
 const CURRENT_TERM = uid(2403);
 const SHOWCASE = uid(1801); // Nairobi, in 5 days, NAC-001 and NAC-002 invited
 const HACKATHON = uid(1802); // national, in 30 days
+const GAME_JAM = uid(1803); // Kisumu, held 20 days ago
+
+const PNG = Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  Buffer.from('fake image data'),
+]);
+const PDF = Buffer.from('%PDF-1.4 signed consent form');
+const day = (n) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 async function signIn(email) {
   const res = await request(app).post('/api/v1/auth/login').send({ email, password: PASSWORD });
@@ -218,5 +235,177 @@ describe('Termly report', () => {
     const outbox = await api('pm').get('/notifications/outbox');
     expect(outbox.body.total).toBeGreaterThanOrEqual(1);
     expect((await api('coordinator').get('/notifications/outbox')).status).toBe(403);
+  });
+});
+
+describe('Events', () => {
+  const newEvent = (extra = {}) => ({
+    name: 'Nairobi Robotics Day',
+    type: 'competition',
+    startDate: day(10),
+    endDate: day(10),
+    venue: 'Thika Road Hall',
+    region: 'nairobi_central',
+    capacity: 3,
+    clubIds: [NAC_001],
+    ...extra,
+  });
+
+  it('shows champions only events their clubs are invited to', async () => {
+    const mine = await api('champion').get('/events');
+    expect(mine.body.data.map((e) => e.id).sort()).toEqual([SHOWCASE, HACKATHON].sort());
+    expect((await api('champion').get(`/events/${GAME_JAM}`)).status).toBe(404);
+    const coordinator = await api('coordinator').get('/events');
+    expect(coordinator.body.data.map((e) => e.id)).not.toContain(GAME_JAM);
+    expect(coordinator.body.data.map((e) => e.id)).toContain(HACKATHON);
+  });
+
+  it('lets coordinators run events in their own region only', async () => {
+    const created = await api('coordinator').post('/events', newEvent());
+    expect(created.status).toBe(201);
+    expect(created.body.data.clubs.map((c) => c.id)).toEqual([NAC_001]);
+
+    expect((await api('coordinator').post('/events', newEvent({ region: null }))).status).toBe(403);
+    expect(
+      (await api('coordinator').post('/events', newEvent({ region: 'coast', clubIds: [] }))).status,
+    ).toBe(403);
+    expect((await api('pm').post('/events', newEvent({ clubIds: [WNY_001] }))).status).toBe(400);
+    expect((await api('champion').post('/events', newEvent())).status).toBe(403);
+    expect(
+      (await api('pm').post('/events', newEvent({ endDate: day(5), startDate: day(6) }))).status,
+    ).toBe(400);
+
+    // The national hackathon is HQ's: a coordinator can read it but not change it.
+    expect(
+      (await api('coordinator').patch(`/events/${HACKATHON}`, { venue: 'Elsewhere' })).status,
+    ).toBe(403);
+    expect(
+      (await api('otherCoordinator').patch(`/events/${SHOWCASE}`, { venue: 'Kisumu Hall' })).status,
+    ).toBe(404);
+    const invited = await api('pm').put(`/events/${HACKATHON}/clubs`, {
+      clubIds: [NAC_001, WNY_001, NAC_003],
+    });
+    expect(invited.status).toBe(200);
+    expect(invited.body.data.clubs).toHaveLength(3);
+  });
+
+  it('registers learners with invitation, capacity, closing date and status checks', async () => {
+    const { body } = await api('coordinator').post('/events', newEvent());
+    const id = body.data.id;
+    const champion = api('champion');
+
+    expect(
+      (await champion.post(`/events/${id}/participants`, { learnerIds: [AMANI] })).status,
+    ).toBe(409); // NAC-002 not invited
+    expect(
+      (await champion.post(`/events/${id}/participants`, { learnerIds: [JABARI] })).status,
+    ).toBe(409); // left
+    expect(
+      (await champion.post(`/events/${id}/participants`, { learnerIds: [AKINYI] })).status,
+    ).toBe(404); // not her learner
+
+    const ok = await champion.post(`/events/${id}/participants`, {
+      learnerIds: [ZAWADI, BARAKA, IMANI],
+    });
+    expect(ok.status).toBe(201);
+    expect(ok.body.data.map((p) => p.consent)).toEqual(['pending', 'pending', 'pending']);
+    const twice = await champion.post(`/events/${id}/participants`, { learnerIds: [ZAWADI] });
+    expect(twice.status).toBe(409);
+    expect(twice.body.error.details[0].learnerId).toBe(ZAWADI);
+    const full = await champion.post(`/events/${id}/participants`, { learnerIds: [NEEMA] });
+    expect(full.status).toBe(409);
+    expect(full.body.error.message).toMatch(/full/);
+
+    // Withdrawing frees a place.
+    await champion.patch(`/events/${id}/participants/${BARAKA}`, { status: 'withdrawn' });
+    expect(
+      (await champion.post(`/events/${id}/participants`, { learnerIds: [NEEMA] })).status,
+    ).toBe(201);
+
+    await api('coordinator').patch(`/events/${id}`, { registrationCloses: day(-1) });
+    const closed = await champion.post(`/events/${id}/participants`, { learnerIds: [BARAKA] });
+    expect(closed.status).toBe(409);
+    expect(closed.body.error.message).toMatch(/closed/);
+  });
+
+  it('records event consent with the signed form, apart from club consent (D4-6)', async () => {
+    const champion = api('champion');
+    const saved = await champion.put(`/events/${SHOWCASE}/consents/${IMANI}`, {
+      status: 'given',
+      signedOn: day(-1),
+    });
+    expect(saved.status).toBe(200);
+    expect(saved.body.data.find((p) => p.learnerId === IMANI).consent).toBe('given');
+    const form = await champion.upload(
+      'put',
+      `/events/${SHOWCASE}/consents/${IMANI}/file`,
+      PDF,
+      'application/pdf',
+    );
+    expect(form.status).toBe(200);
+    expect(form.body.data.find((p) => p.learnerId === IMANI).hasConsentFile).toBe(true);
+
+    expect((await champion.get(`/events/${SHOWCASE}/consents/${IMANI}/file`)).status).toBe(403);
+    const download = await api('coordinator').get(`/events/${SHOWCASE}/consents/${IMANI}/file`);
+    expect(download.status).toBe(200);
+    expect(
+      (await api('champion').put(`/events/${SHOWCASE}/consents/${NEEMA}`, { status: 'given' }))
+        .status,
+    ).toBe(404);
+  });
+
+  it('records projects and results; only organisers give awards', async () => {
+    const champion = api('champion');
+    const project = { title: 'Matatu Route Finder', learnerIds: [ZAWADI, BARAKA] };
+    const created = await champion.post(`/events/${SHOWCASE}/projects`, project);
+    expect(created.status).toBe(201);
+    const row = created.body.data.find((p) => p.title === project.title);
+    expect(row.learners.map((l) => l.name)).toEqual(['Zawadi Mwangi', 'Baraka Otieno']);
+    expect(row.clubCode).toBe('NAC-001');
+
+    expect(
+      (await champion.patch(`/events/${SHOWCASE}/projects/${row.id}`, { award: 'Winner' })).status,
+    ).toBe(403);
+    expect(
+      (await champion.post(`/events/${SHOWCASE}/projects`, { title: 'X1', learnerIds: [NEEMA] }))
+        .status,
+    ).toBe(400); // not registered
+    const award = await api('pm').patch(`/events/${SHOWCASE}/projects/${row.id}`, {
+      award: 'Best idea',
+      rank: 1,
+    });
+    expect(award.body.data.find((p) => p.id === row.id)).toMatchObject({
+      award: 'Best idea',
+      rank: 1,
+    });
+
+    // Kisumu's coordinator sees the project at a national event without names of other regions.
+    const jam = await api('otherChampion').get(`/events/${GAME_JAM}/projects`);
+    expect(jam.body.data[0].learners).toHaveLength(2);
+  });
+
+  it('asks before adding a photo with learners lacking consent (R4-5)', async () => {
+    const champion = api('champion');
+    const refused = await champion.upload('post', `/events/${SHOWCASE}/photos`, PNG, 'image/png');
+    expect(refused.status).toBe(409);
+    expect(refused.body.error.code).toBe('PHOTO_CONSENT_MISSING');
+    // Imani refused photo consent for the club, even with event consent.
+    expect(refused.body.error.details.map((d) => d.learnerId)).toContain(IMANI);
+
+    const added = await champion.upload(
+      'post',
+      `/events/${SHOWCASE}/photos?confirmConsent=true`,
+      PNG,
+      'image/png',
+    );
+    expect(added.status).toBe(201);
+    const photoId = added.body.data.photoIds[0];
+    expect((await api('coordinator').get(`/events/${SHOWCASE}/photos/${photoId}`)).status).toBe(
+      200,
+    );
+    expect((await champion.delete(`/events/${SHOWCASE}/photos/${photoId}`)).status).toBe(403);
+    expect((await api('coordinator').delete(`/events/${SHOWCASE}/photos/${photoId}`)).status).toBe(
+      204,
+    );
   });
 });
