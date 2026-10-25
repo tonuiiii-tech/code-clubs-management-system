@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Avatar, Menu, SkipLink } from 'steamlabsui';
+import { Logo } from 'steamlabsui/logo';
 import { useAuth } from '../context/AuthContext.jsx';
 import { LanguageSwitcher } from '../components/LanguageSwitcher.jsx';
 import { DemoBanner } from '../components/DemoBanner.jsx';
@@ -39,7 +40,10 @@ export function AppLayout() {
       <DemoBanner />
       <div className="app-shell">
         <nav className="app-nav" aria-label={t('nav.main')}>
-          <strong className="app-nav__brand">{t('app.name')}</strong>
+          <div className="app-nav__brand">
+            <Logo variant="white" width={120} />
+            <strong>{t('app.name')}</strong>
+          </div>
           {NAV.filter((item) => allowed(item.permission)).map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end}>
               {t(item.key)}

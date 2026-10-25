@@ -48,6 +48,7 @@ export function LearnerDetailPage() {
   return (
     <>
       <PageHeader
+        eyebrow={t('nav.learners')}
         back={
           <BackLink asChild>
             <Link to="/learners">{t('common.back')}</Link>

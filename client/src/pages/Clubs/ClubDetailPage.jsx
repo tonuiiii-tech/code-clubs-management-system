@@ -52,6 +52,7 @@ export function ClubDetailPage() {
   return (
     <>
       <PageHeader
+        eyebrow={t('nav.clubs')}
         back={
           <BackLink asChild>
             <Link to="/clubs">{t('common.back')}</Link>

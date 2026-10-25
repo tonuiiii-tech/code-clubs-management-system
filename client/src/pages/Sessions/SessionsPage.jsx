@@ -49,6 +49,7 @@ export function SessionsPage() {
   return (
     <>
       <PageHeader
+        eyebrow={t('app.name')}
         title={t('sessions.title')}
         description={t('sessions.description')}
         actions={

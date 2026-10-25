@@ -14,16 +14,24 @@ import { REGION_VALUES, TRACKS } from '@code-clubs/shared/enums';
 import { DataState } from '../../components/DataState.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { getDashboardSummary } from '../../services/dashboardService.js';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 /** Counts inside the user's own scope (US-06, US-12). Charts and reports come in Sprint 4. */
 export function DashboardPage() {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const { loading, error, data, reload } = useApi(getDashboardSummary);
   const summary = data?.data;
 
   return (
     <>
-      <PageHeader title={t('dashboard.title')} description={t('dashboard.description')} />
+      <PageHeader
+        eyebrow={
+          user ? t('dashboard.welcome', { name: user.fullName.split(' ')[0] }) : t('app.name')
+        }
+        title={t('dashboard.title')}
+        description={t('dashboard.description')}
+      />
       <DataState loading={loading} error={error} onRetry={reload}>
         {summary && (
           <div className="page-grid">

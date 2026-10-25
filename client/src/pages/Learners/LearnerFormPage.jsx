@@ -116,6 +116,7 @@ function LearnerForm({ learner, clubs }) {
   return (
     <>
       <PageHeader
+        eyebrow={t('nav.learners')}
         back={
           <BackLink asChild>
             <Link to={editing ? `/learners/${learner.id}` : '/learners'}>{t('common.back')}</Link>

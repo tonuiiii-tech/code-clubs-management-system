@@ -88,6 +88,7 @@ function SchoolForm({ school }) {
   return (
     <>
       <PageHeader
+        eyebrow={t('nav.schools')}
         back={
           <BackLink asChild>
             <Link to={editing ? `/schools/${school.id}` : '/schools'}>{t('common.back')}</Link>

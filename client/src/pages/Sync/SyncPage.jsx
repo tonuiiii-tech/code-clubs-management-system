@@ -39,7 +39,11 @@ export function SyncPage() {
 
   return (
     <>
-      <PageHeader title={t('sync.title')} description={t('sync.description')} />
+      <PageHeader
+        eyebrow={t('app.name')}
+        title={t('sync.title')}
+        description={t('sync.description')}
+      />
       <div className="page-grid">
         {sync.enabled ? (
           <>

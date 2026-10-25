@@ -396,6 +396,15 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Alternatives considered:** Pointing the Vercel build at a hosted API (no API is hosted yet); running Express as Vercel functions (file uploads, rate limits and the sync module expect one long-running server).
 - **Consequences:** The Vercel site holds no real data and needs no secrets. Hosting the API (for example Render or Railway with Atlas) is a later decision; then a second Vercel build with `VITE_API_URL` can serve the real app.
 
+## D3-11: The app borrows the look of steamlabsafrica.com
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** Enock asked for the design principles of steamlabsafrica.com and the STEAMLabs logo in the app. The website uses the same palette and font as the steamlabsui kit (Clover green, Fuel orange, Poppins), with a bolder style.
+- **Decision:** Keep the kit's tokens and add a thin layer in `client/src/ui/app.css`: pill-shaped buttons and menu items, page titles in Poppins 900, an uppercase eyebrow above every page title, cards with 20 px corners and a soft shadow, dashboard tiles with big numbers and the kit's cream offset shadow, and a sign-in page with a green-to-navy brand panel. The official logo comes from the kit (`steamlabsui/logo`): white on the green menu and on the brand panel. Poppins 800 and 900 are self-hosted like the other weights, so the look works offline.
+- **Alternatives considered:** Copying the website's marketing sections (hero photos, partner ticker) into every page. Those suit a website, not daily data entry on tablets.
+- **Consequences:** Only the sign-in page has a large brand panel. On phones the panel shrinks to the logo and headline. Any later kit update to the same classes may need this layer adjusted.
+
 ## Decision template
 
 Copy this template for future entries:

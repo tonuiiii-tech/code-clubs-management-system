@@ -34,6 +34,7 @@ export function ClubsPage() {
   return (
     <>
       <PageHeader
+        eyebrow={t('app.name')}
         title={t('clubs.title')}
         description={t('clubs.description')}
         actions={

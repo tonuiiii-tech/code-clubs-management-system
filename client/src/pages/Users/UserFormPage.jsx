@@ -134,6 +134,7 @@ function UserForm({ user }) {
   return (
     <>
       <PageHeader
+        eyebrow={t('nav.users')}
         back={
           <BackLink asChild>
             <Link to="/users">{t('common.back')}</Link>

@@ -35,6 +35,7 @@ export function SchoolDetailPage() {
   return (
     <>
       <PageHeader
+        eyebrow={t('nav.schools')}
         back={
           <BackLink asChild>
             <Link to="/schools">{t('common.back')}</Link>

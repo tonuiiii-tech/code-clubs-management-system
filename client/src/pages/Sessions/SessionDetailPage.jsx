@@ -51,6 +51,7 @@ export function SessionDetailPage() {
   return (
     <>
       <PageHeader
+        eyebrow={t('nav.sessions')}
         back={
           <BackLink asChild>
             <Link to="/sessions">{t('common.back')}</Link>
