@@ -49,4 +49,4 @@ D3-1 to D3-9 in `docs/decision-log.md`; R3-1 to R3-6 in `docs/risk-register.md`.
 
 ## Next
 
-Sprint 4, as planned in Sprint 1: events and reports.
+Sprint 4, as in the Sprint 1 roadmap: HQ dashboard and alerts, the termly PDF report, events and event consent, and announcements (SMS or WhatsApp behind a stub).
