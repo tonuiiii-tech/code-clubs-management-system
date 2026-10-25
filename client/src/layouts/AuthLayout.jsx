@@ -18,7 +18,10 @@ export function AuthLayout() {
             <p className="auth-hero__title">{t('login.heroTitle')}</p>
             <p className="auth-hero__lead">{t('login.heroText')}</p>
           </div>
-          <p className="auth-hero__motto">{t('login.motto')}</p>
+          <div className="auth-hero__foot">
+            <p className="auth-hero__motto">{t('login.motto')}</p>
+            <p className="partner-credit">{t('app.partner')}</p>
+          </div>
         </section>
         <div className="auth-form">
           <div className="auth-card">

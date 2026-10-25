@@ -405,6 +405,15 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Alternatives considered:** Copying the website's marketing sections (hero photos, partner ticker) into every page. Those suit a website, not daily data entry on tablets.
 - **Consequences:** Only the sign-in page has a large brand panel. On phones the panel shrinks to the logo and headline. Any later kit update to the same classes may need this layer adjusted.
 
+## D3-12: Raspberry Pi Foundation credit, as text until the logo is cleared
+
+- **Status:** Proposed (wording to be confirmed by STEAMLabs)
+- **Date:** 2026-10-25
+- **Context:** Enock asked for a Raspberry Pi picture and a "sponsored by Raspberry Pi" line. Code Club is a Raspberry Pi Foundation programme. The Raspberry Pi logo is a trademark that partners may use only with the Foundation's files and permission.
+- **Decision:** A one-line credit, "In partnership with the Raspberry Pi Foundation", appears at the bottom of the sign-in panel and of the menu, in English and Kiswahili, with a raspberry-coloured rule from the kit (`--rpi-raspberry`). The logo is added only once STEAMLabs sends the official file and confirms the permission; it is never copied from the web or redrawn.
+- **Alternatives considered:** "Sponsored by", if the Foundation funds the work; "Using learning resources from", if there is no formal agreement.
+- **Consequences:** The wording is one translation key (`app.partner`) and can change without code changes.
+
 ## Decision template
 
 Copy this template for future entries:

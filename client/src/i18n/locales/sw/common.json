@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "STEAMLabs Code Clubs"
+    "name": "STEAMLabs Code Clubs",
+    "partner": "Kwa ushirikiano na Raspberry Pi Foundation"
   },
   "nav": {
     "dashboard": "Dashibodi",

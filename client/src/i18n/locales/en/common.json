@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "STEAMLabs Code Clubs"
+    "name": "STEAMLabs Code Clubs",
+    "partner": "In partnership with the Raspberry Pi Foundation"
   },
   "nav": {
     "dashboard": "Dashboard",

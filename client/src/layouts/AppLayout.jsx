@@ -49,6 +49,7 @@ export function AppLayout() {
               {t(item.key)}
             </NavLink>
           ))}
+          <p className="partner-credit app-nav__partner">{t('app.partner')}</p>
         </nav>
         <main className="app-main" id="main" tabIndex={-1}>
           <div className="app-topbar">

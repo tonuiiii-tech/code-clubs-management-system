@@ -158,6 +158,26 @@ body {
   font-weight: 700;
 }
 
+.auth-hero__foot {
+  display: grid;
+  gap: 0.5rem;
+}
+
+/* Partner credit (D3-12): text only until the official Raspberry Pi logo and permission arrive. */
+.partner-credit {
+  margin: 0;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--rpi-raspberry);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.app-nav__partner {
+  margin-top: auto;
+  margin-inline: 0.75rem;
+  opacity: 0.92;
+}
+
 /* Orange on green is hard to read at small sizes, so text on the panel stays white. */
 .auth-hero .sla-eyebrow {
   color: #fff;
