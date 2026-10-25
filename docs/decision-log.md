@@ -387,6 +387,15 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Alternatives considered:** Replacing the list on push.
 - **Consequences:** Builds on D2-4 (one record per learner per session).
 
+## D3-10: Vercel hosts the demo build only
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** Enock connected the repository to Vercel so stakeholders can open the app. Vercel serves static sites well, but the API needs a long-running Node server and MongoDB, which Vercel does not host in this setup.
+- **Decision:** `vercel.json` builds the client in demo mode (`build:demo`, in-browser mock API with fictional data, D1-20) and installs only the client and shared workspaces. Every route falls back to `index.html`; the service worker is never cached by the CDN.
+- **Alternatives considered:** Pointing the Vercel build at a hosted API (no API is hosted yet); running Express as Vercel functions (file uploads, rate limits and the sync module expect one long-running server).
+- **Consequences:** The Vercel site holds no real data and needs no secrets. Hosting the API (for example Render or Railway with Atlas) is a later decision; then a second Vercel build with `VITE_API_URL` can serve the real app.
+
 ## Decision template
 
 Copy this template for future entries:

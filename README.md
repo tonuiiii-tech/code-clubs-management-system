@@ -107,6 +107,16 @@ Open <http://localhost:5173> and use the **Sign in as…** buttons to try each r
 
 CI runs lint, format check, tests and build on every push and pull request (`.github/workflows/ci.yml`).
 
+## Online demo (Vercel)
+
+The repository deploys to Vercel as the **demo build** (D3-10): the whole app runs in the browser with fictional data and no server, so it is safe to share with stakeholders. `vercel.json` holds the settings. In the Vercel project:
+
+1. **Settings → Build and Deployment → Root Directory:** leave it empty (the repository root), so `vercel.json` is used.
+2. Leave the framework, install, build and output settings on their defaults; `vercel.json` overrides them.
+3. On the free Hobby plan, Vercel can refuse to deploy commits whose author is not the account owner. If a pull request preview fails within seconds, that is the likely cause; merges into `main` are authored by you and deploy.
+
+No environment variables or secrets are needed.
+
 ## Rules for contributors
 
 - Never commit `.env` files, secrets or real personal data. Seed data is fictional.
