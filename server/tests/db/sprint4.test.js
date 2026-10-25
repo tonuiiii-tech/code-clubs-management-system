@@ -44,6 +44,7 @@ const PNG = Buffer.concat([
   Buffer.from('fake image data'),
 ]);
 const PDF = Buffer.from('%PDF-1.4 signed consent form');
+const TERM_REPORTS_NOTE = uid(2201); // from Otieno to every champion; Faith has read it
 const day = (n) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 async function signIn(email) {
@@ -407,5 +408,84 @@ describe('Events', () => {
     expect((await api('coordinator').delete(`/events/${SHOWCASE}/photos/${photoId}`)).status).toBe(
       204,
     );
+  });
+});
+
+describe('Announcements', () => {
+  const message = (audience, extra = {}) => ({
+    title: 'Laptops arriving',
+    body: 'New laptops reach your club next week.',
+    audience: { roles: [], regions: [], clubIds: [], ...audience },
+    channels: [],
+    ...extra,
+  });
+
+  it('shows each user their inbox with read marks and an unread count', async () => {
+    const inbox = await api('champion').get('/announcements');
+    expect(inbox.status).toBe(200);
+    expect(inbox.body.data).toHaveLength(2);
+    expect(inbox.body.unread).toBe(1);
+    expect(inbox.body.data.find((a) => a.id === TERM_REPORTS_NOTE).read).toBe(true);
+    expect(inbox.body.data[0].recipientIds).toBeUndefined();
+    expect((await api('otherChampion').get('/announcements')).body.data).toHaveLength(1);
+  });
+
+  it('reaches exactly the chosen audience', async () => {
+    const preview = await api('pm').post('/announcements/preview', {
+      audience: { roles: ['champion'], regions: ['nairobi_central'], clubIds: [] },
+      channels: ['sms'],
+    });
+    // Faith (NAC-001, NAC-002), Grace (NAC-002) and Brian (NAC-003).
+    expect(preview.body.data).toEqual({ recipients: 3, messages: 3 });
+
+    const sent = await api('pm').post(
+      '/announcements',
+      message({ clubIds: [WNY_001] }, { channels: ['sms', 'whatsapp'] }),
+    );
+    expect(sent.status).toBe(201);
+    expect(sent.body.data).toMatchObject({ recipientCount: 1, readCount: 0, messages: 2 });
+    const id = sent.body.data.id;
+    expect((await api('otherChampion').get(`/announcements/${id}`)).status).toBe(200);
+    expect((await api('champion').get(`/announcements/${id}`)).status).toBe(404);
+    expect((await api('champion').post(`/announcements/${id}/read`)).status).toBe(404);
+
+    // The stub records the copies and sends nothing (US-24).
+    const copies = await OutboundMessage.find({ announcementId: id }).lean();
+    expect(copies.map((m) => m.channel).sort()).toEqual(['sms', 'whatsapp']);
+    expect(copies.every((m) => m.provider === 'stub' && m.to.startsWith('+254700000'))).toBe(true);
+
+    // A coordinator's audience covers their own regions only.
+    const regional = await api('coordinator').post('/announcements', message({}));
+    expect(regional.status).toBe(201);
+    expect((await api('otherChampion').get(`/announcements/${regional.body.data.id}`)).status).toBe(
+      404,
+    );
+    expect(
+      (await api('coordinator').post('/announcements', message({ regions: ['coast'] }))).status,
+    ).toBe(403);
+    expect(
+      (await api('coordinator').post('/announcements', message({ clubIds: [WNY_001] }))).status,
+    ).toBe(403);
+    expect((await api('champion').post('/announcements', message({}))).status).toBe(403);
+    expect(
+      (
+        await api('pm').post(
+          '/announcements',
+          message({ roles: ['system_admin'], regions: ['coast'] }),
+        )
+      ).status,
+    ).toBe(400); // nobody matches
+  });
+
+  it('counts reads once and shows the sender how many read it', async () => {
+    const sent = await api('coordinator').post('/announcements', message({ clubIds: [NAC_001] }));
+    const id = sent.body.data.id;
+    expect((await api('champion').post(`/announcements/${id}/read`)).status).toBe(200);
+    expect((await api('champion').post(`/announcements/${id}/read`)).status).toBe(200);
+    const mine = await api('coordinator').get(`/announcements/${id}`);
+    expect(mine.body.data).toMatchObject({ recipientCount: 1, readCount: 1 });
+    const box = await api('coordinator').get('/announcements?box=sent');
+    expect(box.body.data.find((a) => a.id === id).readCount).toBe(1);
+    expect((await api('champion').get('/announcements?box=sent')).body.data).toEqual([]);
   });
 });

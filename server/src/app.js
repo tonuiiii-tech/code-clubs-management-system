@@ -16,6 +16,7 @@ import { alertsRouter, dashboardRouter } from './modules/dashboard/dashboard.rou
 import { syncRouter } from './modules/sync/sync.routes.js';
 import { notificationsRouter } from './modules/notifications/notifications.routes.js';
 import { reportsRouter } from './modules/reports/reports.routes.js';
+import { announcementsRouter } from './modules/announcements/announcements.routes.js';
 import { eventsRouter } from './modules/events/events.routes.js';
 import { termsRouter } from './modules/terms/terms.routes.js';
 
@@ -48,6 +49,7 @@ export function createApp() {
   api.use('/alerts', alertsRouter);
   api.use('/reports', reportsRouter);
   api.use('/events', eventsRouter);
+  api.use('/announcements', announcementsRouter);
   api.use('/notifications', notificationsRouter);
   app.use('/api/v1', api);
 
