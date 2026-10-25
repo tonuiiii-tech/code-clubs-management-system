@@ -407,7 +407,7 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 
 ## D3-12: Raspberry Pi Foundation credit, as text until the logo is cleared
 
-- **Status:** Proposed (wording to be confirmed by STEAMLabs)
+- **Status:** Accepted (wording chosen by Enock on 2026-10-25; logo pending)
 - **Date:** 2026-10-25
 - **Context:** Enock asked for a Raspberry Pi picture and a "sponsored by Raspberry Pi" line. Code Club is a Raspberry Pi Foundation programme. The Raspberry Pi logo is a trademark that partners may use only with the Foundation's files and permission.
 - **Decision:** A one-line credit, "In partnership with the Raspberry Pi Foundation", appears at the bottom of the sign-in panel and of the menu, in English and Kiswahili, with a raspberry-coloured rule from the kit (`--rpi-raspberry`). The logo is added only once STEAMLabs sends the official file and confirms the permission; it is never copied from the web or redrawn.
