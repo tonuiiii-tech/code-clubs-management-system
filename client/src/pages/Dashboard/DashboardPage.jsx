@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import {
+  Alert,
   Card,
   CardContent,
   CardHeader,
@@ -26,6 +27,11 @@ export function DashboardPage() {
       <DataState loading={loading} error={error} onRetry={reload}>
         {summary && (
           <div className="page-grid">
+            {data.savedAt && (
+              <Alert tone="info">
+                {t('dashboard.savedAt', { date: new Date(data.savedAt).toLocaleString() })}
+              </Alert>
+            )}
             <div className="stat-grid">
               <Stat variant="tile" value={summary.activeClubs} label={t('dashboard.activeClubs')} />
               <Stat variant="tile" value={summary.schools} label={t('dashboard.schools')} />

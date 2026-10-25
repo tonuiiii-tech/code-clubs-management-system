@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Avatar, Menu, SkipLink } from 'steamlabsui';
 import { useAuth } from '../context/AuthContext.jsx';
 import { LanguageSwitcher } from '../components/LanguageSwitcher.jsx';
 import { DemoBanner } from '../components/DemoBanner.jsx';
+import { ConfirmDialog } from '../components/ConfirmDialog.jsx';
+import { SyncStatus } from '../components/SyncStatus.jsx';
+import { useSyncState } from '../offline/index.js';
 
 /** Menu items are filtered by the shared policy; the server still checks every request (D1-3). */
 export const NAV = [
@@ -13,6 +17,7 @@ export const NAV = [
   { to: '/sessions', key: 'nav.sessions', permission: 'session:read' },
   { to: '/schools', key: 'nav.schools', permission: 'school:read' },
   { to: '/users', key: 'nav.users', permission: 'user:manage' },
+  { to: '/sync', key: 'nav.sync', permission: ['sync:use', 'syncConflict:read'] },
   { to: '/profile', key: 'nav.profile' },
 ];
 
@@ -20,6 +25,13 @@ export function AppLayout() {
   const { t } = useTranslation();
   const { user, can, logout } = useAuth();
   const navigate = useNavigate();
+  const sync = useSyncState();
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+  const allowed = (permission) => !permission || [permission].flat().some((p) => can(p));
+  const unsent = sync.pending + sync.attention;
+
+  // Signing out deletes this device's copy, so warn about changes not yet sent (D3-2).
+  const signOut = () => (unsent > 0 ? setConfirmingSignOut(true) : logout());
 
   return (
     <>
@@ -28,7 +40,7 @@ export function AppLayout() {
       <div className="app-shell">
         <nav className="app-nav" aria-label={t('nav.main')}>
           <strong className="app-nav__brand">{t('app.name')}</strong>
-          {NAV.filter((item) => !item.permission || can(item.permission)).map((item) => (
+          {NAV.filter((item) => allowed(item.permission)).map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end}>
               {t(item.key)}
             </NavLink>
@@ -36,6 +48,7 @@ export function AppLayout() {
         </nav>
         <main className="app-main" id="main" tabIndex={-1}>
           <div className="app-topbar">
+            <SyncStatus />
             <LanguageSwitcher />
             {user && (
               <Menu
@@ -52,7 +65,7 @@ export function AppLayout() {
                 items={[
                   { label: t('nav.profile'), onSelect: () => navigate('/profile') },
                   'separator',
-                  { label: t('nav.signOut'), onSelect: logout },
+                  { label: t('nav.signOut'), onSelect: signOut },
                 ]}
               />
             )}
@@ -60,6 +73,18 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+      <ConfirmDialog
+        open={confirmingSignOut}
+        title={t('sync.signOutTitle')}
+        confirmLabel={t('sync.signOutAnyway')}
+        onConfirm={() => {
+          setConfirmingSignOut(false);
+          logout();
+        }}
+        onClose={() => setConfirmingSignOut(false)}
+      >
+        {t('sync.signOutBody', { count: unsent })}
+      </ConfirmDialog>
     </>
   );
 }

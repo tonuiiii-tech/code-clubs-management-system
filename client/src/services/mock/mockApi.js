@@ -12,6 +12,7 @@ import {
   REGION_CODE_PREFIX,
   ROLES,
   SESSION_MAX_PHOTOS,
+  SYNC_SESSION_DAYS,
   UPLOAD_MAX_BYTES,
   UPLOAD_TYPES,
 } from '@code-clubs/shared/enums';
@@ -39,6 +40,7 @@ import {
   loginSchema,
   sessionEditWindowOpen,
   sessionPhotoQuerySchema,
+  syncPushSchema,
   updateClubSchema,
   updateLearnerSchema,
   updateOwnProfileSchema,
@@ -421,8 +423,13 @@ function learnerRoutes() {
         const used = db.learners
           .filter((l) => l.clubId === clubId)
           .reduce((max, l) => Math.max(max, Number(l.learnerNumber.slice(-3))), 0);
+        const { id: chosenId } = details;
+        delete details.id;
+        if (chosenId && db.learners.some((l) => l.id === chosenId)) {
+          throw conflict(ERROR_MESSAGES.duplicateId);
+        }
         const learner = {
-          id: crypto.randomUUID(),
+          id: chosenId ?? crypto.randomUUID(),
           learnerNumber: `${club.code}-${String(used + 1).padStart(3, '0')}`,
           ...details,
           birthYear,
@@ -681,11 +688,15 @@ function sessionRoutes() {
         if (db.sessions.some((s) => s.clubId === club.id && s.date === input.date)) {
           throw conflict(ERROR_MESSAGES.duplicateSession);
         }
+        const { id: chosenId, ...fields } = input;
+        if (chosenId && db.sessions.some((s) => s.id === chosenId)) {
+          throw conflict(ERROR_MESSAGES.duplicateId);
+        }
         const session = {
-          id: crypto.randomUUID(),
+          id: chosenId ?? crypto.randomUUID(),
           startTime: club.startTime,
           endTime: club.endTime,
-          ...input,
+          ...fields,
           region: club.region,
           photoIds: [],
           ...reported(actor, input.status),
@@ -785,7 +796,10 @@ function sessionRoutes() {
       '/sessions/:id/photos',
       async ({ actor, params, query, body }) => {
         const session = findSession(actor, authorize(actor, 'session:write'), idParam(params.id));
-        const { confirmConsent } = validate(sessionPhotoQuerySchema, query, 'query');
+        const { confirmConsent, opId } = validate(sessionPhotoQuerySchema, query, 'query');
+        // A syncing device sending the same photo again adds it once.
+        db.photoOps ??= {};
+        if (opId && db.photoOps[opId]) return [201, { data: sessionDetail(session) }];
         assertEditable(actor, session.date);
         if (session.photoIds.length >= SESSION_MAX_PHOTOS)
           throw conflict(ERROR_MESSAGES.tooManyPhotos);
@@ -805,6 +819,7 @@ function sessionRoutes() {
           throw conflict(ERROR_MESSAGES.photoConsentMissing, 'PHOTO_CONSENT_MISSING', missing);
         }
         const photoId = await checkFile(body, PHOTO_TYPES, ERROR_MESSAGES.photoTypeNotAllowed);
+        if (opId) db.photoOps[opId] = photoId;
         session.photoIds = [...session.photoIds, photoId];
         Object.assign(session, { updatedAt: now(), updatedBy: actor.id });
         return [201, { data: sessionDetail(session) }];
@@ -834,6 +849,184 @@ function sessionRoutes() {
         return [204, null];
       },
     ],
+  ];
+}
+
+// ---------------------------------------------------------------------------
+// Sprint 3: sync (docs/sync-protocol.md). Pushed changes run through the routes above, so the
+// same rules apply. Simplified for the demo: every pull sends the whole scope with reset: true,
+// and conflicts are not logged.
+
+async function applySyncOperation(actor, op, aliases) {
+  const call = async (method, path, body) => {
+    const route = match(method, path);
+    return route.handler({ actor, params: route.params, query: {}, body });
+  };
+  const id = op.recordId && (aliases.get(op.recordId) ?? op.recordId);
+  const need = () => {
+    if (!id) {
+      throw badRequest(ERROR_MESSAGES.invalidFields, [
+        { field: 'recordId', message: 'Required for this operation' },
+      ]);
+    }
+    return id;
+  };
+  switch (op.type) {
+    case 'learner.create':
+      if (!db.learners.some((l) => l.id === op.data.id)) await call('POST', '/learners', op.data);
+      return {};
+    case 'learner.update':
+      await call('PATCH', `/learners/${need()}`, op.data);
+      return {};
+    case 'learner.status':
+      await call('PATCH', `/learners/${need()}/status`, op.data);
+      return {};
+    case 'learner.contact':
+      await call('PUT', `/learners/${need()}/contact`, op.data);
+      return {};
+    case 'consent.set':
+      await call('PUT', `/learners/${need()}/consents/${op.params?.type}`, op.data);
+      return {};
+    case 'session.create': {
+      const existing = db.sessions.find(
+        (s) => s.clubId === op.data.clubId && s.date === op.data.date,
+      );
+      if (existing?.id === op.data.id) return {};
+      if (!existing) {
+        await call('POST', '/sessions', op.data);
+        return {};
+      }
+      // Another device reported this club's session for the same day: join it (D3-6).
+      findSession(actor, authorize(actor, 'session:write'), existing.id);
+      const fill = {};
+      for (const field of ['topic', 'notes', 'startTime', 'endTime', 'cancellationReason']) {
+        if (op.data[field] && !existing[field]) fill[field] = op.data[field];
+      }
+      if (existing.status === 'planned' && op.data.status && op.data.status !== 'planned') {
+        fill.status = op.data.status;
+      }
+      if (Object.keys(fill).length) await call('PATCH', `/sessions/${existing.id}`, fill);
+      aliases.set(op.data.id, existing.id);
+      return { recordId: existing.id, joined: true };
+    }
+    case 'session.update':
+      await call('PATCH', `/sessions/${need()}`, op.data);
+      return {};
+    case 'session.attendance': {
+      // Merged per learner: nobody else's mark is removed (D2-4).
+      const session = findSession(actor, authorize(actor, 'session:write'), need());
+      const { records } = validate(attendanceSchema, op.data, 'data');
+      assertEditable(actor, session.date);
+      if (session.status !== 'held') throw badRequest(ERROR_MESSAGES.attendanceHeldOnly);
+      const inClub = records.every((r) =>
+        db.learners.some((l) => l.id === r.learnerId && l.clubId === session.clubId),
+      );
+      if (!inClub) throw badRequest(ERROR_MESSAGES.attendanceNotInClub);
+      for (const { learnerId, status } of records) {
+        const mark = db.attendance.find(
+          (a) => a.sessionId === session.id && a.learnerId === learnerId,
+        );
+        if (mark) Object.assign(mark, { status, updatedAt: now(), updatedBy: actor.id });
+        else {
+          db.attendance.push({
+            id: crypto.randomUUID(),
+            sessionId: session.id,
+            learnerId,
+            clubId: session.clubId,
+            region: session.region,
+            date: session.date,
+            status,
+            createdAt: now(),
+            updatedAt: now(),
+            createdBy: actor.id,
+            updatedBy: actor.id,
+          });
+        }
+      }
+      return {};
+    }
+    default:
+      throw badRequest(ERROR_MESSAGES.invalidFields);
+  }
+}
+
+async function syncPush(actor, body) {
+  authorize(actor, 'sync:use');
+  const { operations } = validate(syncPushSchema, body, 'body');
+  db.syncOps ??= {};
+  const aliases = new Map();
+  const refused = new Set();
+  const results = [];
+  for (const op of operations) {
+    const target = op.recordId ? (aliases.get(op.recordId) ?? op.recordId) : op.data?.id;
+    if (target && refused.has(target)) {
+      results.push({ opId: op.opId, status: 'skipped' });
+      continue;
+    }
+    let result = db.syncOps[op.opId];
+    if (!result) {
+      try {
+        result = {
+          opId: op.opId,
+          status: 'applied',
+          ...(await applySyncOperation(actor, op, aliases)),
+        };
+      } catch (err) {
+        if (!(err instanceof MockHttpError)) throw err;
+        const { code, message, details } = err;
+        result = {
+          opId: op.opId,
+          status: 'rejected',
+          error: { code, message, ...(details && { details }) },
+        };
+      }
+      db.syncOps[op.opId] = result;
+    }
+    if (result.status === 'rejected' && target) refused.add(target);
+    if (result.joined) aliases.set(op.data.id, result.recordId);
+    results.push(result);
+  }
+  return [200, { data: { results } }];
+}
+
+function syncPull(actor) {
+  const scope = scopeFor(actor, 'sync:use');
+  if (!scope) throw new MockHttpError(403, 'SYNC_NOT_AVAILABLE', ERROR_MESSAGES.syncNotAvailable);
+  const filter = scopeFilter(actor, scope);
+  const from = new Date(Date.now() - SYNC_SESSION_DAYS * 86_400_000).toISOString().slice(0, 10);
+  const learners = db.learners.filter((l) => clubRecordInFilter(l, filter));
+  const sessions = db.sessions.filter((s) => clubRecordInFilter(s, filter) && s.date >= from);
+  const sessionIds = new Set(sessions.map((s) => s.id));
+  return [
+    200,
+    {
+      data: {
+        scopeKey: 'demo',
+        reset: true,
+        changes: {
+          schools: db.schools.filter((s) => schoolInFilter(s, filter)),
+          clubs: db.clubs.filter((c) => clubInFilter(c, filter)),
+          learners: learners.map((l) => ({
+            ...l,
+            age: new Date().getFullYear() - l.birthYear,
+            hasContact: db.learnerContacts.some((c) => c.learnerId === l.id),
+          })),
+          consents: db.consents
+            .filter((c) => clubRecordInFilter(c, filter))
+            .map(({ fileId, ...c }) => ({
+              ...c,
+              signedOn: c.signedOn ?? null,
+              hasFile: Boolean(fileId),
+            })),
+          sessions,
+          attendance: db.attendance.filter((a) => sessionIds.has(a.sessionId)),
+        },
+        deleted: { attendance: [] },
+        cursor: 'demo',
+        more: false,
+        serverTime: now(),
+      },
+    },
   ];
 }
 
@@ -1171,6 +1364,16 @@ const routes = [
 
   ...learnerRoutes(),
   ...sessionRoutes(),
+  ['POST', '/sync/push', ({ actor, body }) => syncPush(actor, body)],
+  ['GET', '/sync/pull', ({ actor }) => syncPull(actor)],
+  [
+    'GET',
+    '/sync/conflicts',
+    ({ actor }) => {
+      authorize(actor, 'syncConflict:read');
+      return [200, { data: [], page: 1, pageSize: 20, total: 0 }];
+    },
+  ],
   [
     'GET',
     '/dashboard/summary',

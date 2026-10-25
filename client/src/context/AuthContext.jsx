@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { can as canDo } from '@code-clubs/shared/permissions';
 import * as authService from '../services/authService.js';
+import { purgeExpired } from '../offline/index.js';
+import { rememberUser } from '../offline/registry.js';
 import { updateMyProfile } from '../services/usersService.js';
 
 const AuthContext = createContext(null);
@@ -10,10 +12,14 @@ export function AuthProvider({ children }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    authService.restoreSession().then((restored) => {
-      setUser(restored);
-      setReady(true);
-    });
+    // Local data not synced for 14 days is deleted before anything else (D3-2).
+    purgeExpired()
+      .catch(() => {})
+      .then(() => authService.restoreSession())
+      .then((restored) => {
+        setUser(restored);
+        setReady(true);
+      });
   }, []);
 
   const login = useCallback(
@@ -27,6 +33,7 @@ export function AuthProvider({ children }) {
   const updateProfile = useCallback(async (changes) => {
     const { data } = await updateMyProfile(changes);
     setUser(data);
+    rememberUser(data);
     return data;
   }, []);
   /** The server ends every session after a password change, so the user signs in again. */

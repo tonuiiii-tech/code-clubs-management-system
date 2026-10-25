@@ -13,16 +13,16 @@ This is how a device that works offline exchanges changes with the server. Only 
 
 ## 2. Records that sync
 
-| Records        | Pulled to the device                                             | Changed offline                         |
-| -------------- | ---------------------------------------------------------------- | --------------------------------------- |
-| Schools        | In scope                                                         | No                                      |
-| Clubs          | In scope                                                         | No                                      |
-| Learners       | In scope, with `hasContact` (never the contact)                  | Register, edit, mark as left, reactivate |
-| Consents       | Status, date signed and whether a form is on file (never the form) | Status, date signed, attach a form      |
-| Sessions       | In scope, dated in the last 120 days or in the future            | Plan, report, edit                      |
-| Attendance     | For the sessions above                                           | Take attendance                         |
-| Guardian contacts | Never                                                         | Enter (sent, then deleted from the device) |
-| Session photos | Never (viewed online)                                           | Add (sent, then deleted from the device) |
+| Records           | Pulled to the device                                               | Changed offline                            |
+| ----------------- | ------------------------------------------------------------------ | ------------------------------------------ |
+| Schools           | In scope                                                           | No                                         |
+| Clubs             | In scope                                                           | No                                         |
+| Learners          | In scope, with `hasContact` (never the contact)                    | Register, edit, mark as left, reactivate   |
+| Consents          | Status, date signed and whether a form is on file (never the form) | Status, date signed, attach a form         |
+| Sessions          | In scope, dated in the last 120 days or in the future              | Plan, report, edit                         |
+| Attendance        | For the sessions above                                             | Take attendance                            |
+| Guardian contacts | Never                                                              | Enter (sent, then deleted from the device) |
+| Session photos    | Never (viewed online)                                              | Add (sent, then deleted from the device)   |
 
 ## 3. Push: `POST /api/v1/sync/push`
 
@@ -43,16 +43,16 @@ The device sends its outbox in order, at most 50 operations per request.
 }
 ```
 
-| `type`               | `recordId`  | `params`   | `data` is the body of               |
-| -------------------- | ----------- | ---------- | ----------------------------------- |
-| `learner.create`     | (none)      |            | `POST /learners`, with `id`         |
-| `learner.update`     | learner     |            | `PATCH /learners/:id`               |
-| `learner.status`     | learner     |            | `PATCH /learners/:id/status`        |
-| `learner.contact`    | learner     |            | `PUT /learners/:id/contact`         |
-| `consent.set`        | learner     | `{ type }` | `PUT /learners/:id/consents/:type`  |
-| `session.create`     | (none)      |            | `POST /sessions`, with `id`         |
-| `session.update`     | session     |            | `PATCH /sessions/:id`               |
-| `session.attendance` | session     |            | `PUT /sessions/:id/attendance`      |
+| `type`               | `recordId` | `params`   | `data` is the body of              |
+| -------------------- | ---------- | ---------- | ---------------------------------- |
+| `learner.create`     | (none)     |            | `POST /learners`, with `id`        |
+| `learner.update`     | learner    |            | `PATCH /learners/:id`              |
+| `learner.status`     | learner    |            | `PATCH /learners/:id/status`       |
+| `learner.contact`    | learner    |            | `PUT /learners/:id/contact`        |
+| `consent.set`        | learner    | `{ type }` | `PUT /learners/:id/consents/:type` |
+| `session.create`     | (none)     |            | `POST /sessions`, with `id`        |
+| `session.update`     | session    |            | `PATCH /sessions/:id`              |
+| `session.attendance` | session    |            | `PUT /sessions/:id/attendance`     |
 
 - `id` in a create is a UUID made on the device; the record keeps it on the server (D1-6).
 - `recordedAt` is when the change was made on the device. See section 6.
@@ -67,18 +67,22 @@ The answer has one result per operation, in the same order:
       { "opId": "3f1c…", "status": "applied" },
       { "opId": "77b2…", "status": "applied", "conflicts": ["topic"] },
       { "opId": "c901…", "status": "applied", "recordId": "e4d0…", "joined": true },
-      { "opId": "a5e3…", "status": "rejected", "error": { "code": "POSSIBLE_DUPLICATE", "message": "…", "details": [] } },
+      {
+        "opId": "a5e3…",
+        "status": "rejected",
+        "error": { "code": "POSSIBLE_DUPLICATE", "message": "…", "details": [] }
+      },
       { "opId": "d812…", "status": "skipped" }
     ]
   }
 }
 ```
 
-| Status     | Meaning                                                                                           | Device does                                       |
-| ---------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| `applied`  | Saved. `conflicts` lists fields where someone else's value was overwritten (logged on the server). | Removes it from the outbox                        |
-| `rejected` | Refused with the same error the online endpoint gives                                             | Moves it to "Needs attention"                     |
-| `skipped`  | Not tried because an earlier operation on the same record was refused in this request             | Keeps it, blocked behind the refused one          |
+| Status     | Meaning                                                                                            | Device does                              |
+| ---------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `applied`  | Saved. `conflicts` lists fields where someone else's value was overwritten (logged on the server). | Removes it from the outbox               |
+| `rejected` | Refused with the same error the online endpoint gives                                              | Moves it to "Needs attention"            |
+| `skipped`  | Not tried because an earlier operation on the same record was refused in this request              | Keeps it, blocked behind the refused one |
 
 **Idempotency.** The server stores each `opId` with its result in `syncOperations` (kept 30 days). An `opId` it has seen gets the stored result back and changes nothing. Refused operations are stored too, so a retry gets the same answer until the device sends a new operation (for example with `confirmDuplicate: true`).
 
@@ -105,7 +109,12 @@ The answer:
     "scopeKey": "c8f1…",
     "reset": false,
     "changes": {
-      "schools": [], "clubs": [], "learners": [], "consents": [], "sessions": [], "attendance": []
+      "schools": [],
+      "clubs": [],
+      "learners": [],
+      "consents": [],
+      "sessions": [],
+      "attendance": []
     },
     "deleted": { "attendance": ["…"] },
     "cursor": "<opaque>",
@@ -127,13 +136,13 @@ After every pull, the device applies its unsent operations again on top of what 
 
 The server compares `base` with what it has now:
 
-| Situation                                                           | Result                                                                                                                  |
-| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Field unchanged since the device saw it                             | Applied, no conflict                                                                                                    |
-| Someone else changed a field this operation also changes            | Applied (last write wins, D3-5). The overwritten value goes to `syncConflicts` and the result lists the field.         |
-| Different fields changed by different people                        | Both kept, because an update only sets the fields it carries                                                            |
-| Attendance                                                          | Merged per learner: an offline attendance list adds or changes marks and never removes other learners' marks (D2-4)    |
-| Two sessions for the same club and date                             | The second is joined to the first (D3-6): empty fields of the existing session are filled in, the result carries the existing `recordId` and `joined: true`, and later operations in the request that use the device's ID are pointed at the existing session. The device renames its record. |
+| Situation                                                | Result                                                                                                                                                                                                                                                                                        |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Field unchanged since the device saw it                  | Applied, no conflict                                                                                                                                                                                                                                                                          |
+| Someone else changed a field this operation also changes | Applied (last write wins, D3-5). The overwritten value goes to `syncConflicts` and the result lists the field.                                                                                                                                                                                |
+| Different fields changed by different people             | Both kept, because an update only sets the fields it carries                                                                                                                                                                                                                                  |
+| Attendance                                               | Merged per learner: an offline attendance list adds or changes marks and never removes other learners' marks (D2-4)                                                                                                                                                                           |
+| Two sessions for the same club and date                  | The second is joined to the first (D3-6): empty fields of the existing session are filled in, the result carries the existing `recordId` and `joined: true`, and later operations in the request that use the device's ID are pointed at the existing session. The device renames its record. |
 
 Conflict values of fields that are never written to the audit log (`accessibilityNeeds`, contact fields) are stored as "changed" without the value. Guardian contacts are never compared.
 
@@ -161,9 +170,9 @@ Conflict values of fields that are never written to the audit log (`accessibilit
 
 ## 9. Errors
 
-| Code                   | When                                                         |
-| ---------------------- | ------------------------------------------------------------ |
-| `VALIDATION_ERROR`     | The request or an operation does not match its schema        |
-| `INVALID_RECORDED_AT`  | `recordedAt` is in the future                                 |
-| `SYNC_NOT_AVAILABLE`   | Pull by a role that does not sync (D3-1)                     |
-| Any service error      | Returned inside the operation's result, as online            |
+| Code                  | When                                                  |
+| --------------------- | ----------------------------------------------------- |
+| `VALIDATION_ERROR`    | The request or an operation does not match its schema |
+| `INVALID_RECORDED_AT` | `recordedAt` is in the future                         |
+| `SYNC_NOT_AVAILABLE`  | Pull by a role that does not sync (D3-1)              |
+| Any service error     | Returned inside the operation's result, as online     |

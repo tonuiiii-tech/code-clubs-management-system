@@ -95,7 +95,7 @@ export function LearnersPage() {
           <TableBody>
             {rows.map((l) => (
               <TableRow key={l.id}>
-                <TableCell>{l.learnerNumber}</TableCell>
+                <TableCell>{l.learnerNumber ?? t('learners.numberPending')}</TableCell>
                 <TableCell>
                   <TextLink asChild arrow={false}>
                     <Link to={`/learners/${l.id}`}>

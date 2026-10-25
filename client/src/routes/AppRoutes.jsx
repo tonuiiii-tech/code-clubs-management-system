@@ -19,6 +19,7 @@ import { SessionsPage } from '../pages/Sessions/SessionsPage.jsx';
 import { SessionDetailPage } from '../pages/Sessions/SessionDetailPage.jsx';
 import { SessionFormPage } from '../pages/Sessions/SessionFormPage.jsx';
 import { ProfilePage } from '../pages/Profile/ProfilePage.jsx';
+import { SyncPage } from '../pages/Sync/SyncPage.jsx';
 import { NotFoundPage } from '../pages/NotFound/NotFoundPage.jsx';
 
 /** [path, permission, page]. Guards only hide screens; the API enforces the same rules (D1-3). */
@@ -43,6 +44,8 @@ const PROTECTED = [
   ['/users/new', 'user:manage', UserFormPage],
   ['/users/:id/edit', 'user:manage', UserFormPage],
   ['/profile', 'user:updateSelf', ProfilePage],
+  // Everyone can open it; it shows sync to those who sync and conflicts to those who may read them.
+  ['/sync', 'user:updateSelf', SyncPage],
 ];
 
 export function AppRoutes() {
