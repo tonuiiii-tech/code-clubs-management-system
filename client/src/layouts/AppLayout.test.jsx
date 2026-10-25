@@ -31,19 +31,25 @@ describe('navigation follows the permission policy', () => {
       'Clubs',
       'Learners',
       'Sessions',
+      'Events',
+      'Announcements',
+      'Reports',
       'Schools',
       'Users',
+      'Settings',
       'Sync',
       'My profile',
     ]);
   });
 
-  it('hides user management from a Club Champion', () => {
+  it('hides user management, reports and settings from a Club Champion', () => {
     expect(renderAs('champion')).toEqual([
       'Dashboard',
       'Clubs',
       'Learners',
       'Sessions',
+      'Events',
+      'Announcements',
       'Schools',
       'Sync',
       'My profile',

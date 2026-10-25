@@ -302,6 +302,16 @@ async function pull(local) {
       await local.consents.bulkPut(changes.consents.map(consentRecord));
       await local.sessions.bulkPut(changes.sessions);
       await local.attendance.bulkPut(changes.attendance.map(attendanceRecord));
+      // Sprint 4 records; an older server sends none.
+      for (const table of [
+        'events',
+        'eventParticipants',
+        'eventConsents',
+        'announcements',
+        'announcementReads',
+      ]) {
+        if (changes[table]?.length) await local[table].bulkPut(changes[table]);
+      }
       if (data.deleted.attendance.length) {
         await local.attendance.where('id').anyOf(data.deleted.attendance).delete();
       }

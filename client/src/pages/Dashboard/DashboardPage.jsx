@@ -14,10 +14,17 @@ import { REGION_VALUES, TRACKS } from '@code-clubs/shared/enums';
 import { DataState } from '../../components/DataState.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { getDashboardSummary } from '../../services/dashboardService.js';
+import { listEvents } from '../../services/eventsService.js';
+import { useAuth } from '../../context/AuthContext.jsx';
+import { AlertsCard } from './AlertsCard.jsx';
+import { HqPanels, UpcomingEvents } from './HqPanels.jsx';
 
-/** Counts inside the user's own scope (US-06, US-12). Charts and reports come in Sprint 4. */
+const upcoming = () => listEvents({ from: new Date().toISOString().slice(0, 10), pageSize: 5 });
+
+/** Counts inside the user's own scope (US-06, US-12), then trends and alerts (US-19, US-20). */
 export function DashboardPage() {
   const { t } = useTranslation();
+  const { can } = useAuth();
   const { loading, error, data, reload } = useApi(getDashboardSummary);
   const summary = data?.data;
 
@@ -85,7 +92,21 @@ export function DashboardPage() {
           </div>
         )}
       </DataState>
+      <div className="page-grid" style={{ marginTop: '1.5rem' }}>
+        {can('dashboard:hq') ? <HqPanels /> : <ChampionPanels />}
+      </div>
     </>
+  );
+}
+
+/** Champions: alerts for their clubs and the events their clubs are invited to. */
+function ChampionPanels() {
+  const events = useApi(upcoming);
+  return (
+    <div className="form-grid">
+      <AlertsCard />
+      {events.data?.data && <UpcomingEvents events={events.data.data} />}
+    </div>
   );
 }
 

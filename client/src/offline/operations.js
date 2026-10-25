@@ -117,6 +117,10 @@ const APPLY = {
   },
   // Photos waiting to upload are shown from pendingFiles.
   async 'file.photo'() {},
+  async 'announcement.read'(db, { recordId, recordedAt }) {
+    if (await db.announcementReads.get(recordId)) return;
+    await db.announcementReads.put({ id: recordId, announcementId: recordId, readAt: recordedAt });
+  },
 };
 
 export async function applyLocal(db, op) {

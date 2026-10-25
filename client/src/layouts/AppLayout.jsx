@@ -7,6 +7,7 @@ import { LanguageSwitcher } from '../components/LanguageSwitcher.jsx';
 import { DemoBanner } from '../components/DemoBanner.jsx';
 import { ConfirmDialog } from '../components/ConfirmDialog.jsx';
 import { SyncStatus } from '../components/SyncStatus.jsx';
+import { AnnouncementsBell } from '../components/AnnouncementsBell.jsx';
 import { useSyncState } from '../offline/index.js';
 
 /** Menu items are filtered by the shared policy; the server still checks every request (D1-3). */
@@ -15,8 +16,12 @@ export const NAV = [
   { to: '/clubs', key: 'nav.clubs', permission: 'club:read' },
   { to: '/learners', key: 'nav.learners', permission: 'learner:read' },
   { to: '/sessions', key: 'nav.sessions', permission: 'session:read' },
+  { to: '/events', key: 'nav.events', permission: 'event:read' },
+  { to: '/announcements', key: 'nav.announcements', permission: 'announcement:read' },
+  { to: '/reports', key: 'nav.reports', permission: 'report:read' },
   { to: '/schools', key: 'nav.schools', permission: 'school:read' },
   { to: '/users', key: 'nav.users', permission: 'user:manage' },
+  { to: '/settings', key: 'nav.settings', permission: ['term:manage', 'report:schedule'] },
   { to: '/sync', key: 'nav.sync', permission: ['sync:use', 'syncConflict:read'] },
   { to: '/profile', key: 'nav.profile' },
 ];
@@ -49,6 +54,7 @@ export function AppLayout() {
         <main className="app-main" id="main" tabIndex={-1}>
           <div className="app-topbar">
             <SyncStatus />
+            {can('announcement:read') && <AnnouncementsBell />}
             <LanguageSwitcher />
             {user && (
               <Menu

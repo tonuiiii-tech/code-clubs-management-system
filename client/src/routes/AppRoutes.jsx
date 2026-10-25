@@ -20,6 +20,12 @@ import { SessionDetailPage } from '../pages/Sessions/SessionDetailPage.jsx';
 import { SessionFormPage } from '../pages/Sessions/SessionFormPage.jsx';
 import { ProfilePage } from '../pages/Profile/ProfilePage.jsx';
 import { SyncPage } from '../pages/Sync/SyncPage.jsx';
+import { EventsPage } from '../pages/Events/EventsPage.jsx';
+import { EventDetailPage } from '../pages/Events/EventDetailPage.jsx';
+import { EventFormPage } from '../pages/Events/EventFormPage.jsx';
+import { AnnouncementsPage } from '../pages/Announcements/AnnouncementsPage.jsx';
+import { ReportsPage } from '../pages/Reports/ReportsPage.jsx';
+import { SettingsPage } from '../pages/Settings/SettingsPage.jsx';
 import { NotFoundPage } from '../pages/NotFound/NotFoundPage.jsx';
 
 /** [path, permission, page]. Guards only hide screens; the API enforces the same rules (D1-3). */
@@ -43,6 +49,13 @@ const PROTECTED = [
   ['/users', 'user:manage', UsersPage],
   ['/users/new', 'user:manage', UserFormPage],
   ['/users/:id/edit', 'user:manage', UserFormPage],
+  ['/events', 'event:read', EventsPage],
+  ['/events/new', 'event:manage', EventFormPage],
+  ['/events/:id', 'event:read', EventDetailPage],
+  ['/events/:id/edit', 'event:manage', EventFormPage],
+  ['/announcements', 'announcement:read', AnnouncementsPage],
+  ['/reports', 'report:read', ReportsPage],
+  ['/settings', ['term:manage', 'report:schedule'], SettingsPage],
   ['/profile', 'user:updateSelf', ProfilePage],
   // Everyone can open it; it shows sync to those who sync and conflicts to those who may read them.
   ['/sync', 'user:updateSelf', SyncPage],

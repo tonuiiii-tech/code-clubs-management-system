@@ -287,13 +287,17 @@ export function buildTermReport({
       sessionsHeld: regionSessions.length,
       attendanceRate: attendanceTotals(regionSessions, bySession).rate,
     };
-  }).filter((row) => row.clubs || row.learners || row.sessionsHeld);
+  })
+    .filter((row) => row.clubs || row.learners || row.sessionsHeld)
+    .map((row) => ({ ...row, learners: suppressSmall(row.learners) }));
 
   const byTrack = TRACKS.map((track) => ({
     track,
     clubs: activeClubs.filter((c) => c.mainTrack === track).length,
     learners: active.filter((l) => clubById.get(l.clubId)?.mainTrack === track).length,
-  })).filter((row) => row.clubs || row.learners);
+  }))
+    .filter((row) => row.clubs || row.learners)
+    .map((row) => ({ ...row, learners: suppressSmall(row.learners) }));
 
   const byAge = AGE_BANDS.map((band) => {
     const rows = active.filter((l) => ageBand(termYear - l.birthYear) === band);
