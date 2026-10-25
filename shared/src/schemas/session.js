@@ -32,7 +32,8 @@ const sessionRules = (session, ctx) => {
 };
 
 export const createSessionSchema = sessionFields
-  .extend({ clubId: idSchema })
+  // A device can choose the id, so a session reported offline keeps it (D1-6).
+  .extend({ id: idSchema.optional(), clubId: idSchema })
   .strict()
   .superRefine(sessionRules);
 
@@ -69,6 +70,10 @@ export const sessionPhotoQuerySchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
+  // Sent by a syncing device: a repeated upload with the same opId adds the photo once, and the
+  // edit window is checked against when the photo was taken (docs/sync-protocol.md).
+  opId: idSchema.optional(),
+  recordedAt: z.iso.datetime().optional(),
 });
 
 export const listSessionsQuerySchema = paginationSchema.extend({

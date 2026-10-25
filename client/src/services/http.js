@@ -32,6 +32,10 @@ export class ApiError extends Error {
 }
 
 async function sendToMock(path, { method = 'GET', body, query, file, asBlob } = {}) {
+  // The demo has no network, so "offline" (e.g. the browser's offline switch) is acted out here.
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    throw new ApiError(0, 'NETWORK_ERROR', ERROR_MESSAGES.network);
+  }
   const { mockRequest } = await import('./mock/mockApi.js');
   const cleanQuery = Object.fromEntries(
     Object.entries(query ?? {}).filter(([, value]) => value !== undefined && value !== ''),

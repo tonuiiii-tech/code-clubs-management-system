@@ -33,6 +33,7 @@ describe('navigation follows the permission policy', () => {
       'Sessions',
       'Schools',
       'Users',
+      'Sync',
       'My profile',
     ]);
   });
@@ -44,6 +45,7 @@ describe('navigation follows the permission policy', () => {
       'Learners',
       'Sessions',
       'Schools',
+      'Sync',
       'My profile',
     ]);
   });

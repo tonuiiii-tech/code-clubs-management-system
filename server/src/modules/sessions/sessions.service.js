@@ -3,9 +3,10 @@ import { SESSION_MAX_PHOTOS } from '@code-clubs/shared/enums';
 import { sessionEditWindowOpen } from '@code-clubs/shared/schemas';
 import { scopeFor } from '@code-clubs/shared/permissions';
 import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
-import { BUCKETS, deleteFile, readFile, saveFile } from '../../db/files.js';
+import { BUCKETS, deleteFile, findFileByOpId, readFile, saveFile } from '../../db/files.js';
 import { badRequest, conflict, forbidden, notFound } from '../../utils/httpError.js';
 import { fileExtension } from '../../utils/fileType.js';
+import { deviceTime } from '../../utils/deviceTime.js';
 import { scopeFilter } from '../scope.js';
 import { recordAudit } from '../audit/audit.service.js';
 import { getClub } from '../clubs/clubs.service.js';
@@ -16,10 +17,10 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 /**
  * Champions can change a session report for 7 days after the session; coordinators (in their
- * regions) and HQ at any time (D2-5).
+ * regions) and HQ at any time (D2-5). For a change made offline, `at` is when it was made (D3-7).
  */
-function assertEditable(actor, date) {
-  if (sessionEditWindowOpen(date)) return;
+function assertEditable(actor, date, at = new Date()) {
+  if (sessionEditWindowOpen(date, at)) return;
   if (scopeFor(actor, 'session:editLate')) return;
   throw forbidden(ERROR_MESSAGES.sessionLocked);
 }
@@ -50,24 +51,26 @@ export async function getSession(actor, scope, id) {
   return { ...session, attendance: await repo.attendanceForSession(id) };
 }
 
-const reported = (actor, status) =>
-  status === 'held' ? { reportedBy: actor.id, reportedAt: new Date() } : {};
+const reported = (actor, status, at) =>
+  status === 'held' ? { reportedBy: actor.id, reportedAt: at ?? new Date() } : {};
 
-export async function createSession(actor, scope, input, { requestId }) {
+export async function createSession(actor, scope, input, { requestId, recordedAt }) {
+  const { id, ...fields } = input;
   const club = await getClub(actor, scope, input.clubId);
   if (club.status !== 'active') throw badRequest(ERROR_MESSAGES.clubInactive);
   assertDateFitsStatus(input);
-  assertEditable(actor, input.date);
+  assertEditable(actor, input.date, recordedAt);
+  if (id && (await repo.sessionExists(id))) throw conflict(ERROR_MESSAGES.duplicateId);
   const now = new Date();
   const session = {
-    id: randomUUID(),
+    id: id ?? randomUUID(),
     // The club's usual times unless others are given.
     startTime: club.startTime,
     endTime: club.endTime,
-    ...input,
+    ...fields,
     region: club.region,
     photoIds: [],
-    ...reported(actor, input.status),
+    ...reported(actor, input.status, recordedAt),
     createdAt: now,
     updatedAt: now,
     createdBy: actor.id,
@@ -79,18 +82,18 @@ export async function createSession(actor, scope, input, { requestId }) {
     action: 'session.create',
     entityType: 'session',
     entityId: session.id,
-    after: input,
+    after: fields,
     region: club.region,
     requestId,
   });
   return { ...session, attendance: [] };
 }
 
-export async function updateSession(actor, scope, id, changes, { requestId }) {
+export async function updateSession(actor, scope, id, changes, { requestId, recordedAt }) {
   const before = await findSession(actor, scope, id);
-  assertEditable(actor, before.date);
+  assertEditable(actor, before.date, recordedAt);
   const merged = { ...before, ...changes };
-  if (changes.date) assertEditable(actor, changes.date);
+  if (changes.date) assertEditable(actor, changes.date, recordedAt);
   assertDateFitsStatus(merged);
   if (merged.status === 'held' && !merged.topic) {
     throw badRequest(ERROR_MESSAGES.invalidFields, [
@@ -104,7 +107,9 @@ export async function updateSession(actor, scope, id, changes, { requestId }) {
   }
   await repo.updateSessionById(id, {
     ...changes,
-    ...(changes.status && changes.status !== before.status && reported(actor, changes.status)),
+    ...(changes.status &&
+      changes.status !== before.status &&
+      reported(actor, changes.status, recordedAt)),
     updatedAt: new Date(),
     updatedBy: actor.id,
   });
@@ -122,15 +127,24 @@ export async function updateSession(actor, scope, id, changes, { requestId }) {
   return getSession(actor, scope, id);
 }
 
-/** Saves the whole attendance list in one step (US-11). */
-export async function saveAttendance(actor, scope, id, { records }, { requestId }) {
+/**
+ * Saves the whole attendance list in one step (US-11). With `merge` (a list taken offline) only
+ * the marks sent are added or changed and nobody else's are removed (docs/sync-protocol.md).
+ */
+export async function saveAttendance(
+  actor,
+  scope,
+  id,
+  { records },
+  { requestId, recordedAt, merge = false },
+) {
   const session = await findSession(actor, scope, id);
-  assertEditable(actor, session.date);
+  assertEditable(actor, session.date, recordedAt);
   if (session.status !== 'held') throw badRequest(ERROR_MESSAGES.attendanceHeldOnly);
   const ids = records.map((r) => r.learnerId);
   const inClub = await repo.learnerIdsInClub(session.clubId, ids);
   if (inClub.length !== ids.length) throw badRequest(ERROR_MESSAGES.attendanceNotInClub);
-  await repo.replaceAttendance(session, records, actor.id);
+  await repo.replaceAttendance(session, records, actor.id, { merge });
   const count = (status) => records.filter((r) => r.status === status).length;
   await recordAudit({
     actor,
@@ -153,9 +167,20 @@ export async function saveAttendance(actor, scope, id, { records }, { requestId 
  * Adds a photo (D2-7). If any learner marked present has no photo consent, the champion must
  * first confirm they are not in the photo; the API answers 409 with their names until then.
  */
-export async function addPhoto(actor, scope, id, file, { confirmConsent }, { requestId }) {
+export async function addPhoto(
+  actor,
+  scope,
+  id,
+  file,
+  { confirmConsent, opId, recordedAt },
+  { requestId },
+) {
   const session = await findSession(actor, scope, id);
-  assertEditable(actor, session.date);
+  // A device sending the same photo again (its reply was lost) adds it only once.
+  if (opId && (await findFileByOpId(BUCKETS.sessionPhotos, opId))) {
+    return getSession(actor, scope, id);
+  }
+  assertEditable(actor, session.date, deviceTime(recordedAt));
   if (session.photoIds.length >= SESSION_MAX_PHOTOS) throw conflict(ERROR_MESSAGES.tooManyPhotos);
   const missing = await withoutPhotoConsent(await repo.presentLearnerIds(id));
   if (missing.length && !confirmConsent) {
@@ -166,7 +191,7 @@ export async function addPhoto(actor, scope, id, file, { confirmConsent }, { req
   }
   const photoId = await saveFile(BUCKETS.sessionPhotos, file.buffer, {
     contentType: file.type,
-    metadata: { sessionId: id, uploadedBy: actor.id },
+    metadata: { sessionId: id, uploadedBy: actor.id, ...(opId && { opId }) },
   });
   await repo.updateSessionById(id, {
     photoIds: [...session.photoIds, photoId],

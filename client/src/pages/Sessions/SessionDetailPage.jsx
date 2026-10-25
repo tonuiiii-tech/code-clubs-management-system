@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -33,6 +33,7 @@ import {
   deleteSessionPhoto,
   getSession,
   getSessionPhoto,
+  removePendingPhoto,
   saveAttendance,
 } from '../../services/sessionsService.js';
 import { SessionStatusBadge } from './SessionsPage.jsx';
@@ -308,7 +309,14 @@ function PhotosCard({ session, canWrite, onChange }) {
     }
   }
 
-  const canAdd = canWrite && session.photoIds.length < SESSION_MAX_PHOTOS;
+  // Photos taken offline wait on the device until they upload (D3-8).
+  const pendingPhotos = session.pendingPhotos ?? [];
+  const canAdd = canWrite && session.photoIds.length + pendingPhotos.length < SESSION_MAX_PHOTOS;
+
+  async function removePending(opId) {
+    await removePendingPhoto(opId);
+    onChange();
+  }
 
   return (
     <Card>
@@ -331,7 +339,7 @@ function PhotosCard({ session, canWrite, onChange }) {
       </CardHeader>
       <CardContent>
         <p className="muted">{t('sessions.photosHint', { max: SESSION_MAX_PHOTOS })}</p>
-        {session.photoIds.length === 0 ? (
+        {session.photoIds.length === 0 && pendingPhotos.length === 0 ? (
           <EmptyState title={t('sessions.noPhotos')} />
         ) : (
           <div className="photo-grid">
@@ -346,6 +354,9 @@ function PhotosCard({ session, canWrite, onChange }) {
                   </Button>
                 )}
               </figure>
+            ))}
+            {pendingPhotos.map((photo) => (
+              <PendingPhoto key={photo.id} photo={photo} onRemove={() => removePending(photo.id)} />
             ))}
           </div>
         )}
@@ -397,5 +408,21 @@ function PhotosCard({ session, canWrite, onChange }) {
         {t('sessions.deletePhotoConfirm')}
       </ConfirmDialog>
     </Card>
+  );
+}
+
+/** A photo saved on this device that has not uploaded yet. */
+function PendingPhoto({ photo, onRemove }) {
+  const { t } = useTranslation();
+  const url = useMemo(() => (photo.blob ? URL.createObjectURL(photo.blob) : null), [photo.blob]);
+  useEffect(() => () => url && URL.revokeObjectURL(url), [url]);
+  return (
+    <figure className="photo-pending">
+      {url && <img src={url} alt={t('sessions.photoPending')} />}
+      <Badge variant="primary">{t('sessions.photoPending')}</Badge>
+      <Button variant="ghost" size="sm" onClick={onRemove}>
+        {t('sessions.removePending')}
+      </Button>
+    </figure>
   );
 }

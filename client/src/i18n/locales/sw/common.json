@@ -12,7 +12,8 @@
     "skip": "Ruka hadi maudhui",
     "main": "Menyu kuu",
     "learners": "Wanafunzi",
-    "sessions": "Vipindi"
+    "sessions": "Vipindi",
+    "sync": "Usawazishaji"
   },
   "language": {
     "label": "Lugha",
@@ -54,7 +55,8 @@
     "sessionsThisMonth": "Vipindi mwezi huu",
     "attendanceRate": "Mahudhurio mwezi huu",
     "missingConsent": "Wanafunzi bila idhini ya kushiriki",
-    "noRate": "Bado hakuna mahudhurio"
+    "noRate": "Bado hakuna mahudhurio",
+    "savedAt": "Uko nje ya mtandao. Takwimu hizi ni za {{date}}."
   },
   "users": {
     "title": "Watumiaji",
@@ -325,7 +327,11 @@
     "attendanceNotInClub": "Baadhi ya wanafunzi si wanachama wa klabu hii",
     "tooManyPhotos": "Kipindi kinaweza kuwa na picha 3 tu",
     "photoConsentMissing": "Baadhi ya wanafunzi waliohudhuria hawana idhini ya picha. Thibitisha kuwa hawaonekani kwenye picha.",
-    "photoNotFound": "Picha haikupatikana"
+    "photoNotFound": "Picha haikupatikana",
+    "duplicateId": "Rekodi yenye kitambulisho hiki tayari ipo",
+    "invalidRecordedAt": "Muda wa mabadiliko haya uko mbele. Angalia saa ya kifaa.",
+    "syncNotAvailable": "Usawazishaji nje ya mtandao ni kwa Mabingwa wa Klabu na Waratibu",
+    "needsConnection": "Hili linahitaji muunganisho wa intaneti"
   },
   "learners": {
     "title": "Wanafunzi",
@@ -379,7 +385,8 @@
     "addContact": "Ongeza mawasiliano ya mzazi sasa",
     "consent": "Idhini",
     "noParticipationConsent": "Hakuna idhini ya kushiriki",
-    "noPhotoConsent": "Hakuna idhini ya picha"
+    "noPhotoConsent": "Hakuna idhini ya picha",
+    "numberPending": "Itatolewa baada ya kusawazisha"
   },
   "consent": {
     "title": "Idhini",
@@ -395,7 +402,8 @@
     "uploadHint": "Piga picha au skani fomu ya karatasi iliyosainiwa tu, si mtoto. JPG, PNG au PDF, hadi MB 5.",
     "download": "Pakua fomu",
     "saved": "Idhini imehifadhiwa",
-    "status": "Hali ya idhini"
+    "status": "Hali ya idhini",
+    "formPending": "Fomu inasubiri kupakiwa"
   },
   "consentStatuses": {
     "pending": "Inasubiriwa",
@@ -470,7 +478,9 @@
     "photoAlt": "Picha ya kipindi {{n}}",
     "reportedBy": "Imeripotiwa",
     "recent": "Vipindi vya karibuni",
-    "viewAll": "Angalia vyote"
+    "viewAll": "Angalia vyote",
+    "photoPending": "Inasubiri kupakiwa",
+    "removePending": "Ondoa"
   },
   "sessionStatuses": {
     "planned": "Kimepangwa",
@@ -482,5 +492,77 @@
     "absent": "Hayupo",
     "late": "Amechelewa",
     "excused": "Ana ruhusa"
+  },
+  "sync": {
+    "title": "Usawazishaji",
+    "description": "Mabadiliko yaliyohifadhiwa kwenye kifaa hiki na kutumwa STEAMLabs kukiwa na muunganisho",
+    "offline": "Nje ya mtandao",
+    "syncing": "Inasawazisha…",
+    "waiting_one": "Badiliko {{count}} linasubiri kusawazishwa",
+    "waiting_other": "Mabadiliko {{count}} yanasubiri kusawazishwa",
+    "savedOnDevice": "Imehifadhiwa kwenye kifaa hiki",
+    "allSynced": "Mabadiliko yote yamesawazishwa",
+    "lastSync": "Ilisawazishwa {{time}}",
+    "never": "Bado haijasawazishwa",
+    "attention_one": "Badiliko {{count}} linahitaji uangalizi",
+    "attention_other": "Mabadiliko {{count}} yanahitaji uangalizi",
+    "signInAgain": "Ingia tena ili kusawazisha",
+    "serverProblem": "Imeshindwa kusawazisha. Itajaribu tena hivi karibuni.",
+    "syncNow": "Sawazisha sasa",
+    "statusTitle": "Kifaa hiki",
+    "pendingLabel": "Yanasubiri kusawazishwa",
+    "attentionLabel": "Yanahitaji uangalizi",
+    "attentionTitle": "Yanahitaji uangalizi",
+    "attentionEmpty": "Hakuna kinachohitaji uangalizi",
+    "attentionHint": "Seva haikukubali mabadiliko haya. Yanabaki kwenye kifaa hiki hadi uchague la kufanya.",
+    "waitingBehind_one": "Badiliko {{count}} zaidi la rekodi hii linasubiri nyuma yake",
+    "waitingBehind_other": "Mabadiliko {{count}} zaidi ya rekodi hii yanasubiri nyuma yake",
+    "tryAgain": "Jaribu tena",
+    "differentChild": "Hifadhi: huyu ni mtoto mwingine",
+    "confirmPhoto": "Thibitisha na upakie",
+    "discard": "Tupa",
+    "discardTitle": "Tupa badiliko hili?",
+    "discardBody": "Halitafika STEAMLabs. Mabadiliko ya rekodi hiyo hiyo yanayosubiri nyuma yake yatatupwa pia.",
+    "notSyncing": "Usawazishaji ni kwa Mabingwa wa Klabu na Waratibu. Unafanya kazi mtandaoni.",
+    "conflictsTitle": "Yaliyobadilishwa na badiliko la baadaye",
+    "conflictsHint": "Watu wawili walipobadilisha kitu kimoja, badiliko la baadaye lilibaki. Hizi ni thamani lililozibadilisha.",
+    "conflictsEmpty": "Hakuna mabadiliko yaliyobadilishwa",
+    "conflictField": "Nini",
+    "conflictBefore": "Thamani iliyobadilishwa",
+    "conflictAfter": "Thamani iliyobaki",
+    "conflictBy": "Imebadilishwa na",
+    "conflictWhen": "Lini",
+    "hidden": "Haionyeshwi (taarifa binafsi)",
+    "deviceNote": "Klabu zako tu ndizo huhifadhiwa kwenye kifaa hiki. Kutoka kunazifuta.",
+    "signOutTitle": "Mabadiliko hayajasawazishwa",
+    "signOutBody_one": "Badiliko {{count}} bado halijafika STEAMLabs. Kutoka kunalifuta kwenye kifaa hiki.",
+    "signOutBody_other": "Mabadiliko {{count}} bado hayajafika STEAMLabs. Kutoka kunayafuta kwenye kifaa hiki.",
+    "signOutAnyway": "Toka na ufute",
+    "ops": {
+      "learner": {
+        "create": "Sajili mwanafunzi: {{label}}",
+        "update": "Hariri mwanafunzi: {{label}}",
+        "status": "Badilisha hali: {{label}}",
+        "contact": "Mawasiliano ya mlezi: {{label}}"
+      },
+      "consent": {
+        "set": "Idhini: {{label}}"
+      },
+      "file": {
+        "consent": "Fomu ya idhini: {{label}}",
+        "photo": "Picha ya kipindi: {{label}}"
+      },
+      "session": {
+        "create": "Ripoti kipindi: {{label}}",
+        "update": "Hariri kipindi: {{label}}",
+        "attendance": "Mahudhurio: {{label}}"
+      }
+    },
+    "entities": {
+      "learner": "Mwanafunzi",
+      "session": "Kipindi",
+      "consent": "Idhini",
+      "attendance": "Mahudhurio"
+    }
   }
 }

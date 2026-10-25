@@ -53,7 +53,7 @@ export function LearnerDetailPage() {
             <Link to="/learners">{t('common.back')}</Link>
           </BackLink>
         }
-        eyebrow={data?.learnerNumber}
+        eyebrow={data && (data.learnerNumber ?? t('learners.numberPending'))}
         title={data ? `${data.firstName} ${data.lastName}` : t('learners.title')}
         meta={data && <LearnerStatusBadge status={data.status} />}
       />
@@ -176,11 +176,15 @@ function ConsentCard({ learner, onChange }) {
                   <ConsentBadges consents={{ [type]: consent }} />
                   <small className="muted">
                     {consent.signedOn && `${t('consent.signedOn')} ${consent.signedOn} · `}
-                    {consent.hasFile ? t('consent.formOnFile') : t('consent.noForm')}
+                    {consent.filePending
+                      ? t('consent.formPending')
+                      : consent.hasFile
+                        ? t('consent.formOnFile')
+                        : t('consent.noForm')}
                   </small>
                 </div>
                 <span className="badge-row">
-                  {consent.hasFile && can('consentFile:read') && (
+                  {consent.hasFile && !consent.filePending && can('consentFile:read') && (
                     <Button variant="ghost" size="sm" onClick={() => download(type)}>
                       {t('consent.download')}
                     </Button>

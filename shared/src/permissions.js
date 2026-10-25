@@ -97,6 +97,15 @@ export const POLICY = Object.freeze({
   },
   // Changing a session report after the edit window (D2-5).
   'session:editLate': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL, [COORDINATOR]: ASSIGNED },
+
+  // Sprint 3. Only champions and coordinators keep data on a device and sync it (D3-1).
+  'sync:use': { [COORDINATOR]: ASSIGNED, [CHAMPION]: ASSIGNED },
+  // Values overwritten when two people changed the same field offline (D3-5).
+  'syncConflict:read': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+  },
 });
 
 export const PERMISSIONS = Object.freeze(Object.keys(POLICY));

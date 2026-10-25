@@ -5,3 +5,4 @@ export * from './school.js';
 export * from './club.js';
 export * from './learner.js';
 export * from './session.js';
+export * from './sync.js';

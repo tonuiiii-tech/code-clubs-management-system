@@ -39,6 +39,8 @@ const learnerFields = z.object({
 
 export const createLearnerSchema = learnerFields
   .extend({
+    // A device can choose the id, so a learner registered offline keeps it (D1-6).
+    id: idSchema.optional(),
     clubId: idSchema,
     contact: learnerContactSchema.optional(),
     // Set after the user has seen the "possible duplicate" warning and still wants to save (US-07).

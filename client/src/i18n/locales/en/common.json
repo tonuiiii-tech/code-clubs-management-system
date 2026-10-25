@@ -12,7 +12,8 @@
     "skip": "Skip to content",
     "main": "Main navigation",
     "learners": "Learners",
-    "sessions": "Sessions"
+    "sessions": "Sessions",
+    "sync": "Sync"
   },
   "language": {
     "label": "Language",
@@ -54,7 +55,8 @@
     "sessionsThisMonth": "Sessions this month",
     "attendanceRate": "Attendance this month",
     "missingConsent": "Learners without participation consent",
-    "noRate": "No attendance yet"
+    "noRate": "No attendance yet",
+    "savedAt": "You are offline. These numbers are from {{date}}."
   },
   "users": {
     "title": "Users",
@@ -325,7 +327,11 @@
     "attendanceNotInClub": "Some learners are not active members of this club",
     "tooManyPhotos": "A session can have at most 3 photos",
     "photoConsentMissing": "Some learners present have no photo consent. Confirm they are not in the photo.",
-    "photoNotFound": "Photo not found"
+    "photoNotFound": "Photo not found",
+    "duplicateId": "A record with this ID already exists",
+    "invalidRecordedAt": "The time of this change is in the future. Check the device clock.",
+    "syncNotAvailable": "Offline sync is for Club Champions and Coordinators",
+    "needsConnection": "This needs an internet connection"
   },
   "learners": {
     "title": "Learners",
@@ -379,7 +385,8 @@
     "addContact": "Add a guardian contact now",
     "consent": "Consent",
     "noParticipationConsent": "No participation consent",
-    "noPhotoConsent": "No photo consent"
+    "noPhotoConsent": "No photo consent",
+    "numberPending": "Given after sync"
   },
   "consent": {
     "title": "Consent",
@@ -395,7 +402,8 @@
     "uploadHint": "Photograph or scan the signed paper form only, not the child. JPG, PNG or PDF, up to 5 MB.",
     "download": "Download form",
     "saved": "Consent saved",
-    "status": "Consent status"
+    "status": "Consent status",
+    "formPending": "Form waiting to upload"
   },
   "consentStatuses": {
     "pending": "Pending",
@@ -470,7 +478,9 @@
     "photoAlt": "Session photo {{n}}",
     "reportedBy": "Reported",
     "recent": "Recent sessions",
-    "viewAll": "View all"
+    "viewAll": "View all",
+    "photoPending": "Waiting to upload",
+    "removePending": "Remove"
   },
   "sessionStatuses": {
     "planned": "Planned",
@@ -482,5 +492,77 @@
     "absent": "Absent",
     "late": "Late",
     "excused": "Excused"
+  },
+  "sync": {
+    "title": "Sync",
+    "description": "Changes saved on this device and sent to STEAMLabs when there is a connection",
+    "offline": "Offline",
+    "syncing": "Syncing…",
+    "waiting_one": "{{count}} change waiting to sync",
+    "waiting_other": "{{count}} changes waiting to sync",
+    "savedOnDevice": "Saved on this device",
+    "allSynced": "All changes synced",
+    "lastSync": "Last synced {{time}}",
+    "never": "Not synced yet",
+    "attention_one": "{{count}} change needs attention",
+    "attention_other": "{{count}} changes need attention",
+    "signInAgain": "Sign in again to sync",
+    "serverProblem": "Could not sync. Trying again soon.",
+    "syncNow": "Sync now",
+    "statusTitle": "This device",
+    "pendingLabel": "Waiting to sync",
+    "attentionLabel": "Needs attention",
+    "attentionTitle": "Needs attention",
+    "attentionEmpty": "Nothing needs attention",
+    "attentionHint": "The server did not accept these changes. They stay on this device until you choose what to do.",
+    "waitingBehind_one": "{{count}} more change for this record is waiting behind it",
+    "waitingBehind_other": "{{count}} more changes for this record are waiting behind it",
+    "tryAgain": "Try again",
+    "differentChild": "Save: this is a different child",
+    "confirmPhoto": "Confirm and upload",
+    "discard": "Discard",
+    "discardTitle": "Discard this change?",
+    "discardBody": "It will not reach STEAMLabs. Changes to the same record that are waiting behind it are discarded too.",
+    "notSyncing": "Sync is for Club Champions and Coordinators. You are working online.",
+    "conflictsTitle": "Overwritten by a later change",
+    "conflictsHint": "When two people changed the same thing, the later change was kept. These are the values it replaced.",
+    "conflictsEmpty": "No overwritten changes",
+    "conflictField": "What",
+    "conflictBefore": "Replaced value",
+    "conflictAfter": "Kept value",
+    "conflictBy": "Changed by",
+    "conflictWhen": "When",
+    "hidden": "Not shown (personal data)",
+    "deviceNote": "Only your own clubs are kept on this device. Signing out deletes them.",
+    "signOutTitle": "Changes not synced",
+    "signOutBody_one": "{{count}} change has not reached STEAMLabs yet. Signing out deletes it from this device.",
+    "signOutBody_other": "{{count}} changes have not reached STEAMLabs yet. Signing out deletes them from this device.",
+    "signOutAnyway": "Sign out and delete",
+    "ops": {
+      "learner": {
+        "create": "Register learner: {{label}}",
+        "update": "Edit learner: {{label}}",
+        "status": "Change status: {{label}}",
+        "contact": "Guardian contact: {{label}}"
+      },
+      "consent": {
+        "set": "Consent: {{label}}"
+      },
+      "file": {
+        "consent": "Consent form: {{label}}",
+        "photo": "Session photo: {{label}}"
+      },
+      "session": {
+        "create": "Report session: {{label}}",
+        "update": "Edit session: {{label}}",
+        "attendance": "Attendance: {{label}}"
+      }
+    },
+    "entities": {
+      "learner": "Learner",
+      "session": "Session",
+      "consent": "Consent",
+      "attendance": "Attendance"
+    }
   }
 }

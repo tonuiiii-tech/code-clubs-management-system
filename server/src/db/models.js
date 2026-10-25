@@ -275,6 +275,64 @@ attendanceSchema.index({ sessionId: 1, learnerId: 1 }, { unique: true });
 attendanceSchema.index({ learnerId: 1, date: -1 });
 attendanceSchema.index({ region: 1, date: -1 });
 
+/**
+ * Sprint 3: sync (docs/sync-protocol.md). Each change sent by a device is stored with its result,
+ * so sending it again changes nothing (D3-3). Kept 30 days.
+ */
+const syncOperationSchema = new Schema(
+  {
+    _id: String,
+    userId: { type: String, required: true },
+    type: String,
+    state: { type: String, enum: ['running', 'done'], default: 'running' },
+    result: Schema.Types.Mixed,
+    createdAt: { type: Date, default: () => new Date() },
+  },
+  { versionKey: false },
+);
+syncOperationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
+
+/** A value overwritten when two people changed the same field (D3-5). */
+const syncConflictSchema = new Schema(
+  {
+    _id: uuid,
+    at: { type: Date, required: true },
+    entityType: { type: String, required: true },
+    entityId: { type: String, required: true },
+    field: { type: String, required: true },
+    // A readable name for the field when it is an id, e.g. the learner of an attendance mark.
+    label: String,
+    // Values of fields never written to the audit log are not kept either.
+    overwritten: Schema.Types.Mixed,
+    applied: Schema.Types.Mixed,
+    redacted: { type: Boolean, default: false },
+    clubId: String,
+    region: { type: String, enum: REGION_VALUES },
+    actorId: String,
+    actorName: String,
+    recordedAt: Date,
+    opId: String,
+  },
+  { versionKey: false },
+);
+syncConflictSchema.index({ region: 1, at: -1 });
+syncConflictSchema.index({ clubId: 1, at: -1 });
+
+/** Records deleted on the server, so devices can delete them too. Kept 30 days. */
+const tombstoneSchema = new Schema(
+  {
+    _id: uuid,
+    entityType: { type: String, required: true },
+    recordId: { type: String, required: true },
+    clubId: String,
+    region: { type: String, enum: REGION_VALUES },
+    updatedAt: { type: Date, default: () => new Date() },
+  },
+  { versionKey: false },
+);
+tombstoneSchema.index({ updatedAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
+tombstoneSchema.index({ entityType: 1, updatedAt: 1, _id: 1 });
+
 /** Atomic sequences, e.g. the next club number for a region prefix. */
 const counterSchema = new Schema(
   { _id: String, seq: { type: Number, default: 0 } },
@@ -300,6 +358,18 @@ auditEntrySchema.index({ entityType: 1, entityId: 1, at: -1 });
 auditEntrySchema.index({ actorId: 1, at: -1 });
 auditEntrySchema.index({ region: 1, at: -1 });
 
+// Devices pull changes in (updatedAt, _id) order (docs/sync-protocol.md, section 4).
+for (const schema of [
+  schoolSchema,
+  clubSchema,
+  learnerSchema,
+  consentSchema,
+  sessionSchema,
+  attendanceSchema,
+]) {
+  schema.index({ updatedAt: 1, _id: 1 });
+}
+
 const define = (name, schema, collection) => models[name] ?? model(name, schema, collection);
 
 export const User = define('User', userSchema, 'users');
@@ -314,3 +384,6 @@ export const LearnerContact = define('LearnerContact', learnerContactSchema, 'le
 export const Consent = define('Consent', consentSchema, 'consents');
 export const Session = define('Session', sessionSchema, 'sessions');
 export const Attendance = define('Attendance', attendanceSchema, 'attendance');
+export const SyncOperation = define('SyncOperation', syncOperationSchema, 'syncOperations');
+export const SyncConflict = define('SyncConflict', syncConflictSchema, 'syncConflicts');
+export const Tombstone = define('Tombstone', tombstoneSchema, 'tombstones');

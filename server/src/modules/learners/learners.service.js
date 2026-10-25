@@ -10,7 +10,8 @@ import { recordAudit } from '../audit/audit.service.js';
 import { getClub } from '../clubs/clubs.service.js';
 import * as repo from './learners.repository.js';
 
-const today = () => new Date().toISOString().slice(0, 10);
+/** Today, or the day a change was made on a device that synced it later (docs/sync-protocol.md). */
+const today = (recordedAt) => (recordedAt ?? new Date()).toISOString().slice(0, 10);
 const PENDING = { status: 'pending', signedOn: null, hasFile: false };
 
 /** Every consent type, with "pending" for any not recorded yet. */
@@ -51,8 +52,8 @@ export async function getLearner(actor, scope, id) {
  * Registers a learner in a club in scope. Region and school come from the club (D2-6).
  * The guardian contact, if given, is stored apart and not returned (D2-1).
  */
-export async function createLearner(actor, scope, input, { requestId }) {
-  const { contact, confirmDuplicate, clubId, age, ...details } = input;
+export async function createLearner(actor, scope, input, { requestId, recordedAt }) {
+  const { id, contact, confirmDuplicate, clubId, age, ...details } = input;
   const club = await getClub(actor, scope, clubId);
   if (club.status !== 'active') throw badRequest(ERROR_MESSAGES.clubInactive);
   if (club.venueType === 'primary_school' && !details.admissionNumber) {
@@ -63,6 +64,7 @@ export async function createLearner(actor, scope, input, { requestId }) {
   if ((await repo.countActiveLearners(clubId)) >= club.capacity) {
     throw conflict(ERROR_MESSAGES.clubFull);
   }
+  if (id && (await repo.learnerExists(id))) throw conflict(ERROR_MESSAGES.duplicateId);
   const birthYear = birthYearFromAge(age);
   if (!confirmDuplicate) {
     const duplicate = await repo.findPossibleDuplicate({ clubId, birthYear, ...details });
@@ -75,7 +77,7 @@ export async function createLearner(actor, scope, input, { requestId }) {
   }
   const now = new Date();
   const learner = {
-    id: randomUUID(),
+    id: id ?? randomUUID(),
     learnerNumber: await repo.nextLearnerNumber(club.code),
     ...details,
     birthYear,
@@ -83,7 +85,7 @@ export async function createLearner(actor, scope, input, { requestId }) {
     schoolId: club.schoolId ?? null,
     region: club.region,
     status: 'active',
-    joinedAt: today(),
+    joinedAt: today(recordedAt),
     leftAt: null,
     createdAt: now,
     updatedAt: now,
@@ -127,7 +129,7 @@ export async function updateLearner(actor, scope, id, input, { requestId }) {
 }
 
 /** Leaving keeps the learner's attendance history; coming back needs a free place. */
-export async function setLearnerStatus(actor, scope, id, { status }, { requestId }) {
+export async function setLearnerStatus(actor, scope, id, { status }, { requestId, recordedAt }) {
   const before = await findLearner(actor, scope, id);
   if (before.status === status) return getLearner(actor, scope, id);
   if (status === 'active') {
@@ -136,7 +138,7 @@ export async function setLearnerStatus(actor, scope, id, { status }, { requestId
       throw conflict(ERROR_MESSAGES.clubFull);
     }
   }
-  const changes = { status, leftAt: status === 'left' ? today() : null };
+  const changes = { status, leftAt: status === 'left' ? today(recordedAt) : null };
   await repo.updateLearnerById(id, { ...changes, updatedAt: new Date(), updatedBy: actor.id });
   await recordAudit({
     actor,
@@ -154,6 +156,8 @@ export async function setLearnerStatus(actor, scope, id, { status }, { requestId
 async function saveContact(actor, learner, contact, { requestId }) {
   const before = (await repo.findContact(learner.id)) ?? {};
   await repo.replaceContact(learner.id, contact, actor.id);
+  // Devices learn that a contact is on file from the learner's record (hasContact).
+  await repo.updateLearnerById(learner.id, { updatedAt: new Date() });
   await recordAudit({
     actor,
     action: 'learner.contactSet',
