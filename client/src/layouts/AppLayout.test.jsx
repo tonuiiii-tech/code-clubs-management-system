@@ -44,7 +44,7 @@ describe('navigation follows the permission policy', () => {
     ]);
   });
 
-  it('hides user management, reports and settings from a Club Champion', () => {
+  it('hides user management, reports, settings and schools from a Club Champion', () => {
     expect(renderAs('champion')).toEqual([
       'Dashboard',
       'Clubs',
@@ -54,9 +54,12 @@ describe('navigation follows the permission policy', () => {
       'Equipment',
       'Resources',
       'Announcements',
-      'Schools',
       'Sync',
       'My profile',
     ]);
+  });
+
+  it('keeps the Schools section for a Code Clubs Coordinator', () => {
+    expect(renderAs('coordinator')).toContain('Schools');
   });
 });
