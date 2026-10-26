@@ -10,8 +10,12 @@ import {
   consentTypeSchema,
   createLearnerSchema,
   createSessionSchema,
+  assessmentScoresSchema,
+  createAssessmentSchema,
+  createProjectSchema,
   learnerContactSchema,
   learnerStatusSchema,
+  reportEquipmentSchema,
   updateLearnerSchema,
   updateSessionSchema,
 } from '@code-clubs/shared/schemas';
@@ -19,6 +23,9 @@ import { badRequest, forbidden, HttpError } from '../../utils/httpError.js';
 import { deviceTime } from '../../utils/deviceTime.js';
 import { scopeFilter } from '../scope.js';
 import * as announcements from '../announcements/announcements.service.js';
+import * as equipment from '../equipment/equipment.service.js';
+import * as progress from '../progress/progress.service.js';
+import { presentResource } from '../resources/resources.service.js';
 import * as learners from '../learners/learners.service.js';
 import { learnerExists } from '../learners/learners.repository.js';
 import * as sessions from '../sessions/sessions.service.js';
@@ -133,6 +140,33 @@ const OPERATIONS = {
     schema: z.object({}).strict(),
     run: ({ actor, recordId, ctx }) =>
       announcements.markRead(actor, recordId, { readAt: ctx.recordedAt ?? new Date() }),
+  },
+  // Sprint 5 (D5-5): reports, projects and scores made offline.
+  'equipment.report': {
+    needsRecord: true,
+    permission: 'equipment:report',
+    schema: reportEquipmentSchema,
+    run: ({ actor, scope, recordId, data, ctx }) =>
+      equipment.reportEquipment(actor, scope, recordId, data, ctx),
+  },
+  // A project or assessment made on the device, then changed there: the same id each time.
+  'project.save': {
+    permission: 'progress:record',
+    schema: createProjectSchema.required({ id: true }),
+    run: ({ actor, scope, data, ctx }) => progress.saveProject(actor, scope, data, ctx),
+  },
+  'assessment.save': {
+    permission: 'progress:record',
+    schema: createAssessmentSchema.required({ id: true }),
+    run: ({ actor, scope, data, ctx }) => progress.saveAssessment(actor, scope, data, ctx),
+  },
+  // Scores are merged learner by learner, like attendance (D2-4, D5-5).
+  'assessment.scores': {
+    needsRecord: true,
+    permission: 'progress:record',
+    schema: assessmentScoresSchema,
+    run: ({ actor, scope, recordId, data, ctx }) =>
+      progress.saveScores(actor, scope, recordId, data, ctx),
   },
 };
 
@@ -303,6 +337,11 @@ const KINDS = [
   'eventConsents',
   'announcements',
   'announcementReads',
+  'equipmentItems',
+  'resources',
+  'learnerProjects',
+  'assessments',
+  'assessmentScores',
 ];
 
 function decodeCursor(text) {
@@ -380,6 +419,11 @@ export async function pull(actor, query) {
     repo.changedEventConsents(filter, after('eventConsents'), PAGE),
     repo.changedAnnouncements(actor.id, after('announcements'), PAGE),
     repo.changedAnnouncementReads(actor.id, after('announcementReads'), PAGE),
+    repo.changedEquipmentItems(filter, after('equipmentItems'), PAGE),
+    repo.changedResources(after('resources'), PAGE),
+    repo.changedLearnerProjects(filter, after('learnerProjects'), PAGE),
+    repo.changedAssessments(filter, after('assessments'), PAGE),
+    repo.changedAssessmentScores(filter, after('assessmentScores'), PAGE),
   ]);
   const [
     schools,
@@ -394,6 +438,11 @@ export async function pull(actor, query) {
     eventConsents,
     announcementRecords,
     announcementReads,
+    equipmentItems,
+    resources,
+    learnerProjects,
+    assessments,
+    assessmentScores,
   ] = lists;
 
   const next = { at: { ...cursor.at }, more: lists.some((list) => list.length === PAGE) };
@@ -423,7 +472,17 @@ export async function pull(actor, query) {
         readAt,
         updatedAt,
       })),
+      equipmentItems: equipmentItems.map(withoutAuthors),
+      // The list only: files are saved on the device when a champion asks (D5-3).
+      resources: resources.map(presentResource),
+      learnerProjects: learnerProjects.map(({ fileId, ...p }) => ({
+        ...withoutAuthors(p),
+        hasFile: Boolean(fileId),
+      })),
+      assessments: assessments.map(withoutAuthors),
+      assessmentScores: assessmentScores.map(withoutAuthors),
     },
+    ...(firstPage && { inScope: await repo.idsInScope(filter, fromDate) }),
     deleted: {
       attendance: deleted.filter((t) => t.entityType === 'attendance').map((t) => t.recordId),
     },

@@ -4,6 +4,7 @@ import {
   attendanceKey,
   consentKey,
   DATA_TABLES,
+  scoreKey,
   deleteUserDb,
   getMeta,
   openUserDb,
@@ -24,7 +25,7 @@ const AFTER_CHANGE = 1_500;
 let db = null;
 let user = null;
 let running = null;
-let again = false;
+let followUp = null;
 let timers = { change: null, retry: null, interval: null };
 let failures = 0;
 
@@ -98,7 +99,7 @@ export async function stopOffline({ wipe = false } = {}) {
   window.removeEventListener('online', onOnline);
   window.removeEventListener('offline', onOffline);
   document.removeEventListener('visibilitychange', onVisible);
-  await running?.catch(() => {});
+  await (followUp ?? running)?.catch(() => {});
   db?.close();
   db = null;
   user = null;
@@ -125,12 +126,18 @@ export function requestSync({ now = false } = {}) {
   timers.change = setTimeout(() => syncNow().catch(() => {}), now ? 0 : AFTER_CHANGE);
 }
 
-/** Runs one sync. Resolves when it is done; a second call during a sync runs once more after. */
+/**
+ * Runs one sync. Resolves when it is done; a call during a sync runs once more after it and
+ * resolves when that run is done, so the caller sees changes made before the call.
+ */
 export function syncNow() {
   if (!db) return Promise.resolve();
   if (running) {
-    again = true;
-    return running;
+    followUp ??= running.then(() => {
+      followUp = null;
+      return syncNow();
+    });
+    return followUp;
   }
   const run = async () => {
     setState({ syncing: true });
@@ -150,10 +157,6 @@ export function syncNow() {
   };
   running = run().finally(() => {
     running = null;
-    if (again) {
-      again = false;
-      requestSync({ now: true });
-    }
   });
   return running;
 }
@@ -245,7 +248,13 @@ async function uploadFile(local, op) {
   const stored = await local.pendingFiles.get(op.opId);
   const file = stored && new Blob([stored.bytes], { type: stored.type });
   try {
-    if (file && op.type === 'file.consent') {
+    if (file && op.type === 'file.project') {
+      await request(`/progress/projects/${op.recordId}/file`, {
+        method: 'PUT',
+        file,
+        query: { confirmConsent: String(Boolean(op.data?.confirmConsent)), opId: op.opId },
+      });
+    } else if (file && op.type === 'file.consent') {
       await request(`/learners/${op.recordId}/consents/${op.params.type}/file`, {
         method: 'PUT',
         file,
@@ -284,6 +293,20 @@ async function uploadFile(local, op) {
 const learnerRecord = ({ age: _age, ...learner }) => learner;
 const consentRecord = (c) => ({ ...c, key: consentKey(c.learnerId, c.type) });
 const attendanceRecord = (a) => ({ ...a, key: attendanceKey(a.sessionId, a.learnerId) });
+const scoreRecord = (s) => ({ ...s, key: scoreKey(s.assessmentId, s.learnerId) });
+
+/** Tables whose records can leave the user's scope without a tombstone (sync.repository). */
+const PRUNED = ['events', 'equipmentItems', 'resources', 'learnerProjects'];
+
+/** Drops what the server no longer sends the user: an uninvited event, a returned item. */
+async function prune(local, inScope) {
+  for (const table of PRUNED) {
+    if (!inScope[table]) continue;
+    const keep = new Set(inScope[table]);
+    const gone = (await local[table].toCollection().primaryKeys()).filter((id) => !keep.has(id));
+    if (gone.length) await local[table].bulkDelete(gone);
+  }
+}
 
 async function pull(local) {
   // After a discarded change the device reloads everything, so nothing of it is left (§4).
@@ -302,16 +325,24 @@ async function pull(local) {
       await local.consents.bulkPut(changes.consents.map(consentRecord));
       await local.sessions.bulkPut(changes.sessions);
       await local.attendance.bulkPut(changes.attendance.map(attendanceRecord));
-      // Sprint 4 records; an older server sends none.
+      // Sprint 4 and 5 records; an older server sends none.
       for (const table of [
         'events',
         'eventParticipants',
         'eventConsents',
         'announcements',
         'announcementReads',
+        'equipmentItems',
+        'resources',
+        'learnerProjects',
+        'assessments',
       ]) {
         if (changes[table]?.length) await local[table].bulkPut(changes[table]);
       }
+      if (changes.assessmentScores?.length) {
+        await local.assessmentScores.bulkPut(changes.assessmentScores.map(scoreRecord));
+      }
+      if (data.inScope) await prune(local, data.inScope);
       if (data.deleted.attendance.length) {
         await local.attendance.where('id').anyOf(data.deleted.attendance).delete();
       }
@@ -327,6 +358,37 @@ async function pull(local) {
   await replayOutbox(local);
   await setMeta(local, 'ready', true);
   setState({ ready: true });
+  refreshSavedResources(local).catch(() => {});
+  // Terms, for the learner progress page offline.
+  request('/terms')
+    .then(({ data }) =>
+      setMeta(local, 'cache:terms', { value: data, at: new Date().toISOString() }),
+    )
+    .catch(() => {});
+}
+
+/**
+ * Keeps saved resource files in step with the library: a replaced file is fetched again, an
+ * unpublished or removed one is deleted (D5-3).
+ */
+async function refreshSavedResources(local) {
+  for (const saved of await local.savedResources.toArray()) {
+    const resource = await local.resources.get(saved.id);
+    if (!resource?.hasFile) {
+      await local.savedResources.delete(saved.id);
+    } else if (resource.updatedAt !== saved.resourceUpdatedAt) {
+      const blob = await request(`/resources/${saved.id}/file`, { asBlob: true });
+      if (db !== local) return;
+      await local.savedResources.put({
+        ...saved,
+        bytes: await blob.arrayBuffer(),
+        type: blob.type || resource.fileType,
+        fileName: resource.fileName,
+        size: blob.size,
+        resourceUpdatedAt: resource.updatedAt,
+      });
+    }
+  }
 }
 
 /** Applies unsent changes again on top of what the server sent. */

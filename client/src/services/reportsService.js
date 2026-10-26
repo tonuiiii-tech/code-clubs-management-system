@@ -18,6 +18,9 @@ export const getHqDashboard = (query) =>
   withCache(`hq:${JSON.stringify(query ?? {})}`, () => request('/dashboard/hq', { query }));
 export const getAlerts = (query) =>
   withCache(`alerts:${JSON.stringify(query ?? {})}`, () => request('/alerts', { query }));
+/** Hides an alert from this person for 7 days (R4-4). */
+export const dismissAlert = (key) =>
+  request('/alerts/dismissals', { method: 'POST', body: { key } });
 
 /** The termly report's numbers, shown on screen; counts only (D4-3). */
 export const getTermReport = (query) => request('/reports/termly', { query });

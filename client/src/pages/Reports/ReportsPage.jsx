@@ -247,6 +247,42 @@ function ReportSheet({ report }) {
           e.participants,
         ])}
       />
+      {report.progress && (
+        <Section
+          title={t('reports.progress')}
+          columns={[
+            t('clubs.track'),
+            t('reports.projects'),
+            t('reports.assessments'),
+            t('reports.scores'),
+            t('reports.averageScore'),
+          ]}
+          rows={report.progress.map((r) => [
+            t(`tracks.${r.track}`),
+            r.projects,
+            r.assessments,
+            r.scores,
+            percent(r.averageScore),
+          ])}
+        />
+      )}
+      {report.equipment && (
+        <Section
+          title={t('reports.equipment')}
+          columns={[
+            t('hq.region'),
+            t('reports.items'),
+            t('reports.lent'),
+            t('reports.needsAttention'),
+          ]}
+          rows={report.equipment.byRegion.map((r) => [
+            t(`regions.${r.region}`),
+            r.total,
+            r.lent,
+            r.needsAttention,
+          ])}
+        />
+      )}
       <Section
         title={t('reports.clubs')}
         columns={[

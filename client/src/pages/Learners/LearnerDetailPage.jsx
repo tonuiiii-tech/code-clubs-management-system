@@ -37,11 +37,13 @@ import {
   setLearnerStatus,
   uploadConsentFile,
 } from '../../services/learnersService.js';
+import { LearnerProgressCard } from '../Progress/ProgressCards.jsx';
 import { LearnerStatusBadge } from './LearnersPage.jsx';
 
 export function LearnerDetailPage() {
   const { id } = useParams();
   const { t } = useTranslation();
+  const { can } = useAuth();
   const learner = useApi(getLearner, id);
   const data = learner.data?.data;
 
@@ -63,6 +65,7 @@ export function LearnerDetailPage() {
             <LearnerDetails learner={data} onChange={learner.reload} />
             <ConsentCard learner={data} onChange={learner.reload} />
             <ContactCard learner={data} onChange={learner.reload} />
+            {can('progress:read') && <LearnerProgressCard learner={data} />}
           </div>
         )}
       </DataState>

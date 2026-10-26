@@ -17,6 +17,8 @@ export const NAV = [
   { to: '/learners', key: 'nav.learners', permission: 'learner:read' },
   { to: '/sessions', key: 'nav.sessions', permission: 'session:read' },
   { to: '/events', key: 'nav.events', permission: 'event:read' },
+  { to: '/equipment', key: 'nav.equipment', permission: 'equipment:read' },
+  { to: '/resources', key: 'nav.resources', permission: 'resource:read' },
   { to: '/announcements', key: 'nav.announcements', permission: 'announcement:read' },
   { to: '/reports', key: 'nav.reports', permission: 'report:read' },
   { to: '/schools', key: 'nav.schools', permission: 'school:read' },

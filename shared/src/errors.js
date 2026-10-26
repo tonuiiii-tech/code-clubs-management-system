@@ -88,6 +88,30 @@ export const ERROR_MESSAGES = Object.freeze({
   announcementNotFound: 'Announcement not found',
   announcementNoRecipients: 'Nobody matches this audience',
   announcementOwnRegion: 'You can only send announcements to your own regions',
+  alertNotFound: 'This alert no longer applies',
+  // Equipment (Sprint 5)
+  equipmentNotFound: 'Item not found',
+  equipmentOwnRegion: 'You can only manage equipment in your own region',
+  duplicateSerial: 'An item with this serial number already exists',
+  equipmentOnLoan: 'This item is already lent to a club',
+  equipmentNotLendable: 'This item cannot be lent in its current condition',
+  equipmentNotOnLoan: 'This item is not lent to a club',
+  loanNotFound: 'Loan not found',
+  // Resources
+  resourceNotFound: 'Resource not found',
+  resourceNeedsLinkOrFile: 'Add a link or upload a file before publishing',
+  resourceFileType: 'Upload a PDF, PowerPoint, Word, OpenDocument, Scratch, ZIP, JPG or PNG file',
+  resourceFileTooLarge: 'The file is larger than 20 MB',
+  resourceFileNotFound: 'This resource has no file',
+  offlineStorageFull:
+    'Not enough space: saved resources can use up to 300 MB on this device. Remove some first.',
+  videoLinkOnly: 'Videos are added as links, not uploaded files',
+  // Learner progress
+  projectNotFound: 'Project not found',
+  projectLearnersOneClub: 'All project members must be active learners of the same club',
+  assessmentNotFound: 'Assessment not found',
+  scoreAboveMaximum: 'A score cannot be higher than the maximum score',
+  scoresNotInClub: 'Some learners are not active members of this club',
 });
 
 const KEY_BY_MESSAGE = new Map(Object.entries(ERROR_MESSAGES).map(([key, text]) => [text, key]));

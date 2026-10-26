@@ -412,7 +412,7 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Context:** HQ wants to see which clubs need help: no recent session, low attendance, missing consent, near capacity, missing event consent.
 - **Decision:** `computeAlerts` in `shared/src/insights.js` checks the rules (thresholds as in the plan, agreed by Enock) each time `GET /alerts` is called, inside the user's scope. The demo mock uses the same function, so the numbers match.
 - **Alternatives considered:** A nightly job that stores alerts.
-- **Consequences:** Alerts are never out of date. Dismissing an alert for 7 days (R4-4) needs stored state and is left for later; alerts are grouped per club on the dashboard to keep the list short.
+- **Consequences:** Alerts are never out of date. Dismissing an alert for 7 days (R4-4) needs stored state and was added in Sprint 5 (D5-8); alerts are grouped per club on the dashboard to keep the list short.
 
 ## D4-3: Reports hold counts only
 
@@ -466,7 +466,79 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Context:** Enock chose read-only events offline. Champions should still see events and announcements without internet.
 - **Decision:** Sync pulls events, participants, event consents, announcements and read marks to the device. Event and announcement screens ask the server first and fall back to the device copy when offline (`onlineFirst`); "mark as read" goes through the Sprint 3 outbox. Creating or changing events, and registering learners, need a connection. The HQ dashboard and alerts show the last saved numbers with their date when offline.
 - **Alternatives considered:** Reading only from the device (as clubs and learners do); full offline event registration (about 2 more days).
-- **Consequences:** Known gap: if a club is removed from an event's invitations, that event stays on the club's devices until the local database is reset. To be fixed with a scope reset in a later sprint.
+- **Consequences:** Known gap: if a club is removed from an event's invitations, that event stays on the club's devices until the local database is reset. Fixed in Sprint 5 (D5-8).
+
+## D5-1: An item is in an HQ store or lent to one club; kits are one item
+
+- **Status:** Accepted
+- **Date:** 2026-10-26
+- **Context:** HQ needs to know where every laptop and robotics kit is (Q25, Q26). Tagging each part of a kit (every micro:bit, every cable) is more work than HQ can keep up.
+- **Decision:** Every item belongs to the HQ store of a region and is either there or lent to one club. A kit is one item with a contents note (Enock's answer to question 2). A loan needs the item to be in the store and working or needing repair; a partial unique index on open loans means two people lending the same item at once get one loan and one refusal. Champions see their clubs' items and report damage or loss; they cannot lend or return.
+- **Alternatives considered:** Tagging every part; letting items move between clubs directly.
+- **Consequences:** Every loan, return, repair and report records who and when (R5-3). Retired items stay in the register but are left out of dashboard counts. A coordinator manages items in their regions' stores and sees items lent to their regions' clubs.
+
+## D5-2: Resources are files up to 20 MB or links; videos are links only
+
+- **Status:** Accepted
+- **Date:** 2026-10-26
+- **Context:** Champions need lesson plans, slides, worksheets and videos (Q22, Q27). Storage and data are costly; most venues have no internet.
+- **Decision:** A resource has a link, a file in GridFS (up to 20 MB), or both. Videos are links only (question 3). Allowed files: PDF, PowerPoint (PPTX), OpenDocument slides and text (ODP, ODT), Word (DOCX), Scratch (SB3), ZIP, JPG and PNG. The server checks the file's first bytes match its name (PDF, ZIP container, PNG or JPEG). A resource can only be published with a link or a file. Only HQ adds and publishes; everyone signed in reads published resources.
+- **Alternatives considered:** Uploading videos; any file type.
+- **Consequences:** Word and ODT were added to the plan's list, because many worksheets are written in Word. A Word file renamed to `.pdf` is refused.
+
+## D5-3: Saved resources are kept in the browser's storage, up to 300 MB
+
+- **Status:** Accepted
+- **Date:** 2026-10-26
+- **Context:** Champions need lesson plans in class with no internet.
+- **Decision:** Champions and coordinators (who keep data on their device, D3-1) can save a resource's file on the device. The file goes in the user's local database, in a `savedResources` table outside the synced tables, with a limit of 300 MB and the space used shown on the Resources page. After each sync a replaced file is fetched again and an unpublished or deleted one is removed. Saved files are deleted on sign-out with the rest of the local data (D3-2).
+- **Alternatives considered:** The service worker cache (harder to count and to delete per user); saving every resource automatically.
+- **Consequences:** Tested: a saved file opens offline and is gone after signing out.
+
+## D5-4: Raspberry Pi Foundation material is linked, not copied
+
+- **Status:** Accepted
+- **Date:** 2026-10-26
+- **Context:** STEAMLabs uses the Raspberry Pi Foundation curriculum (Q22). Its projects have their own licence.
+- **Decision:** Their projects are added as links. The resource form reminds HQ of this, and HQ confirms the licence of anything it uploads (R5-2).
+- **Alternatives considered:** Uploading PDF copies of their projects.
+- **Consequences:** Their links need internet. A worksheet STEAMLabs writes itself can be uploaded and saved for offline use.
+
+## D5-5: Projects and scores are recorded offline; scores merge learner by learner
+
+- **Status:** Accepted
+- **Date:** 2026-10-26
+- **Context:** Most venues have no internet (Q36). Enock chose offline recording (question 4).
+- **Decision:** Four new outbox operations: `equipment.report`, `project.save`, `assessment.save` and `assessment.scores`, plus a project file upload that waits like session photos (D3-8). `project.save` and `assessment.save` carry the whole record with the id made on the device, so the server creates it the first time and updates it after. Only changed scores are sent, and the server merges them learner by learner like attendance (D3-9), so two people can enter scores for one assessment. A project photo with learners who have no photo consent needs the same confirmation as session photos (D2-7).
+- **Alternatives considered:** Online only (saves about 2 days).
+- **Consequences:** These operations are not checked for conflicts: the later save wins, without an entry in the conflict log. Tested: changes sent twice are applied once.
+
+## D5-6: Scores and projects are learner data
+
+- **Status:** Accepted
+- **Date:** 2026-10-26
+- **Context:** Scores are about children and could be used to rank them publicly (R5-4).
+- **Decision:** Projects and scores have the same scope as the learner record: champions their own clubs, coordinators their regions, HQ everything. The termly report shows only counts of projects and assessments and the average score per track, and hides an average made of fewer than 5 scores, like other small groups (D4-3).
+- **Alternatives considered:** Scores visible to all champions; per-learner scores in the report.
+- **Consequences:** Tested on MongoDB: the report JSON holds no learner names, project titles or individual scores.
+
+## D5-7: Some API paths differ from the plan
+
+- **Status:** Accepted
+- **Date:** 2026-10-26
+- **Context:** The plan listed `/projects`, `/assessments`, `/learners/:id/progress`, `/clubs/:id/progress`, `PATCH /equipment/:id/loans/:loanId` and `POST /alerts/:key/dismiss`.
+- **Decision:** Projects, assessments and the progress pages are under one router, `/api/v1/progress` (`/progress/projects`, `/progress/assessments`, `/progress/learners/:id`, `/progress/clubs/:id`). A return is `POST /equipment/:id/return`, since an item has at most one open loan. Hiding an alert is `POST /alerts/dismissals` with `{ key }`, because keys contain colons.
+- **Alternatives considered:** The paths as planned.
+- **Consequences:** Each module owns one path prefix, as in Sprints 1 to 4.
+
+## D5-8: Equipment and resources are read online first; records that leave scope leave the device
+
+- **Status:** Accepted
+- **Date:** 2026-10-26
+- **Context:** Equipment history (loans, repairs, reports) is only needed online. D4-8 left a gap: an event stayed on a device after its club was uninvited.
+- **Decision:** Equipment and the resource list are read from the server first and from the device copy when offline, like events (D4-8). A champion's damage report goes straight to the server when online and through the outbox when not. The first page of every pull now carries `inScope`, the ids of events, items, resources and projects the user may keep; the device deletes the others. Alerts can be hidden for 7 days by each person (R4-4), stored in `alertDismissals`.
+- **Alternatives considered:** Tombstones for every record that leaves scope.
+- **Consequences:** Closes the D4-8 gap (tested: an uninvited event is no longer in `inScope`). The device copy of an item has no loan history.
 
 ## Decision template
 

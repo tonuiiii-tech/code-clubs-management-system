@@ -21,6 +21,11 @@ export const DATA_TABLES = [
   'eventConsents',
   'announcements',
   'announcementReads',
+  'equipmentItems',
+  'resources',
+  'learnerProjects',
+  'assessments',
+  'assessmentScores',
 ];
 
 export function openUserDb(userId) {
@@ -46,11 +51,22 @@ export function openUserDb(userId) {
     announcements: 'id',
     announcementReads: 'id',
   });
+  // Sprint 5: the club's equipment, the resource list, projects and scores (plan section 7).
+  // Saved resource files sit outside DATA_TABLES, so a full reload keeps them (D5-3).
+  db.version(3).stores({
+    equipmentItems: 'id, clubId',
+    resources: 'id',
+    learnerProjects: 'id, clubId',
+    assessments: 'id, clubId',
+    assessmentScores: 'key, assessmentId, learnerId',
+    savedResources: 'id',
+  });
   return db;
 }
 
 export const consentKey = (learnerId, type) => `${learnerId}:${type}`;
 export const attendanceKey = (sessionId, learnerId) => `${sessionId}:${learnerId}`;
+export const scoreKey = (assessmentId, learnerId) => `${assessmentId}:${learnerId}`;
 
 export async function getMeta(db, key, fallback = null) {
   return (await db.meta.get(key))?.value ?? fallback;

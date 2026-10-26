@@ -13,16 +13,21 @@ This is how a device that works offline exchanges changes with the server. Only 
 
 ## 2. Records that sync
 
-| Records           | Pulled to the device                                               | Changed offline                            |
-| ----------------- | ------------------------------------------------------------------ | ------------------------------------------ |
-| Schools           | In scope                                                           | No                                         |
-| Clubs             | In scope                                                           | No                                         |
-| Learners          | In scope, with `hasContact` (never the contact)                    | Register, edit, mark as left, reactivate   |
-| Consents          | Status, date signed and whether a form is on file (never the form) | Status, date signed, attach a form         |
-| Sessions          | In scope, dated in the last 120 days or in the future              | Plan, report, edit                         |
-| Attendance        | For the sessions above                                             | Take attendance                            |
-| Guardian contacts | Never                                                              | Enter (sent, then deleted from the device) |
-| Session photos    | Never (viewed online)                                              | Add (sent, then deleted from the device)   |
+| Records                  | Pulled to the device                                                                               | Changed offline                                 |
+| ------------------------ | -------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Schools                  | In scope                                                                                           | No                                              |
+| Clubs                    | In scope                                                                                           | No                                              |
+| Learners                 | In scope, with `hasContact` (never the contact)                                                    | Register, edit, mark as left, reactivate        |
+| Consents                 | Status, date signed and whether a form is on file (never the form)                                 | Status, date signed, attach a form              |
+| Sessions                 | In scope, dated in the last 120 days or in the future                                              | Plan, report, edit                              |
+| Attendance               | For the sessions above                                                                             | Take attendance                                 |
+| Guardian contacts        | Never                                                                                              | Enter (sent, then deleted from the device)      |
+| Session photos           | Never (viewed online)                                                                              | Add (sent, then deleted from the device)        |
+| Events and announcements | Invited events, their participants and event consents; own announcements and read marks (Sprint 4) | Mark an announcement read                       |
+| Equipment items          | Items the user's clubs hold (coordinators: their regions' items)                                   | Report damage, loss or a needed repair          |
+| Resources                | Published resources, without files; files the user saves are kept beside them (D5-3)               | No                                              |
+| Learner projects         | In scope, with `hasFile` (never the file)                                                          | Add and edit; a photo or file waits to upload   |
+| Assessments and scores   | In scope                                                                                           | Add and edit; enter scores (merged per learner) |
 
 ## 3. Push: `POST /api/v1/sync/push`
 
@@ -43,16 +48,21 @@ The device sends its outbox in order, at most 50 operations per request.
 }
 ```
 
-| `type`               | `recordId` | `params`   | `data` is the body of              |
-| -------------------- | ---------- | ---------- | ---------------------------------- |
-| `learner.create`     | (none)     |            | `POST /learners`, with `id`        |
-| `learner.update`     | learner    |            | `PATCH /learners/:id`              |
-| `learner.status`     | learner    |            | `PATCH /learners/:id/status`       |
-| `learner.contact`    | learner    |            | `PUT /learners/:id/contact`        |
-| `consent.set`        | learner    | `{ type }` | `PUT /learners/:id/consents/:type` |
-| `session.create`     | (none)     |            | `POST /sessions`, with `id`        |
-| `session.update`     | session    |            | `PATCH /sessions/:id`              |
-| `session.attendance` | session    |            | `PUT /sessions/:id/attendance`     |
+| `type`               | `recordId`   | `params`   | `data` is the body of                                                      |
+| -------------------- | ------------ | ---------- | -------------------------------------------------------------------------- |
+| `learner.create`     | (none)       |            | `POST /learners`, with `id`                                                |
+| `learner.update`     | learner      |            | `PATCH /learners/:id`                                                      |
+| `learner.status`     | learner      |            | `PATCH /learners/:id/status`                                               |
+| `learner.contact`    | learner      |            | `PUT /learners/:id/contact`                                                |
+| `consent.set`        | learner      | `{ type }` | `PUT /learners/:id/consents/:type`                                         |
+| `session.create`     | (none)       |            | `POST /sessions`, with `id`                                                |
+| `session.update`     | session      |            | `PATCH /sessions/:id`                                                      |
+| `session.attendance` | session      |            | `PUT /sessions/:id/attendance`                                             |
+| `announcement.read`  | announcement |            | `POST /announcements/:id/read`                                             |
+| `equipment.report`   | item         |            | `POST /equipment/:id/report`                                               |
+| `project.save`       | (none)       |            | the whole project, with `id`: created the first time, updated after (D5-5) |
+| `assessment.save`    | (none)       |            | the whole assessment, with `id`, the same way                              |
+| `assessment.scores`  | assessment   |            | `PUT /progress/assessments/:id/scores` (changed scores only)               |
 
 - `id` in a create is a UUID made on the device; the record keeps it on the server (D1-6).
 - `recordedAt` is when the change was made on the device. See section 6.
@@ -94,6 +104,7 @@ Consent forms and session photos go to the existing upload endpoints after the o
 
 - `PUT /learners/:id/consents/:type/file`: a new upload replaces the old file, so repeating it is harmless.
 - `POST /sessions/:id/photos?confirmConsent=…&opId=…&recordedAt=…`: the server stores `opId` with the photo, and a second upload with the same `opId` returns the session unchanged.
+- `PUT /progress/projects/:id/file?confirmConsent=…&opId=…`: the same, for a project's photo or file (Sprint 5).
 
 ## 4. Pull: `GET /api/v1/sync/pull`
 
@@ -128,6 +139,7 @@ The answer:
 - **Overlap.** The first page of every pull starts 2 minutes before the saved cursor. Two saves that finish out of order can never be missed this way, and the device simply saves the repeated records again (D3-4).
 - **Deletions.** Only attendance marks are ever deleted (when a whole list is saved online without a learner). The server keeps a tombstone for 30 days and sends its ID in `deleted`.
 - **Scope changes.** `scopeKey` is a hash of the clubs in the user's scope. If it differs from the device's, the answer has `reset: true` and the full scope from the start. The device wipes its records (not its outbox) and saves the new ones. This covers a champion added to or removed from a club and a coordinator's regions changing. A device without a cursor also gets the full scope.
+- **Records that leave scope.** The first page of every pull has `inScope`: the ids of the events, equipment items, resources and projects the user may keep. The device deletes any others it holds, for example an event its club is no longer invited to or an item handed back to the store (D5-8).
 - **Shapes.** Records have the same fields as the online API (learners with `age` and `hasContact`, consents without file IDs). Sessions come without their attendance list; attendance marks come on their own.
 
 After every pull, the device applies its unsent operations again on top of what it received, so the screen always shows "server state plus my unsent changes".

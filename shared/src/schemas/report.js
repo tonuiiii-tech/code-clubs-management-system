@@ -29,3 +29,6 @@ export const reportRecipientsSchema = z
   .strict();
 
 export const listOutboxQuerySchema = paginationSchema;
+
+/** Hides one alert for the person who dismissed it, for 7 days (R4-4). */
+export const dismissAlertSchema = z.object({ key: z.string().trim().min(3).max(200) }).strict();

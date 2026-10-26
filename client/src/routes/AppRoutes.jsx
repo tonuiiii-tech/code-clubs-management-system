@@ -27,6 +27,15 @@ import { AnnouncementsPage } from '../pages/Announcements/AnnouncementsPage.jsx'
 import { ReportsPage } from '../pages/Reports/ReportsPage.jsx';
 import { SettingsPage } from '../pages/Settings/SettingsPage.jsx';
 import { NotFoundPage } from '../pages/NotFound/NotFoundPage.jsx';
+import { EquipmentPage } from '../pages/Equipment/EquipmentPage.jsx';
+import { EquipmentDetailPage } from '../pages/Equipment/EquipmentDetailPage.jsx';
+import { EquipmentFormPage } from '../pages/Equipment/EquipmentFormPage.jsx';
+import { ResourcesPage } from '../pages/Resources/ResourcesPage.jsx';
+import { ResourceDetailPage } from '../pages/Resources/ResourceDetailPage.jsx';
+import { ResourceFormPage } from '../pages/Resources/ResourceFormPage.jsx';
+import { ProjectFormPage } from '../pages/Progress/ProjectFormPage.jsx';
+import { AssessmentPage } from '../pages/Progress/AssessmentPage.jsx';
+import { AssessmentFormPage } from '../pages/Progress/AssessmentFormPage.jsx';
 
 /** [path, permission, page]. Guards only hide screens; the API enforces the same rules (D1-3). */
 const PROTECTED = [
@@ -54,6 +63,19 @@ const PROTECTED = [
   ['/events/:id', 'event:read', EventDetailPage],
   ['/events/:id/edit', 'event:manage', EventFormPage],
   ['/announcements', 'announcement:read', AnnouncementsPage],
+  ['/equipment', 'equipment:read', EquipmentPage],
+  ['/equipment/new', 'equipment:manage', EquipmentFormPage],
+  ['/equipment/:id', 'equipment:read', EquipmentDetailPage],
+  ['/equipment/:id/edit', 'equipment:manage', EquipmentFormPage],
+  ['/resources', 'resource:read', ResourcesPage],
+  ['/resources/new', 'resource:manage', ResourceFormPage],
+  ['/resources/:id', 'resource:read', ResourceDetailPage],
+  ['/resources/:id/edit', 'resource:manage', ResourceFormPage],
+  ['/projects/new', 'progress:record', ProjectFormPage],
+  ['/projects/:id/edit', 'progress:record', ProjectFormPage],
+  ['/assessments/new', 'progress:record', AssessmentFormPage],
+  ['/assessments/:id', 'progress:read', AssessmentPage],
+  ['/assessments/:id/edit', 'progress:record', AssessmentFormPage],
   ['/reports', 'report:read', ReportsPage],
   ['/settings', ['term:manage', 'report:schedule'], SettingsPage],
   ['/profile', 'user:updateSelf', ProfilePage],

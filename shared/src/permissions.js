@@ -134,6 +134,42 @@ export const POLICY = Object.freeze({
     [COORDINATOR]: SELF,
     [CHAMPION]: SELF,
   },
+
+  // Sprint 5 (docs/sprints/sprint-5.md, section 8). Champions see and report the items their
+  // clubs hold; coordinators manage their regions' items.
+  'equipment:read': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+    [CHAMPION]: ASSIGNED,
+  },
+  'equipment:manage': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL, [COORDINATOR]: ASSIGNED },
+  'equipment:report': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+    [CHAMPION]: ASSIGNED,
+  },
+  'resource:read': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ALL,
+    [CHAMPION]: ALL,
+  },
+  'resource:manage': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL },
+  // Projects and scores are learner data: the same scope as learner records (D5-6).
+  'progress:read': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+    [CHAMPION]: ASSIGNED,
+  },
+  'progress:record': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+    [CHAMPION]: ASSIGNED,
+  },
 });
 
 export const PERMISSIONS = Object.freeze(Object.keys(POLICY));

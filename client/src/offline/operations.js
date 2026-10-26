@@ -1,5 +1,5 @@
 import { birthYearFromAge } from '@code-clubs/shared/schemas';
-import { attendanceKey, consentKey } from './db.js';
+import { attendanceKey, consentKey, scoreKey } from './db.js';
 
 /**
  * What each change does to the local database. Used when the change is made and again after
@@ -8,7 +8,7 @@ import { attendanceKey, consentKey } from './db.js';
  */
 
 /** Changes that go to POST /sync/push; the rest are file uploads. */
-export const FILE_OPERATIONS = new Set(['file.consent', 'file.photo']);
+export const FILE_OPERATIONS = new Set(['file.consent', 'file.photo', 'file.project']);
 
 /** The record a change is about: changes after a refused one wait behind it. */
 export const targetOf = (op) => op.recordId ?? op.data?.id;
@@ -120,6 +120,63 @@ const APPLY = {
   async 'announcement.read'(db, { recordId, recordedAt }) {
     if (await db.announcementReads.get(recordId)) return;
     await db.announcementReads.put({ id: recordId, announcementId: recordId, readAt: recordedAt });
+  },
+  // Sprint 5 (plan section 7).
+  async 'equipment.report'(db, { recordId, data }) {
+    const item = await db.equipmentItems.get(recordId);
+    if (item && item.condition !== 'retired') {
+      await db.equipmentItems.put({ ...item, condition: data.condition });
+    }
+  },
+  async 'project.save'(db, { data, recordedAt }) {
+    const existing = await db.learnerProjects.get(data.id);
+    const club = await db.clubs.get(data.clubId);
+    await db.learnerProjects.put({
+      sessionId: null,
+      link: null,
+      note: null,
+      hasFile: false,
+      fileType: null,
+      createdAt: recordedAt,
+      ...existing,
+      ...data,
+      region: existing?.region ?? club?.region,
+      updatedAt: existing?.updatedAt ?? recordedAt,
+    });
+  },
+  async 'file.project'(db, { recordId }) {
+    await patch(db.learnerProjects, recordId, { hasFile: true, filePending: true });
+  },
+  async 'assessment.save'(db, { data, recordedAt }) {
+    const existing = await db.assessments.get(data.id);
+    const club = await db.clubs.get(data.clubId);
+    await db.assessments.put({
+      createdAt: recordedAt,
+      ...existing,
+      ...data,
+      region: existing?.region ?? club?.region,
+      updatedAt: existing?.updatedAt ?? recordedAt,
+    });
+  },
+  async 'assessment.scores'(db, { recordId, data }) {
+    const assessment = await db.assessments.get(recordId);
+    if (!assessment) return;
+    await db.assessmentScores.bulkPut(
+      await Promise.all(
+        data.scores.map(async ({ learnerId, score }) => {
+          const key = scoreKey(recordId, learnerId);
+          return {
+            ...(await db.assessmentScores.get(key)),
+            key,
+            assessmentId: recordId,
+            learnerId,
+            clubId: assessment.clubId,
+            region: assessment.region,
+            score,
+          };
+        }),
+      ),
+    );
   },
 };
 

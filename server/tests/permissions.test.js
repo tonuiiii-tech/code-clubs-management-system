@@ -88,4 +88,20 @@ describe('Permission policy', () => {
       expect(roles.map((role) => scopeFor(user(role), permission))).toEqual(scopes);
     }
   });
+
+  it('matches the Sprint 5 table (docs/sprints/sprint-5.md, section 8)', () => {
+    const table = {
+      'equipment:read': ['all', 'all', 'assigned', 'assigned'],
+      'equipment:manage': ['all', 'all', 'assigned', null],
+      'equipment:report': ['all', 'all', 'assigned', 'assigned'],
+      'resource:read': ['all', 'all', 'all', 'all'],
+      'resource:manage': ['all', 'all', null, null],
+      'progress:read': ['all', 'all', 'assigned', 'assigned'],
+      'progress:record': ['all', 'all', 'assigned', 'assigned'],
+    };
+    const roles = [ROLES.SYSTEM_ADMIN, ROLES.PROGRAMME_MANAGER, ROLES.COORDINATOR, ROLES.CHAMPION];
+    for (const [permission, scopes] of Object.entries(table)) {
+      expect(roles.map((role) => scopeFor(user(role), permission))).toEqual(scopes);
+    }
+  });
 });

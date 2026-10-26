@@ -9,6 +9,8 @@ import {
   CONSENT_STATUSES,
   CONSENT_TYPES,
   COUNTIES,
+  EQUIPMENT_CONDITIONS,
+  EQUIPMENT_TYPES,
   EVENT_PARTICIPANT_STATUSES,
   EVENT_STATUSES,
   EVENT_TYPES,
@@ -18,6 +20,8 @@ import {
   GUARDIAN_RELATIONSHIPS,
   LEARNER_STATUSES,
   LANGUAGES,
+  RESOURCE_STATUSES,
+  RESOURCE_TYPES,
   MEETING_DAYS,
   MEETING_FREQUENCIES,
   RECORD_STATUSES,
@@ -527,6 +531,182 @@ const reportRunSchema = new Schema(
   options,
 );
 
+/** Sprint 5: an item is in its region's store (clubId null) or lent to one club (D5-1). */
+const equipmentItemSchema = new Schema(
+  {
+    _id: uuid,
+    assetTag: { type: String, required: true },
+    name: { type: String, required: true, trim: true },
+    type: { type: String, enum: EQUIPMENT_TYPES, required: true },
+    serialNumber: { type: String, default: null },
+    condition: { type: String, enum: EQUIPMENT_CONDITIONS, default: 'working' },
+    region: { type: String, enum: REGION_VALUES, required: true },
+    clubId: { type: String, default: null },
+    contents: { type: String, default: null },
+    notes: { type: String, default: null },
+    ...audited,
+  },
+  options,
+);
+equipmentItemSchema.index({ assetTag: 1 }, { unique: true });
+// Two items cannot share a serial number; items without one are left out of the check.
+equipmentItemSchema.index(
+  { serialNumber: 1 },
+  { unique: true, partialFilterExpression: { serialNumber: { $type: 'string' } } },
+);
+equipmentItemSchema.index({ region: 1, clubId: 1 });
+
+/** One loan of an item to a club; open while returnedDate is null. */
+const equipmentLoanSchema = new Schema(
+  {
+    _id: uuid,
+    itemId: { type: String, required: true },
+    clubId: { type: String, required: true },
+    region: { type: String, enum: REGION_VALUES, required: true },
+    outDate: { type: String, required: true },
+    dueDate: { type: String, default: null },
+    returnedDate: { type: String, default: null },
+    conditionOut: { type: String, enum: EQUIPMENT_CONDITIONS },
+    conditionReturned: { type: String, enum: [...EQUIPMENT_CONDITIONS, null], default: null },
+    note: { type: String, default: null },
+    outBy: String,
+    outByName: String,
+    returnedBy: { type: String, default: null },
+    returnedByName: { type: String, default: null },
+    // True until the item comes back; the unique index below allows one open loan per item.
+    open: { type: Boolean, default: true },
+  },
+  options,
+);
+equipmentLoanSchema.index({ itemId: 1, outDate: -1 });
+// At most one open loan per item, even with two people lending at once.
+equipmentLoanSchema.index(
+  { itemId: 1 },
+  { unique: true, partialFilterExpression: { open: true }, name: 'one_open_loan' },
+);
+equipmentLoanSchema.index({ clubId: 1, returnedDate: 1 });
+
+const equipmentRepairSchema = new Schema(
+  {
+    _id: uuid,
+    itemId: { type: String, required: true },
+    region: { type: String, enum: REGION_VALUES, required: true },
+    date: { type: String, required: true },
+    problem: { type: String, required: true },
+    action: { type: String, default: null },
+    cost: { type: Number, default: null },
+    conditionAfter: { type: String, enum: EQUIPMENT_CONDITIONS, required: true },
+    ...audited,
+  },
+  options,
+);
+equipmentRepairSchema.index({ itemId: 1, date: -1 });
+
+/** A champion's report that an item is damaged, lost or needs repair. */
+const equipmentReportSchema = new Schema(
+  {
+    _id: uuid,
+    itemId: { type: String, required: true },
+    clubId: { type: String, default: null },
+    region: { type: String, enum: REGION_VALUES, required: true },
+    condition: { type: String, enum: EQUIPMENT_CONDITIONS, required: true },
+    note: String,
+    date: { type: String, required: true },
+    reportedBy: String,
+    reportedByName: String,
+  },
+  options,
+);
+equipmentReportSchema.index({ itemId: 1, date: -1 });
+equipmentReportSchema.index({ clubId: 1, date: -1 });
+
+/** Lesson plans, slides, worksheets and video links (plan section 5). */
+const resourceSchema = new Schema(
+  {
+    _id: uuid,
+    title: { type: String, required: true, trim: true },
+    description: String,
+    type: { type: String, enum: RESOURCE_TYPES, required: true },
+    tracks: { type: [String], default: [] },
+    ageBands: { type: [String], default: [] },
+    language: { type: String, enum: LANGUAGES, default: 'en' },
+    link: { type: String, default: null },
+    fileId: { type: String, default: null },
+    fileName: { type: String, default: null },
+    fileType: { type: String, default: null },
+    size: { type: Number, default: null },
+    status: { type: String, enum: RESOURCE_STATUSES, default: 'draft' },
+    ...audited,
+  },
+  options,
+);
+resourceSchema.index({ status: 1, title: 1 });
+
+/** A project one or more learners of one club made (Q23). */
+const learnerProjectSchema = new Schema(
+  {
+    _id: uuid,
+    clubId: { type: String, required: true },
+    region: { type: String, enum: REGION_VALUES, required: true },
+    learnerIds: { type: [String], default: [] },
+    sessionId: { type: String, default: null },
+    title: { type: String, required: true, trim: true },
+    track: { type: String, enum: TRACKS, required: true },
+    link: { type: String, default: null },
+    fileId: { type: String, default: null },
+    fileType: { type: String, default: null },
+    date: { type: String, required: true },
+    note: { type: String, default: null },
+    ...audited,
+  },
+  options,
+);
+learnerProjectSchema.index({ clubId: 1, date: -1 });
+learnerProjectSchema.index({ learnerIds: 1 });
+
+const assessmentSchema = new Schema(
+  {
+    _id: uuid,
+    clubId: { type: String, required: true },
+    region: { type: String, enum: REGION_VALUES, required: true },
+    title: { type: String, required: true, trim: true },
+    track: { type: String, enum: TRACKS, required: true },
+    date: { type: String, required: true },
+    maxScore: { type: Number, required: true },
+    ...audited,
+  },
+  options,
+);
+assessmentSchema.index({ clubId: 1, date: -1 });
+
+/** One score per learner per assessment, merged learner by learner (D5-5). */
+const assessmentScoreSchema = new Schema(
+  {
+    _id: uuid,
+    assessmentId: { type: String, required: true },
+    learnerId: { type: String, required: true },
+    clubId: { type: String, required: true },
+    region: { type: String, enum: REGION_VALUES, required: true },
+    score: { type: Number, default: null },
+    ...audited,
+  },
+  options,
+);
+assessmentScoreSchema.index({ assessmentId: 1, learnerId: 1 }, { unique: true });
+assessmentScoreSchema.index({ learnerId: 1 });
+
+/** An alert one person dismissed, hidden for them until `until` (R4-4). */
+const alertDismissalSchema = new Schema(
+  {
+    _id: String,
+    userId: { type: String, required: true },
+    key: { type: String, required: true },
+    until: { type: Date, required: true },
+  },
+  options,
+);
+alertDismissalSchema.index({ userId: 1, until: 1 });
+
 // Devices pull changes in (updatedAt, _id) order (docs/sync-protocol.md, section 4).
 for (const schema of [
   schoolSchema,
@@ -539,6 +719,11 @@ for (const schema of [
   eventParticipantSchema,
   eventConsentSchema,
   announcementSchema,
+  equipmentItemSchema,
+  resourceSchema,
+  learnerProjectSchema,
+  assessmentSchema,
+  assessmentScoreSchema,
 ]) {
   schema.index({ updatedAt: 1, _id: 1 });
 }
@@ -578,3 +763,12 @@ export const AnnouncementRead = define(
 export const OutboundMessage = define('OutboundMessage', outboundMessageSchema, 'outboundMessages');
 export const Setting = define('Setting', settingSchema, 'settings');
 export const ReportRun = define('ReportRun', reportRunSchema, 'reportRuns');
+export const EquipmentItem = define('EquipmentItem', equipmentItemSchema, 'equipmentItems');
+export const EquipmentLoan = define('EquipmentLoan', equipmentLoanSchema, 'equipmentLoans');
+export const EquipmentRepair = define('EquipmentRepair', equipmentRepairSchema, 'equipmentRepairs');
+export const EquipmentReport = define('EquipmentReport', equipmentReportSchema, 'equipmentReports');
+export const Resource = define('Resource', resourceSchema, 'resources');
+export const LearnerProject = define('LearnerProject', learnerProjectSchema, 'learnerProjects');
+export const Assessment = define('Assessment', assessmentSchema, 'assessments');
+export const AssessmentScore = define('AssessmentScore', assessmentScoreSchema, 'assessmentScores');
+export const AlertDismissal = define('AlertDismissal', alertDismissalSchema, 'alertDismissals');

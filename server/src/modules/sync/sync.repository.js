@@ -2,14 +2,19 @@ import { randomUUID } from 'node:crypto';
 import {
   Announcement,
   AnnouncementRead,
+  Assessment,
+  AssessmentScore,
   Attendance,
   Club,
   Consent,
+  EquipmentItem,
   Event,
   EventConsent,
   EventParticipant,
   Learner,
   LearnerContact,
+  LearnerProject,
+  Resource,
   School,
   Session,
   SyncConflict,
@@ -20,6 +25,7 @@ import { paginate, toRecord } from '../../db/records.js';
 import {
   clubRecordScopeQuery,
   clubScopeQuery,
+  equipmentScopeQuery,
   eventScopeQuery,
   schoolScopeQuery,
 } from '../../db/scopeQueries.js';
@@ -138,6 +144,44 @@ export async function changedAnnouncements(userId, after, limit) {
 
 export async function changedAnnouncementReads(userId, after, limit) {
   return changes(AnnouncementRead, { userId }, after, limit);
+}
+
+// Sprint 5: equipment, resources and learner progress (plan section 7).
+export async function changedEquipmentItems(scopeFilter, after, limit) {
+  return changes(EquipmentItem, await equipmentScopeQuery(scopeFilter), after, limit);
+}
+
+export async function changedResources(after, limit) {
+  return changes(Resource, { status: 'published' }, after, limit);
+}
+
+export async function changedLearnerProjects(scopeFilter, after, limit) {
+  return changes(LearnerProject, await clubRecordScopeQuery(scopeFilter), after, limit);
+}
+
+export async function changedAssessments(scopeFilter, after, limit) {
+  return changes(Assessment, await clubRecordScopeQuery(scopeFilter), after, limit);
+}
+
+export async function changedAssessmentScores(scopeFilter, after, limit) {
+  return changes(AssessmentScore, await clubRecordScopeQuery(scopeFilter), after, limit);
+}
+
+/**
+ * The ids a device may keep of records that can leave its scope without a tombstone: an event its
+ * club is no longer invited to (D4-8), an item handed back, an unpublished resource, a deleted
+ * project. Sent on the first page of a pull; the device drops the rest.
+ */
+export async function idsInScope(scopeFilter, fromDate) {
+  const [events, equipmentItems, resources, learnerProjects] = await Promise.all([
+    Event.distinct('_id', {
+      $and: [await eventScopeQuery(scopeFilter), { endDate: { $gte: fromDate } }],
+    }),
+    EquipmentItem.distinct('_id', await equipmentScopeQuery(scopeFilter)),
+    Resource.distinct('_id', { status: 'published' }),
+    LearnerProject.distinct('_id', await clubRecordScopeQuery(scopeFilter)),
+  ]);
+  return { events, equipmentItems, resources, learnerProjects };
 }
 
 export async function deletedRecords(scopeFilter, after, limit) {

@@ -18,3 +18,17 @@ export function detectFileType(buffer) {
 export function fileExtension(type) {
   return { 'image/jpeg': 'jpg', 'image/png': 'png', 'application/pdf': 'pdf' }[type] ?? 'bin';
 }
+
+const FAMILIES = [
+  { family: 'pdf', bytes: [0x25, 0x50, 0x44, 0x46, 0x2d] },
+  { family: 'png', bytes: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] },
+  { family: 'jpeg', bytes: [0xff, 0xd8, 0xff] },
+  // ZIP, and the files built on it: Office, OpenDocument and Scratch (D5-2).
+  { family: 'zip', bytes: [0x50, 0x4b, 0x03, 0x04] },
+];
+
+/** The kind of file from its first bytes: 'pdf', 'png', 'jpeg', 'zip' or null. */
+export function detectFileFamily(buffer) {
+  if (!Buffer.isBuffer(buffer)) return null;
+  return FAMILIES.find(({ bytes }) => bytes.every((b, i) => buffer[i] === b))?.family ?? null;
+}

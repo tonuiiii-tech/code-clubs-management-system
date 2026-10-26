@@ -1,3 +1,4 @@
+import { ALERT_DISMISS_DAYS, ALERT_RULES } from '@code-clubs/shared/enums';
 import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 import { buildHqDashboard, buildTermReport, computeAlerts } from '@code-clubs/shared/insights';
 import { termForDate } from '@code-clubs/shared/schemas';
@@ -45,10 +46,12 @@ export async function getHqDashboard(actor, scope, { termId, region }) {
     from: term?.startDate ?? day,
     to: term?.endDate ?? day,
   });
-  const events = eventsFor(await repo.eventRows(filter, { endingFrom: day }), data.clubIds, {
-    region,
-  });
-  return buildHqDashboard({ term, ...data, events, today: day });
+  const [eventRows, equipmentItems] = await Promise.all([
+    repo.eventRows(filter, { endingFrom: day }),
+    repo.equipmentRows(filter, { region }),
+  ]);
+  const events = eventsFor(eventRows, data.clubIds, { region });
+  return buildHqDashboard({ term, ...data, events, equipmentItems, today: day });
 }
 
 /** Clubs that need attention (plan section 4.2), for the clubs the user can read. */
@@ -63,11 +66,22 @@ export async function getAlerts(actor, scope, { region, clubId }) {
   });
   const events = await repo.eventRows(filter, { endingFrom: day });
   const eventIds = events.map((e) => e.id);
-  const [consentGivenLearnerIds, participants, eventConsents, terms] = await Promise.all([
+  const [
+    consentGivenLearnerIds,
+    participants,
+    eventConsents,
+    terms,
+    equipmentLoans,
+    equipmentReports,
+    dismissedKeys,
+  ] = await Promise.all([
     repo.participationConsentGiven(data.clubIds),
     repo.participantRows(data.clubIds, eventIds),
     repo.eventConsentRows(eventIds),
     listTerms(),
+    repo.openLoanRows(data.clubIds),
+    repo.equipmentReportRows(data.clubIds, daysAgo(ALERT_RULES.equipmentReportedDays)),
+    repo.dismissedKeys(actor.id),
   ]);
   return computeAlerts({
     ...data,
@@ -75,9 +89,21 @@ export async function getAlerts(actor, scope, { region, clubId }) {
     events,
     participants,
     eventConsents,
+    equipmentLoans,
+    equipmentReports,
+    dismissedKeys,
     terms,
     today: day,
   });
+}
+
+/** Hides an alert from this person for 7 days (R4-4). Only an alert they can see now. */
+export async function dismissAlert(actor, scope, { key }) {
+  const alerts = await getAlerts(actor, scope, {});
+  if (!alerts.some((a) => a.key === key)) throw notFound(ERROR_MESSAGES.alertNotFound);
+  const until = new Date(Date.now() + ALERT_DISMISS_DAYS * 24 * 60 * 60 * 1000);
+  await repo.dismissAlert(actor.id, key, until);
+  return { key, until: until.toISOString() };
 }
 
 /** The termly report's numbers (plan section 5): counts only (D4-3). */
@@ -91,10 +117,17 @@ export async function getTermReport(actor, scope, { termId, region, clubId }) {
     data.clubIds,
     { region, clubId },
   );
-  const participants = await repo.participantRows(
-    data.clubIds,
-    events.map((e) => e.id),
-  );
+  const range = { from: term.startDate, to: term.endDate };
+  const [participants, equipmentItems, projects, assessments] = await Promise.all([
+    repo.participantRows(
+      data.clubIds,
+      events.map((e) => e.id),
+    ),
+    repo.equipmentRows(filter, { region, clubId }),
+    repo.projectRows(data.clubIds, range),
+    repo.assessmentRows(data.clubIds, range),
+  ]);
+  const assessmentScores = await repo.assessmentScoreRows(assessments.map((a) => a.id));
   return buildTermReport({
     term,
     scope: {
@@ -105,6 +138,10 @@ export async function getTermReport(actor, scope, { termId, region, clubId }) {
     ...data,
     events,
     participants,
+    equipmentItems,
+    projects,
+    assessments,
+    assessmentScores,
     generatedAt: new Date().toISOString(),
   });
 }

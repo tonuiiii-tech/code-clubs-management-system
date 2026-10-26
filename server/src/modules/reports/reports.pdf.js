@@ -190,6 +190,38 @@ export function renderTermReportPdf(report) {
       e.participants,
     ]),
   );
+  // Sprint 5: projects and average scores per track (counts and averages only, D5-6).
+  if (report.progress?.length) {
+    table(
+      'Projects and assessments',
+      [
+        { title: 'Track', width: 2 },
+        num('Projects'),
+        num('Assessments'),
+        num('Scores'),
+        num('Average'),
+      ],
+      report.progress.map((r) => [
+        label(TRACK_LABELS, r.track),
+        r.projects,
+        r.assessments,
+        r.scores,
+        percent(r.averageScore),
+      ]),
+    );
+  }
+  if (report.equipment?.total) {
+    table(
+      'Equipment',
+      [{ title: 'Region', width: 2 }, num('Items'), num('Lent'), num('Needs attention')],
+      report.equipment.byRegion.map((r) => [
+        label(REGION_LABELS, r.region),
+        r.total,
+        r.lent,
+        r.needsAttention,
+      ]),
+    );
+  }
   table(
     'Clubs',
     [
