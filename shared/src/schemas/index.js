@@ -10,3 +10,6 @@ export * from './term.js';
 export * from './event.js';
 export * from './announcement.js';
 export * from './report.js';
+export * from './equipment.js';
+export * from './resource.js';
+export * from './progress.js';

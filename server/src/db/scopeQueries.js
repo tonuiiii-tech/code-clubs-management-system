@@ -84,3 +84,19 @@ export async function eventScopeQuery(filter) {
   }
   return NOTHING;
 }
+
+/**
+ * Equipment (Sprint 5): coordinators see their regions' items and items lent to their regions'
+ * clubs; champions the items their clubs hold (D5-1).
+ */
+export async function equipmentScopeQuery(filter) {
+  if (filter.all) return {};
+  if (filter.regions) {
+    const clubIds = await Club.distinct('_id', { region: { $in: filter.regions } });
+    return { $or: [{ region: { $in: filter.regions } }, { clubId: { $in: clubIds } }] };
+  }
+  if (filter.championUserId) {
+    return { clubId: { $in: await championClubIds(filter.championUserId) } };
+  }
+  return NOTHING;
+}

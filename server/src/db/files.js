@@ -10,6 +10,8 @@ export const BUCKETS = Object.freeze({
   sessionPhotos: 'sessionPhotos',
   eventPhotos: 'eventPhotos',
   eventConsentFiles: 'eventConsentFiles',
+  resourceFiles: 'resourceFiles',
+  projectFiles: 'projectFiles',
 });
 
 const bucket = (name) =>

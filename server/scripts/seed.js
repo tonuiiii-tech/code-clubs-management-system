@@ -13,17 +13,25 @@ import { connectDatabase, disconnectDatabase } from '../src/db/index.js';
 import {
   Announcement,
   AnnouncementRead,
+  Assessment,
+  AssessmentScore,
   Attendance,
   Club,
   ClubChampion,
   Consent,
   Counter,
+  EquipmentItem,
+  EquipmentLoan,
+  EquipmentRepair,
+  EquipmentReport,
   Event,
   EventConsent,
   EventParticipant,
   EventProject,
   Learner,
   LearnerContact,
+  LearnerProject,
+  Resource,
   School,
   Session,
   Term,
@@ -45,6 +53,14 @@ export async function seed({ password = env.SEED_DEFAULT_PASSWORD || DEMO_PASSWO
     eventProjects,
     announcements,
     announcementReads,
+    equipmentItems,
+    equipmentLoans,
+    equipmentRepairs,
+    equipmentReports,
+    resources,
+    learnerProjects,
+    assessments,
+    assessmentScores,
     ...sprint2
   } = createSeedData();
   const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
@@ -100,6 +116,20 @@ export async function seed({ password = env.SEED_DEFAULT_PASSWORD || DEMO_PASSWO
   await replaceAll(EventProject, eventProjects);
   await replaceAll(Announcement, announcements);
   await replaceAll(AnnouncementRead, announcementReads);
+
+  // Sprint 5: equipment, resources, projects and assessments (dates follow today's date too).
+  await replaceAll(EquipmentItem, equipmentItems);
+  await EquipmentLoan.deleteMany({ itemId: { $in: equipmentItems.map((i) => i.id) } });
+  await upsertAll(EquipmentLoan, equipmentLoans);
+  await replaceAll(EquipmentRepair, equipmentRepairs);
+  await replaceAll(EquipmentReport, equipmentReports);
+  await replaceAll(Resource, resources);
+  await replaceAll(LearnerProject, learnerProjects);
+  await replaceAll(Assessment, assessments);
+  await AssessmentScore.deleteMany({ assessmentId: { $in: assessments.map((a) => a.id) } });
+  await upsertAll(AssessmentScore, assessmentScores);
+  const highestTag = Math.max(...equipmentItems.map((i) => Number(i.assetTag.slice(3))));
+  await Counter.updateOne({ _id: 'equipment' }, { $max: { seq: highestTag } }, { upsert: true });
 
   // Keep club codes moving forward from the seeded ones (NAC-003 → next is NAC-004).
   for (const prefix of Object.values(REGION_CODE_PREFIX)) {

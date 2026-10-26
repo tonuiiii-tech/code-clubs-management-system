@@ -19,6 +19,9 @@ import { reportsRouter } from './modules/reports/reports.routes.js';
 import { announcementsRouter } from './modules/announcements/announcements.routes.js';
 import { eventsRouter } from './modules/events/events.routes.js';
 import { termsRouter } from './modules/terms/terms.routes.js';
+import { equipmentRouter } from './modules/equipment/equipment.routes.js';
+import { resourcesRouter } from './modules/resources/resources.routes.js';
+import { progressRouter } from './modules/progress/progress.routes.js';
 
 /** Builds the Express app without listening, so tests can use it with Supertest. */
 export function createApp() {
@@ -51,6 +54,9 @@ export function createApp() {
   api.use('/events', eventsRouter);
   api.use('/announcements', announcementsRouter);
   api.use('/notifications', notificationsRouter);
+  api.use('/equipment', equipmentRouter);
+  api.use('/resources', resourcesRouter);
+  api.use('/progress', progressRouter);
   app.use('/api/v1', api);
 
   app.use(notFoundHandler);

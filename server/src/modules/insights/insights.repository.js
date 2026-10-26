@@ -1,15 +1,26 @@
 import {
+  AlertDismissal,
+  Assessment,
+  AssessmentScore,
   Attendance,
   Club,
   Consent,
   Event,
   EventConsent,
+  EquipmentItem,
+  EquipmentLoan,
+  EquipmentReport,
   EventParticipant,
   Learner,
+  LearnerProject,
   Session,
 } from '../../db/models.js';
 import { toRecord } from '../../db/records.js';
-import { clubScopeQuery, eventScopeQuery } from '../../db/scopeQueries.js';
+import {
+  clubScopeQuery,
+  equipmentScopeQuery,
+  eventScopeQuery,
+} from '../../db/scopeQueries.js';
 
 /**
  * Plain rows in a user's scope for the HQ dashboard, alerts and termly report. The numbers are
@@ -103,4 +114,71 @@ export async function eventConsentRows(eventIds) {
     .select('eventId learnerId status')
     .lean();
   return docs.map(toRecord);
+}
+
+// Sprint 5: equipment, projects and assessments.
+
+/** Items in scope, limited like the clubs: a region's store or the chosen club's items. */
+export async function equipmentRows(scopeFilter, { region, clubId } = {}) {
+  const docs = await EquipmentItem.find({
+    $and: [
+      await equipmentScopeQuery(scopeFilter),
+      region ? { region } : {},
+      clubId ? { clubId } : {},
+    ],
+  })
+    .select('region clubId condition type')
+    .lean();
+  return docs.map(toRecord);
+}
+
+export async function openLoanRows(clubIds) {
+  const docs = await EquipmentLoan.find({ clubId: { $in: clubIds }, open: true })
+    .select('itemId clubId dueDate')
+    .lean();
+  return docs.map(toRecord);
+}
+
+export async function equipmentReportRows(clubIds, since) {
+  const docs = await EquipmentReport.find({ clubId: { $in: clubIds }, date: { $gte: since } })
+    .select('itemId clubId condition date')
+    .lean();
+  return docs.map(toRecord);
+}
+
+const dateRange = (from, to) =>
+  from || to ? { date: { ...(from && { $gte: from }), ...(to && { $lte: to }) } } : {};
+
+export async function projectRows(clubIds, { from, to } = {}) {
+  const docs = await LearnerProject.find({ clubId: { $in: clubIds }, ...dateRange(from, to) })
+    .select('clubId track date')
+    .lean();
+  return docs.map(toRecord);
+}
+
+export async function assessmentRows(clubIds, { from, to } = {}) {
+  const docs = await Assessment.find({ clubId: { $in: clubIds }, ...dateRange(from, to) })
+    .select('clubId track date maxScore')
+    .lean();
+  return docs.map(toRecord);
+}
+
+export async function assessmentScoreRows(assessmentIds) {
+  const docs = await AssessmentScore.find({ assessmentId: { $in: assessmentIds } })
+    .select('assessmentId score')
+    .lean();
+  return docs.map(toRecord);
+}
+
+/** Alerts this person hid, until their time is up (R4-4). */
+export async function dismissedKeys(userId, now = new Date()) {
+  return AlertDismissal.distinct('key', { userId, until: { $gt: now } });
+}
+
+export async function dismissAlert(userId, key, until) {
+  await AlertDismissal.updateOne(
+    { _id: `${userId}:${key}` },
+    { $set: { userId, key, until } },
+    { upsert: true },
+  );
 }

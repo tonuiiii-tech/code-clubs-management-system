@@ -3,6 +3,7 @@ import {
   ALERT_RULES,
   ALERT_TYPES,
   CLUB_STATUSES,
+  EQUIPMENT_CONDITIONS,
   REGION_VALUES,
   REPORT_MIN_GROUP,
   TRACKS,
@@ -22,6 +23,12 @@ import { termOn } from './schemas/term.js';
  *   events            { id, name, type, startDate, endDate, venue, region, status, clubIds }
  *   participants      { eventId, learnerId, clubId, status }
  *   eventConsents     { eventId, learnerId, status }
+ *   equipmentItems    { id, region, clubId, condition }               (Sprint 5)
+ *   equipmentLoans    { itemId, clubId, dueDate }                     (open loans only)
+ *   equipmentReports  { itemId, clubId, condition, date }             (champions' reports)
+ *   projects          { clubId, track, date }
+ *   assessments       { id, clubId, track, date, maxScore }
+ *   assessmentScores  { assessmentId, score }
  */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -67,6 +74,7 @@ export function buildHqDashboard({
   sessions,
   sessionAttendance,
   events,
+  equipmentItems = [],
   today,
 }) {
   const clubById = new Map(clubs.map((c) => [c.id, c]));
@@ -146,8 +154,27 @@ export function buildHqDashboard({
     learnersByTrack,
     clubsByStatus,
     upcomingEvents,
+    equipment: equipmentSummary(equipmentItems),
   };
 }
+
+/** Items per condition, and how many are lent to clubs or in a store (Sprint 5). */
+export function equipmentSummary(items) {
+  const inUse = items.filter((i) => i.condition !== 'retired');
+  const counts = countBy(inUse, 'condition');
+  return {
+    total: inUse.length,
+    lent: inUse.filter((i) => i.clubId).length,
+    inStore: inUse.filter((i) => !i.clubId).length,
+    byCondition: Object.fromEntries(
+      EQUIPMENT_CONDITIONS.filter((c) => c !== 'retired').map((c) => [c, counts[c] ?? 0]),
+    ),
+  };
+}
+
+/** A stable key per alert, so a person can dismiss it for a while (R4-4). */
+export const alertKey = ({ type, clubId, eventId }) =>
+  [type, clubId, eventId].filter(Boolean).join(':');
 
 /**
  * Clubs that need attention (plan section 4.2, D4-2). Computed on every request, never stored.
@@ -162,6 +189,9 @@ export function computeAlerts({
   events,
   participants,
   eventConsents,
+  equipmentLoans = [],
+  equipmentReports = [],
+  dismissedKeys = [],
   terms,
   today,
 }) {
@@ -228,10 +258,32 @@ export function computeAlerts({
     }
   }
 
-  const order = (type) => ALERT_TYPES.indexOf(type);
-  return alerts.sort(
-    (a, b) => order(a.type) - order(b.type) || a.clubCode.localeCompare(b.clubCode),
+  // Sprint 5: items past their due date, and items reported damaged, lost or needing repair.
+  const overdueByClub = countBy(
+    equipmentLoans.filter((l) => l.dueDate && l.dueDate < today),
+    'clubId',
   );
+  const reportedSince = addDays(today, -ALERT_RULES.equipmentReportedDays);
+  const reportedByClub = countBy(
+    equipmentReports.filter((r) => r.date >= reportedSince),
+    'clubId',
+  );
+  for (const [type, byClub] of [
+    ['equipmentOverdue', overdueByClub],
+    ['equipmentReported', reportedByClub],
+  ]) {
+    for (const [clubId, n] of Object.entries(byClub)) {
+      const club = clubById.get(clubId);
+      if (club) push(club, type, n);
+    }
+  }
+
+  const dismissed = new Set(dismissedKeys);
+  const order = (type) => ALERT_TYPES.indexOf(type);
+  return alerts
+    .map((alert) => ({ ...alert, key: alertKey(alert) }))
+    .filter((alert) => !dismissed.has(alert.key))
+    .sort((a, b) => order(a.type) - order(b.type) || a.clubCode.localeCompare(b.clubCode));
 }
 
 /** A count small enough to point at one child is shown as "<5" (R4-1). */
@@ -256,6 +308,10 @@ export function buildTermReport({
   sessionAttendance,
   events,
   participants,
+  equipmentItems = [],
+  projects = [],
+  assessments = [],
+  assessmentScores = [],
   generatedAt,
 }) {
   const clubById = new Map(clubs.map((c) => [c.id, c]));
@@ -360,5 +416,51 @@ export function buildTermReport({
     byAge,
     clubs: clubRows,
     events: eventRows,
+    equipment: {
+      ...equipmentSummary(equipmentItems),
+      byRegion: REGION_VALUES.map((region) => {
+        const rows = equipmentItems.filter((i) => i.region === region && i.condition !== 'retired');
+        return {
+          region,
+          total: rows.length,
+          lent: rows.filter((i) => i.clubId).length,
+          needsAttention: rows.filter((i) =>
+            ['needs_repair', 'damaged', 'lost'].includes(i.condition),
+          ).length,
+        };
+      }).filter((row) => row.total),
+    },
+    progress: progressByTrack({ term, projects, assessments, assessmentScores }),
   };
+}
+
+/**
+ * Projects and assessment results per track for a term: counts and averages only, never a
+ * learner's own score (D5-6). An average over fewer than 5 scores is not shown (R4-1).
+ */
+export function progressByTrack({ term, projects, assessments, assessmentScores }) {
+  const termProjects = projects.filter(inTerm(term));
+  const termAssessments = assessments.filter(inTerm(term));
+  const scoresBy = new Map();
+  for (const s of assessmentScores) {
+    if (s.score === null || s.score === undefined) continue;
+    if (!scoresBy.has(s.assessmentId)) scoresBy.set(s.assessmentId, []);
+    scoresBy.get(s.assessmentId).push(s.score);
+  }
+  return TRACKS.map((track) => {
+    const own = termAssessments.filter((a) => a.track === track);
+    const percents = own.flatMap((a) =>
+      (scoresBy.get(a.id) ?? []).map((score) => (score / a.maxScore) * 100),
+    );
+    return {
+      track,
+      projects: termProjects.filter((p) => p.track === track).length,
+      assessments: own.length,
+      scores: suppressSmall(percents.length),
+      averageScore:
+        percents.length >= REPORT_MIN_GROUP
+          ? Math.round(percents.reduce((a, b) => a + b, 0) / percents.length)
+          : null,
+    };
+  }).filter((row) => row.projects || row.assessments);
 }

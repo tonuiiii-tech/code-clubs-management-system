@@ -2,7 +2,11 @@ import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate.js';
 import { authorize } from '../../middleware/authorize.js';
 import { validate } from '../../middleware/validate.js';
-import { alertsQuerySchema, hqDashboardQuerySchema } from '@code-clubs/shared/schemas';
+import {
+  alertsQuerySchema,
+  dismissAlertSchema,
+  hqDashboardQuerySchema,
+} from '@code-clubs/shared/schemas';
 import * as controller from './dashboard.controller.js';
 
 export const dashboardRouter = Router();
@@ -27,4 +31,12 @@ alertsRouter.get(
   authorize('club:read'),
   validate({ query: alertsQuerySchema }),
   controller.alerts,
+);
+// Hides one alert for the person who dismissed it, for 7 days (R4-4).
+alertsRouter.post(
+  '/dismissals',
+  authenticate,
+  authorize('club:read'),
+  validate({ body: dismissAlertSchema }),
+  controller.dismiss,
 );
