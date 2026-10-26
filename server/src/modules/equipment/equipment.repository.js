@@ -19,7 +19,11 @@ function manageScopeQuery(filter) {
   return { _id: null };
 }
 
-export async function listItems(filter, { q, type, condition, region, clubId, location, overdue }, page) {
+export async function listItems(
+  filter,
+  { q, type, condition, region, clubId, location, overdue },
+  page,
+) {
   const overdueIds = overdue
     ? await EquipmentLoan.distinct('itemId', {
         open: true,

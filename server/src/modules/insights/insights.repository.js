@@ -16,11 +16,7 @@ import {
   Session,
 } from '../../db/models.js';
 import { toRecord } from '../../db/records.js';
-import {
-  clubScopeQuery,
-  equipmentScopeQuery,
-  eventScopeQuery,
-} from '../../db/scopeQueries.js';
+import { clubScopeQuery, equipmentScopeQuery, eventScopeQuery } from '../../db/scopeQueries.js';
 
 /**
  * Plain rows in a user's scope for the HQ dashboard, alerts and termly report. The numbers are

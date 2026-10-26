@@ -746,6 +746,7 @@ function createProgrammeData(clubs, today = new Date()) {
     resource(4, 'Algorithms with paper and pencil', 'worksheet', ['unplugged'], {
       language: 'sw',
       description: 'Karatasi ya kazi: andika hatua za kupika chai.',
+      ...demoFileFields(DEMO_RESOURCE_FILES[uid(2804)]),
     }),
     resource(5, 'Term 1 game design slides', 'slides', ['game_design'], { status: 'draft' }),
   ];
@@ -819,6 +820,62 @@ function createProgrammeData(clubs, today = new Date()) {
     learnerProjects,
     assessments,
     assessmentScores,
+  };
+}
+
+/**
+ * A one-page PDF with these lines of text, so demo resources have a real file to open and save
+ * on a device. Plain ASCII only.
+ */
+export function demoPdf(lines) {
+  const text = lines
+    .map(
+      (line, i) =>
+        `BT /F1 ${i ? 12 : 18} Tf 56 ${770 - i * 24} Td (${line.replace(/[()\\]/g, '')}) Tj ET`,
+    )
+    .join('\n');
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    `<< /Length ${text.length} >>\nstream\n${text}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets = objects.map((body, i) => {
+    const at = pdf.length;
+    pdf += `${i + 1} 0 obj\n${body}\nendobj\n`;
+    return at;
+  });
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  pdf += offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('');
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return pdf;
+}
+
+/** Files of demo resources, by resource id: made by the seed (server) and the demo API. */
+export const DEMO_RESOURCE_FILES = {
+  [uid(2804)]: {
+    fileId: uid(2854),
+    fileName: 'algorithms-worksheet.pdf',
+    lines: [
+      'Algorithms with paper and pencil',
+      'Hatua kwa hatua: andika hatua za kupika chai.',
+      '1. Chemsha maji.',
+      '2. Weka majani ya chai.',
+      '3. Ongeza maziwa na sukari.',
+      'Fictional demo worksheet for STEAMLabs Code Clubs.',
+    ],
+  },
+};
+
+function demoFileFields({ fileId, fileName, lines }) {
+  return {
+    fileId,
+    fileName,
+    fileType: 'application/pdf',
+    size: new TextEncoder().encode(demoPdf(lines)).length,
   };
 }
 

@@ -103,6 +103,8 @@ export const ERROR_MESSAGES = Object.freeze({
   resourceFileType: 'Upload a PDF, PowerPoint, Word, OpenDocument, Scratch, ZIP, JPG or PNG file',
   resourceFileTooLarge: 'The file is larger than 20 MB',
   resourceFileNotFound: 'This resource has no file',
+  offlineStorageFull:
+    'Not enough space: saved resources can use up to 300 MB on this device. Remove some first.',
   videoLinkOnly: 'Videos are added as links, not uploaded files',
   // Learner progress
   projectNotFound: 'Project not found',

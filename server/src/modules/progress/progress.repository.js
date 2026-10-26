@@ -79,7 +79,9 @@ export async function listProjects(filter, { clubId, learnerId, track }, page) {
 
 export async function findProject(filter, id) {
   return toRecord(
-    await LearnerProject.findOne({ $and: [{ _id: id }, await clubRecordScopeQuery(filter)] }).lean(),
+    await LearnerProject.findOne({
+      $and: [{ _id: id }, await clubRecordScopeQuery(filter)],
+    }).lean(),
   );
 }
 
@@ -89,7 +91,11 @@ export const insertProject = (project, message) => insertUnique(LearnerProject, 
 
 export async function updateProject(id, changes) {
   return toRecord(
-    await LearnerProject.findByIdAndUpdate(id, { $set: changes }, { returnDocument: 'after' }).lean(),
+    await LearnerProject.findByIdAndUpdate(
+      id,
+      { $set: changes },
+      { returnDocument: 'after' },
+    ).lean(),
   );
 }
 
@@ -210,4 +216,3 @@ export async function attendanceOfLearner(learnerId, from) {
   const present = marks.filter((m) => m.status === 'present' || m.status === 'late').length;
   return { present, total: marks.length };
 }
-

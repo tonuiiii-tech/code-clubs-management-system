@@ -55,12 +55,7 @@ export async function getAssessment(req, res) {
 }
 
 export async function createAssessment(req, res) {
-  const assessment = await service.createAssessment(
-    req.user,
-    req.scope,
-    req.valid.body,
-    meta(req),
-  );
+  const assessment = await service.createAssessment(req.user, req.scope, req.valid.body, meta(req));
   res.status(201).json({ data: assessment });
 }
 

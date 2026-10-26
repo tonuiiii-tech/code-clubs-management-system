@@ -242,9 +242,42 @@ function Panels({ hq, savedAt }) {
             </dl>
           </CardContent>
         </Card>
+        {hq.equipment && <EquipmentPanel equipment={hq.equipment} />}
         <UpcomingEvents events={hq.upcomingEvents} />
       </div>
     </>
+  );
+}
+
+/** Items by condition, and how many are with clubs (US-25). Retired items are left out. */
+function EquipmentPanel({ equipment }) {
+  const { t } = useTranslation();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('hq.equipment')}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="muted">
+          {t('hq.equipmentWhere', {
+            total: equipment.total,
+            lent: equipment.lent,
+            inStore: equipment.inStore,
+          })}
+        </p>
+        <dl className="detail-list">
+          {Object.entries(equipment.byCondition).map(([condition, n]) => (
+            <div key={condition}>
+              <dt>{t(`equipmentConditions.${condition}`)}</dt>
+              <dd>{n}</dd>
+            </div>
+          ))}
+        </dl>
+        <p>
+          <Link to="/equipment">{t('hq.openEquipment')}</Link>
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 

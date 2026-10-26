@@ -254,3 +254,119 @@ describe('shared devices (D3-2)', () => {
     expect(await Dexie.exists(dbName(user.id))).toBe(false);
   });
 });
+
+describe('Sprint 5 on the device', () => {
+  const AMANI = uid(1007);
+  const LAPTOP_1 = uid(2601);
+  const WORKSHEET = uid(2804);
+  const LOOPS_QUIZ = uid(3001);
+  const today = () => new Date().toISOString().slice(0, 10);
+
+  it('pulls the club’s equipment, the resource list, projects and scores', async () => {
+    const db = currentDb();
+    expect((await db.equipmentItems.toArray()).map((i) => i.id).sort()).toEqual(
+      [LAPTOP_1, uid(2602), uid(2603)].sort(),
+    );
+    expect(await db.resources.count()).toBe(4);
+    expect(await db.learnerProjects.count()).toBe(4);
+    const quiz = await local.getAssessment(LOOPS_QUIZ);
+    expect(quiz.data.scored).toBe(5);
+    expect(quiz.data.averageScore).toBe(70);
+  });
+
+  it('records a project, an assessment, scores and a report offline, and sends each once', async () => {
+    net.offline = true;
+    const project = await local.createProject({
+      clubId: NAC_002,
+      learnerIds: [AMANI],
+      title: 'Paper robot',
+      track: 'unplugged',
+      date: today(),
+    });
+    await local.updateProject(project.data.id, { title: 'Paper robot arm' });
+    const quiz = await local.createAssessment({
+      clubId: NAC_002,
+      title: 'Sorting quiz',
+      track: 'unplugged',
+      date: today(),
+      maxScore: 5,
+    });
+    await local.saveScores(quiz.data.id, [{ learnerId: AMANI, score: 4 }]);
+    await expect(
+      local.saveScores(quiz.data.id, [{ learnerId: AMANI, score: 6 }]),
+    ).rejects.toMatchObject({
+      status: 400,
+    });
+    await local.reportEquipment(LAPTOP_1, {
+      condition: 'lost',
+      note: 'Not found after the session',
+    });
+    expect((await local.getEquipment(LAPTOP_1)).data.condition).toBe('lost');
+    expect(getSyncState().pending).toBe(5);
+
+    net.offline = false;
+    await syncNow();
+    expect(getSyncState().pending).toBe(0);
+    const projects = await mockRequest({
+      method: 'GET',
+      path: '/progress/projects',
+      query: { clubId: NAC_002 },
+      token: net.token,
+    });
+    const mine = projects.body.data.filter((p) => p.id === project.data.id);
+    expect(mine.map((p) => p.title)).toEqual(['Paper robot arm']);
+    const saved = await mockRequest({
+      method: 'GET',
+      path: `/progress/assessments/${quiz.data.id}`,
+      token: net.token,
+    });
+    expect(saved.body.data.scores.find((s) => s.learnerId === AMANI).score).toBe(4);
+    const item = await mockRequest({
+      method: 'GET',
+      path: `/equipment/${LAPTOP_1}`,
+      token: net.token,
+    });
+    expect(item.body.data.condition).toBe('lost');
+  });
+
+  it('opens a saved resource with no connection, and forgets it on sign-out', async () => {
+    const resource = (await local.getResource(WORKSHEET)).data;
+    const res = await mockRequest({
+      method: 'GET',
+      path: `/resources/${WORKSHEET}/file`,
+      token: net.token,
+    });
+    await local.keepResourceFile(resource, res.body);
+    expect((await local.savedResourcesSize()).used).toBe(res.body.size);
+    net.offline = true;
+    const file = await local.savedResourceFile(WORKSHEET);
+    expect(file.size).toBe(res.body.size);
+    expect((await local.listResources()).data.find((r) => r.id === WORKSHEET).saved).toBe(true);
+
+    await stopOffline({ wipe: true });
+    expect(await Dexie.exists(dbName(user.id))).toBe(false);
+    await startOffline(user);
+    net.offline = false;
+    await syncNow();
+    expect(await local.savedResourceFile(WORKSHEET)).toBeNull();
+  });
+
+  it('drops a record that left the user’s scope', async () => {
+    const db = currentDb();
+    // An item handed back to the store is no longer the club's.
+    await mockRequest({
+      method: 'POST',
+      path: '/auth/login',
+      body: { email: 'wanjiru.kamau@demo.steamlabs.test', password: DEMO_PASSWORD },
+    }).then((r) =>
+      mockRequest({
+        method: 'POST',
+        path: `/equipment/${LAPTOP_1}/return`,
+        body: { returnedDate: today(), condition: 'working' },
+        token: r.body.data.accessToken,
+      }),
+    );
+    await syncNow();
+    expect(await db.equipmentItems.get(LAPTOP_1)).toBeUndefined();
+  });
+});

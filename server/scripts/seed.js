@@ -7,8 +7,14 @@
  */
 import bcrypt from 'bcrypt';
 import { REGION_CODE_PREFIX } from '@code-clubs/shared/enums';
-import { createSeedData, DEMO_PASSWORD } from '@code-clubs/shared/demo';
+import {
+  createSeedData,
+  DEMO_PASSWORD,
+  DEMO_RESOURCE_FILES,
+  demoPdf,
+} from '@code-clubs/shared/demo';
 import { env } from '../src/config/env.js';
+import { BUCKETS, deleteFile, saveFile } from '../src/db/files.js';
 import { connectDatabase, disconnectDatabase } from '../src/db/index.js';
 import {
   Announcement,
@@ -124,6 +130,14 @@ export async function seed({ password = env.SEED_DEFAULT_PASSWORD || DEMO_PASSWO
   await replaceAll(EquipmentRepair, equipmentRepairs);
   await replaceAll(EquipmentReport, equipmentReports);
   await replaceAll(Resource, resources);
+  for (const { fileId, lines } of Object.values(DEMO_RESOURCE_FILES)) {
+    await deleteFile(BUCKETS.resourceFiles, fileId);
+    await saveFile(BUCKETS.resourceFiles, Buffer.from(demoPdf(lines)), {
+      id: fileId,
+      contentType: 'application/pdf',
+      metadata: { demo: true },
+    });
+  }
   await replaceAll(LearnerProject, learnerProjects);
   await replaceAll(Assessment, assessments);
   await AssessmentScore.deleteMany({ assessmentId: { $in: assessments.map((a) => a.id) } });

@@ -77,9 +77,7 @@ export async function getEquipment(actor, _scope, id) {
   ]);
   const clubs = await repo.clubsByIds([...new Set(loans.map((l) => l.clubId))]);
   const clubBy = new Map(clubs.map((c) => [c.id, c]));
-  const canManage = Boolean(
-    await repo.findManagedItem(filterFor(actor, 'equipment:manage'), id),
-  );
+  const canManage = Boolean(await repo.findManagedItem(filterFor(actor, 'equipment:manage'), id));
   return {
     ...row,
     loans: loans.map((l) => ({ ...l, club: clubSummary(clubBy.get(l.clubId)) })),

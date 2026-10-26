@@ -52,6 +52,7 @@ import {
 import { createSeedData, DEMO_PASSWORD } from '@code-clubs/shared/demo';
 import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 import { sprint4Routes } from './sprint4Routes.js';
+import { sprint5Routes } from './sprint5Routes.js';
 
 const STORAGE_KEY = 'cc-mock-db';
 const INVALID_LOGIN = ERROR_MESSAGES.invalidLogin;
@@ -74,6 +75,7 @@ const notFound = (message = ERROR_MESSAGES.notFound) =>
   new MockHttpError(404, 'NOT_FOUND', message);
 const conflict = (message, code = 'CONFLICT', details) =>
   new MockHttpError(409, code, message, details);
+const tooLarge = (message) => new MockHttpError(413, 'TOO_LARGE', message);
 
 // ---------------------------------------------------------------------------
 // Store: kept in localStorage so demo changes survive a page reload.
@@ -85,8 +87,8 @@ function load() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) db = JSON.parse(saved);
-    // Demo data saved before Sprint 4 has no terms; start again from the seed.
-    if (db && !db.terms) db = null;
+    // Demo data saved before Sprint 4 or 5 lacks their records; start again from the seed.
+    if (db && (!db.terms || !db.equipmentItems)) db = null;
   } catch {
     db = null;
   }
@@ -950,6 +952,7 @@ async function applySyncOperation(actor, op, aliases) {
       sprint4.markRead(actor, need(), op.recordedAt);
       return {};
     default:
+      if (sprint5.applyOperation(actor, op, need)) return {};
       throw badRequest(ERROR_MESSAGES.invalidFields);
   }
 }
@@ -1001,6 +1004,8 @@ function syncPull(actor) {
   const learners = db.learners.filter((l) => clubRecordInFilter(l, filter));
   const sessions = db.sessions.filter((s) => clubRecordInFilter(s, filter) && s.date >= from);
   const sessionIds = new Set(sessions.map((s) => s.id));
+  const sprint4Changes = sprint4.pullChanges(actor, filter, from);
+  const programme = sprint5.pullChanges(actor, filter);
   return [
     200,
     {
@@ -1024,8 +1029,10 @@ function syncPull(actor) {
             })),
           sessions,
           attendance: db.attendance.filter((a) => sessionIds.has(a.sessionId)),
-          ...sprint4.pullChanges(actor, filter, from),
+          ...sprint4Changes,
+          ...programme.changes,
         },
+        inScope: { events: sprint4Changes.events.map((e) => e.id), ...programme.inScope },
         deleted: { attendance: [] },
         cursor: 'demo',
         more: false,
@@ -1064,7 +1071,25 @@ function learnerAndSessionCounts(filter) {
   };
 }
 
+const sprint5 = sprint5Routes({
+  getDb: () => db,
+  authorize,
+  scopeFilter,
+  clubInFilter,
+  clubRecordInFilter,
+  currentAssignments,
+  validate,
+  paginate,
+  readBytes,
+  files,
+  errors: { badRequest, forbidden, notFound, conflict, tooLarge },
+  matches,
+  today,
+  now,
+});
+
 const sprint4 = sprint4Routes({
+  programme: sprint5.insights,
   getDb: () => db,
   authorize,
   scopeFilter,
@@ -1386,6 +1411,7 @@ const routes = [
   ...learnerRoutes(),
   ...sessionRoutes(),
   ...sprint4.routes,
+  ...sprint5.routes,
   ['POST', '/sync/push', ({ actor, body }) => syncPush(actor, body)],
   ['GET', '/sync/pull', ({ actor }) => syncPull(actor)],
   [

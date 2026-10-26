@@ -41,6 +41,7 @@ import { listLearners } from '../../services/learnersService.js';
 import { listSessions } from '../../services/sessionsService.js';
 import { ConsentBadges } from '../../components/ConsentBadges.jsx';
 import { SessionTable } from '../Sessions/SessionsPage.jsx';
+import { ClubProgressCard } from '../Progress/ProgressCards.jsx';
 
 export function ClubDetailPage() {
   const { id } = useParams();
@@ -68,6 +69,7 @@ export function ClubDetailPage() {
             <ClubChampions club={data} />
             {can('learner:read') && <ClubLearners club={data} />}
             {can('session:read') && <ClubSessions club={data} />}
+            {can('progress:read') && <ClubProgressCard club={data} />}
           </div>
         )}
       </DataState>

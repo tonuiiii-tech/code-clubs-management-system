@@ -46,9 +46,7 @@ async function checkMembers(clubId, learnerIds, keep = []) {
   const learners = await repo.learnersByIds(learnerIds);
   const ok =
     learners.length === learnerIds.length &&
-    learners.every(
-      (l) => l.clubId === clubId && (l.status === 'active' || keep.includes(l.id)),
-    );
+    learners.every((l) => l.clubId === clubId && (l.status === 'active' || keep.includes(l.id)));
   if (!ok) throw badRequest(ERROR_MESSAGES.projectLearnersOneClub);
   return learners;
 }

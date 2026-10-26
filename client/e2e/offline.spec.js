@@ -36,6 +36,8 @@ test('a champion works offline and the changes sync when the connection is back'
 
   await signInAsChampion(page);
   await expect(status).toHaveText('All changes synced', { timeout: 15_000 });
+  // The numbers are saved on the device once they have loaded (slow on a remote database).
+  await expect(page.getByText('Loading…')).toHaveCount(0, { timeout: 30_000 });
   // The app itself is cached by the service worker, so it can open with no connection.
   await page.evaluate(() => navigator.serviceWorker.ready.then(() => true));
 

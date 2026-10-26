@@ -18,8 +18,11 @@ const bucket = (name) =>
   new mongoose.mongo.GridFSBucket(mongoose.connection.db, { bucketName: name });
 
 /** Saves a file and returns its id (a UUID string, like every other id, D1-21). */
-export async function saveFile(bucketName, buffer, { contentType, metadata = {} }) {
-  const id = randomUUID();
+export async function saveFile(
+  bucketName,
+  buffer,
+  { contentType, metadata = {}, id = randomUUID() },
+) {
   await new Promise((resolve, reject) => {
     const upload = bucket(bucketName).openUploadStreamWithId(id, id, {
       metadata: { contentType, ...metadata },

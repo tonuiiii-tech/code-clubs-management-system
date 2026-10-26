@@ -3,7 +3,14 @@
  * Same rules, numbers and errors as server/src/modules (R1-19): the numbers come from the same
  * shared/src/insights.js, so demo and server agree.
  */
-import { EVENT_MAX_PHOTOS, PHOTO_TYPES, ROLES, UPLOAD_TYPES } from '@code-clubs/shared/enums';
+import {
+  ALERT_DISMISS_DAYS,
+  ALERT_RULES,
+  EVENT_MAX_PHOTOS,
+  PHOTO_TYPES,
+  ROLES,
+  UPLOAD_TYPES,
+} from '@code-clubs/shared/enums';
 import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 import { buildHqDashboard, buildTermReport, computeAlerts } from '@code-clubs/shared/insights';
 import { scopeFor } from '@code-clubs/shared/permissions';
@@ -13,6 +20,7 @@ import {
   createEventProjectSchema,
   createEventSchema,
   createTermSchema,
+  dismissAlertSchema,
   eventClubsSchema,
   eventConsentSchema,
   eventPhotoQuerySchema,
@@ -38,6 +46,7 @@ const daysAgo = (n) => new Date(Date.now() - n * 86_400_000).toISOString().slice
 /** @param {object} ctx helpers from mockApi.js, which owns the store */
 export function sprint4Routes(ctx) {
   const {
+    programme,
     getDb,
     authorize,
     scopeFilter,
@@ -134,7 +143,13 @@ export function sprint4Routes(ctx) {
     const participants = getDb().eventParticipants.filter(
       (p) => eventIds.has(p.eventId) && data.clubIds.includes(p.clubId),
     );
+    const range = { from: term.startDate, to: term.endDate };
+    const assessments = programme.assessmentRows(data.clubIds, range);
     return buildTermReport({
+      equipmentItems: programme.equipmentRows(filter, { region, clubId }),
+      projects: programme.projectRows(data.clubIds, range),
+      assessments,
+      assessmentScores: programme.assessmentScoreRows(assessments.map((a) => a.id)),
       term,
       scope: {
         region: region ?? null,
@@ -384,6 +399,37 @@ export function sprint4Routes(ctx) {
     return { announcementId: id, read: true };
   }
 
+  /** Clubs that need attention, for the clubs the user can read; same as insights.service. */
+  function alertsFor(actor, { region, clubId }) {
+    const filter = scopeFilter(actor, authorize(actor, 'club:read'));
+    const db = getDb();
+    const day = today();
+    const data = clubData(filter, { region, clubId, from: daysAgo(ALERT_LOOKBACK_DAYS), to: day });
+    const events = eventsInFilter(filter).filter((e) => e.endDate >= day);
+    const eventIds = new Set(events.map((e) => e.id));
+    return computeAlerts({
+      ...data,
+      consentGivenLearnerIds: db.consents
+        .filter((c) => c.type === 'participation' && c.status === 'given')
+        .map((c) => c.learnerId),
+      events,
+      participants: db.eventParticipants.filter(
+        (p) => eventIds.has(p.eventId) && data.clubIds.includes(p.clubId),
+      ),
+      eventConsents: db.eventConsents.filter((c) => eventIds.has(c.eventId)),
+      equipmentLoans: programme.openLoanRows(data.clubIds),
+      equipmentReports: programme.equipmentReportRows(
+        data.clubIds,
+        daysAgo(ALERT_RULES.equipmentReportedDays),
+      ),
+      dismissedKeys: (db.alertDismissals ?? [])
+        .filter((d) => d.userId === actor.id && d.until > now())
+        .map((d) => d.key),
+      terms: db.terms,
+      today: day,
+    });
+  }
+
   function recordMessage(message) {
     const db = getDb();
     db.outboundMessages ??= [];
@@ -461,39 +507,36 @@ export function sprint4Routes(ctx) {
           data.clubIds,
           { region },
         );
-        return [200, { data: buildHqDashboard({ term, ...data, events, today: day }) }];
+        const equipmentItems = programme.equipmentRows(filter, { region });
+        return [
+          200,
+          { data: buildHqDashboard({ term, ...data, events, equipmentItems, today: day }) },
+        ];
       },
     ],
     [
       'GET',
       '/alerts',
-      ({ actor, query }) => {
-        const filter = scopeFilter(actor, authorize(actor, 'club:read'));
-        const { region, clubId } = validate(alertsQuerySchema, query, 'query');
+      ({ actor, query }) => [
+        200,
+        { data: alertsFor(actor, validate(alertsQuerySchema, query, 'query')) },
+      ],
+    ],
+    [
+      'POST',
+      '/alerts/dismissals',
+      ({ actor, body }) => {
+        const { key } = validate(dismissAlertSchema, body, 'body');
+        if (!alertsFor(actor, {}).some((a) => a.key === key)) {
+          throw notFound(ERROR_MESSAGES.alertNotFound);
+        }
+        const until = new Date(Date.now() + ALERT_DISMISS_DAYS * 86_400_000).toISOString();
         const db = getDb();
-        const day = today();
-        const data = clubData(filter, {
-          region,
-          clubId,
-          from: daysAgo(ALERT_LOOKBACK_DAYS),
-          to: day,
-        });
-        const events = eventsInFilter(filter).filter((e) => e.endDate >= day);
-        const eventIds = new Set(events.map((e) => e.id));
-        const alerts = computeAlerts({
-          ...data,
-          consentGivenLearnerIds: db.consents
-            .filter((c) => c.type === 'participation' && c.status === 'given')
-            .map((c) => c.learnerId),
-          events,
-          participants: db.eventParticipants.filter(
-            (p) => eventIds.has(p.eventId) && data.clubIds.includes(p.clubId),
-          ),
-          eventConsents: db.eventConsents.filter((c) => eventIds.has(c.eventId)),
-          terms: db.terms,
-          today: day,
-        });
-        return [200, { data: alerts }];
+        db.alertDismissals = (db.alertDismissals ?? []).filter(
+          (d) => !(d.userId === actor.id && d.key === key),
+        );
+        db.alertDismissals.push({ userId: actor.id, key, until });
+        return [201, { data: { key, until } }];
       },
     ],
 

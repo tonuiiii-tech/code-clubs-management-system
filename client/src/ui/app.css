@@ -612,3 +612,25 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
   gap: 1rem;
 }
+
+/* Sprint 5 */
+.cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.score-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.score-input input {
+  width: 6rem;
+}
+
+.alert-dismiss {
+  text-decoration: underline;
+  color: var(--text-muted, inherit);
+}
