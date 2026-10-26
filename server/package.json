@@ -8,7 +8,8 @@
     "dev": "node --watch-path=src --watch-path=../shared/src --env-file-if-exists=.env src/server.js",
     "start": "node --env-file-if-exists=.env src/server.js",
     "test": "node --experimental-vm-modules ../node_modules/jest/bin/jest.js",
-    "seed": "node --env-file-if-exists=.env scripts/seed.js"
+    "seed": "node --env-file-if-exists=.env scripts/seed.js",
+    "load-test": "node --env-file-if-exists=.env scripts/load-test.js"
   },
   "dependencies": {
     "@code-clubs/shared": "0.1.0",

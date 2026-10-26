@@ -2,7 +2,7 @@
 
 **Project:** STEAMLabs Africa Code Clubs Management System  
 **Sprint duration:** 2 weeks (Tue 6 Jan – Mon 19 Jan 2027, after the school holidays)  
-**Status:** Approved by Enock on 2026-10-26 with the recommended answers to section 15; in progress  
+**Status:** Approved by Enock on 2026-10-26 with the recommended answers to section 15; built and in review (see `sprint-5-summary.md`)  
 **Last updated:** 2026-10-26  
 **Sprint goal:** HQ knows where every laptop and robotics kit is and what state it is in; champions have lesson plans on their device even without internet; and each learner's projects and scores are recorded, so HQ can show what learners actually learn.
 

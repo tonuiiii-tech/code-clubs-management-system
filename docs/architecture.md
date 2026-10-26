@@ -88,6 +88,9 @@ Each business module has routes, controllers, services and a repository.
 - `audit`: recording and reviewing sensitive administrative events.
 - `terms`, `insights`, `dashboard`, `reports`: school terms, the HQ dashboard, alerts and the termly report and PDF (Sprint 4).
 - `events`, `announcements`, `notifications`: events with invited clubs, participants, event consent, projects and photos; announcements; the email/SMS/WhatsApp provider stubs and their outbox (Sprint 4).
+- `equipment`: the equipment register, loans to clubs, returns, repairs and champions' reports (Sprint 5).
+- `resources`: the resource library with files in GridFS or links (Sprint 5).
+- `progress`: learner projects, assessments and scores, and the learner and club progress pages (Sprint 5).
 - `sync`: push of offline changes through the other modules' services, pull of changes in scope, and the conflict log (Sprint 3, `docs/sync-protocol.md`).
 
 Routes define HTTP endpoints. Controllers translate requests and responses. Services enforce business rules and access scope. Repositories are the only code that talks to the database.
@@ -185,9 +188,18 @@ Built in Sprint 4; see `docs/sprints/sprint-4.md` and D4-1 to D4-8.
 - `outboundMessages` (every email, SMS and WhatsApp the stubs would send), `settings` (report recipients), `reportRuns` (the once-per-term lock, D4-5).
 - Dashboard, alert and report numbers are computed by `shared/src/insights.js` on request, never stored (D4-2).
 
-### Later sprints (designed now, built later)
+### Sprint 5: equipment, resources and learner progress
 
-Equipment, Resources, Progress and, later, Certificates. See `docs/sprints/sprint-1.md` for the outline.
+Built in Sprint 5; see `docs/sprints/sprint-5.md` and D5-1 to D5-8.
+
+- `equipmentItems` (asset tag, type, serial number, condition, region store, the club holding it), `equipmentLoans` (one open loan per item, D5-1), `equipmentRepairs`, `equipmentReports`.
+- `resources` (title, type, tracks, ages, language, link and/or file, draft or published); files in the GridFS bucket `resourceFiles` (D5-2).
+- `learnerProjects` (one or more learners of one club, link and/or a file in `projectFiles`), `assessments` and `assessmentScores` (one per learner per assessment, D5-5).
+- `alertDismissals`: alerts a person hid, with the date they come back (D5-8).
+
+### Later sprints
+
+Certificates (Q24). See `docs/sprints/sprint-1.md` for the outline.
 
 ## 8. RBAC and resource scope
 
@@ -232,6 +244,7 @@ Built in Sprint 3; the full protocol is in `docs/sync-protocol.md` and the decis
 - **Conflicts:** field-level merge; the later change wins and the replaced value is logged for coordinators and HQ (D3-5). Same-day sessions are joined (D3-6); attendance is merged per learner (D3-9).
 - **Time:** the 7-day edit window uses the time on the device for changes up to 14 days old (D3-7).
 - **Sensitive records:** guardian contacts, consent forms and photos stay on the device only until sent and are never pulled (D3-8).
+- **Sprint 5:** the club's equipment, the resource list, projects, assessments and scores are pulled too; champions report damage and record projects and scores offline, and save resource files on the device (D5-3, D5-5). Records that leave the user's scope are deleted from the device after the next pull (D5-8).
 - **Visible state:** a status pill on every screen ("Offline · 3 changes waiting to sync") and a Sync page with refused changes (try again, confirm, or discard) and the conflict log.
 
 ## 11. Security and privacy
