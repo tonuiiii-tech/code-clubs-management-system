@@ -25,7 +25,7 @@ const AFTER_CHANGE = 1_500;
 let db = null;
 let user = null;
 let running = null;
-let again = false;
+let followUp = null;
 let timers = { change: null, retry: null, interval: null };
 let failures = 0;
 
@@ -99,7 +99,7 @@ export async function stopOffline({ wipe = false } = {}) {
   window.removeEventListener('online', onOnline);
   window.removeEventListener('offline', onOffline);
   document.removeEventListener('visibilitychange', onVisible);
-  await running?.catch(() => {});
+  await (followUp ?? running)?.catch(() => {});
   db?.close();
   db = null;
   user = null;
@@ -126,12 +126,18 @@ export function requestSync({ now = false } = {}) {
   timers.change = setTimeout(() => syncNow().catch(() => {}), now ? 0 : AFTER_CHANGE);
 }
 
-/** Runs one sync. Resolves when it is done; a second call during a sync runs once more after. */
+/**
+ * Runs one sync. Resolves when it is done; a call during a sync runs once more after it and
+ * resolves when that run is done, so the caller sees changes made before the call.
+ */
 export function syncNow() {
   if (!db) return Promise.resolve();
   if (running) {
-    again = true;
-    return running;
+    followUp ??= running.then(() => {
+      followUp = null;
+      return syncNow();
+    });
+    return followUp;
   }
   const run = async () => {
     setState({ syncing: true });
@@ -151,10 +157,6 @@ export function syncNow() {
   };
   running = run().finally(() => {
     running = null;
-    if (again) {
-      again = false;
-      requestSync({ now: true });
-    }
   });
   return running;
 }

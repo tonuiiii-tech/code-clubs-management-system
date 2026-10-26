@@ -353,6 +353,8 @@ describe('Sprint 5 on the device', () => {
 
   it('drops a record that left the user’s scope', async () => {
     const db = currentDb();
+    // A sync already running when the change is made (as on a slow machine) must not hide it.
+    const inFlight = syncNow();
     // An item handed back to the store is no longer the club's.
     await mockRequest({
       method: 'POST',
@@ -367,6 +369,7 @@ describe('Sprint 5 on the device', () => {
       }),
     );
     await syncNow();
+    await inFlight;
     expect(await db.equipmentItems.get(LAPTOP_1)).toBeUndefined();
   });
 });
