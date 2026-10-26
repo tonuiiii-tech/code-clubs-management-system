@@ -543,3 +543,117 @@ export async function saveDashboard(summary) {
 export async function cachedDashboard() {
   return (await currentDb()?.meta.get('dashboard'))?.value ?? null;
 }
+
+/** Any other numbers seen online (the HQ dashboard, alerts), kept with their date. */
+export async function saveValue(key, value) {
+  const db = currentDb();
+  if (db)
+    await db.meta.put({ key: `cache:${key}`, value: { value, at: new Date().toISOString() } });
+}
+
+export async function cachedValue(key) {
+  return (await currentDb()?.meta.get(`cache:${key}`))?.value ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Events and announcements (Sprint 4): read on the device when offline; changing an event needs a
+// connection, marking an announcement read does not (D4-8).
+
+export async function listEvents(query = {}) {
+  const rows = (await currentDb().events.toArray())
+    .filter(
+      (e) =>
+        (!query.status || e.status === query.status) &&
+        (!query.from || e.endDate >= query.from) &&
+        (!query.region || e.region === query.region),
+    )
+    .sort((a, b) =>
+      query.from ? a.startDate.localeCompare(b.startDate) : b.startDate.localeCompare(a.startDate),
+    );
+  return paginate(rows, query);
+}
+
+export async function getEvent(id) {
+  const db = currentDb();
+  const event = await db.events.get(id);
+  if (!event) throw notFound(ERROR_MESSAGES.eventNotFound);
+  const clubs = (await db.clubs.bulkGet(event.clubIds)).filter(Boolean);
+  const mine = (await db.eventParticipants.where('eventId').equals(id).toArray()).filter(
+    (p) => p.status !== 'withdrawn',
+  );
+  const consents = await db.eventConsents.where('eventId').equals(id).toArray();
+  const given = new Set(consents.filter((c) => c.status === 'given').map((c) => c.learnerId));
+  return {
+    data: {
+      ...event,
+      clubs: clubs.map(({ id: clubId, code, name, region }) => ({
+        id: clubId,
+        code,
+        name,
+        region,
+      })),
+      registered: null,
+      registrationOpen: false,
+      myParticipants: mine.length,
+      consentMissing: mine.filter((p) => !given.has(p.learnerId)).length,
+      offline: true,
+    },
+  };
+}
+
+export async function listEventParticipants(id) {
+  const db = currentDb();
+  const rows = await db.eventParticipants.where('eventId').equals(id).toArray();
+  const consents = await db.eventConsents.where('eventId').equals(id).toArray();
+  const learners = await db.learners.bulkGet(rows.map((p) => p.learnerId));
+  const clubs = await db.clubs.bulkGet(rows.map((p) => p.clubId));
+  return {
+    data: rows
+      .map((p, i) => {
+        const consent = consents.find((c) => c.learnerId === p.learnerId);
+        return {
+          learnerId: p.learnerId,
+          name: learners[i] ? nameOf(learners[i]) : '',
+          learnerNumber: learners[i]?.learnerNumber ?? null,
+          clubId: p.clubId,
+          clubCode: clubs[i]?.code ?? null,
+          status: p.status,
+          consent: consent?.status ?? 'pending',
+          consentSignedOn: consent?.signedOn ?? null,
+          hasConsentFile: Boolean(consent?.hasFile),
+        };
+      })
+      .sort(
+        (a, b) =>
+          (a.clubCode ?? '').localeCompare(b.clubCode ?? '') || a.name.localeCompare(b.name),
+      ),
+  };
+}
+
+async function readIds() {
+  return new Set((await currentDb().announcementReads.toArray()).map((r) => r.announcementId));
+}
+
+export async function listAnnouncements(query = {}) {
+  if (query.box === 'sent') throw new ApiError(0, 'NETWORK_ERROR', ERROR_MESSAGES.needsConnection);
+  const read = await readIds();
+  const rows = (await currentDb().announcements.toArray())
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .map((a) => ({ ...a, read: read.has(a.id) }));
+  return { ...paginate(rows, query), unread: rows.filter((a) => !a.read).length };
+}
+
+export async function getAnnouncement(id) {
+  const announcement = await currentDb().announcements.get(id);
+  if (!announcement) throw notFound(ERROR_MESSAGES.announcementNotFound);
+  return { data: { ...announcement, read: (await readIds()).has(id) } };
+}
+
+export async function markAnnouncementRead(id) {
+  const announcement = await currentDb().announcements.get(id);
+  if (!announcement) throw notFound(ERROR_MESSAGES.announcementNotFound);
+  if (!(await readIds()).has(id)) {
+    await record({ type: 'announcement.read', recordId: id, data: {}, label: announcement.title });
+  }
+  return { data: { announcementId: id, read: true } };
+}

@@ -396,6 +396,78 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Alternatives considered:** Pointing the Vercel build at a hosted API (no API is hosted yet); running Express as Vercel functions (file uploads, rate limits and the sync module expect one long-running server).
 - **Consequences:** The Vercel site holds no real data and needs no secrets. Hosting the API (for example Render or Railway with Atlas) is a later decision; then a second Vercel build with `VITE_API_URL` can serve the real app.
 
+## D4-1: Charts are small SVG components on kit colours, with a table alongside
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** The HQ dashboard needs an attendance trend and sessions per region. Chart libraries add 50–150 KB to an app used on slow connections, and their default colours and gradients do not match the STEAMLabs look.
+- **Decision:** Two small components in `client/src/components/Charts.jsx` (column chart and stacked bars) drawn with SVG in flat kit colours. Each chart has a "Show as a table" section with the same numbers, for screen readers and printing.
+- **Alternatives considered:** Recharts or Chart.js.
+- **Consequences:** No new dependency. New chart types are written by hand; if many are needed, a library can be added later.
+
+## D4-2: Alerts are computed when asked for, not stored
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** HQ wants to see which clubs need help: no recent session, low attendance, missing consent, near capacity, missing event consent.
+- **Decision:** `computeAlerts` in `shared/src/insights.js` checks the rules (thresholds as in the plan, agreed by Enock) each time `GET /alerts` is called, inside the user's scope. The demo mock uses the same function, so the numbers match.
+- **Alternatives considered:** A nightly job that stores alerts.
+- **Consequences:** Alerts are never out of date. Dismissing an alert for 7 days (R4-4) needs stored state and is left for later; alerts are grouped per club on the dashboard to keep the list short.
+
+## D4-3: Reports hold counts only
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** Termly reports go to funders and partners outside STEAMLabs. Learners are children (Kenya DPA 2019).
+- **Decision:** The termly report (screen and PDF) holds counts only: no names, contacts or photos. Any learner count from 1 to 4 shows as "<5" (`suppressSmall`), in the age and gender table and in the region and track tables.
+- **Alternatives considered:** Per-learner tables for HQ only.
+- **Consequences:** Tested on MongoDB: the PDF and JSON contain no learner names. Small clubs show "<5" rather than a number.
+
+## D4-4: PDFs are made on the server with pdfkit
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** The termly report must be emailed automatically, with no person in the loop.
+- **Decision:** `GET /reports/termly.pdf` builds the PDF with `pdfkit` (plain JavaScript, no browser). The demo build, which has no server, prints the report page with print styles instead.
+- **Alternatives considered:** Puppeteer (needs Chromium on the server); making the PDF in the browser (cannot run for the scheduled email).
+- **Consequences:** The PDF layout is code, not HTML. Fonts are pdfkit's built-in Helvetica.
+
+## D4-5: Email, SMS and WhatsApp go through provider stubs
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** No email, SMS or WhatsApp provider or budget is chosen yet (Q51).
+- **Decision:** `server/src/modules/notifications/providers.js` defines email and message providers. The stubs store every message in `outboundMessages` and send nothing; HQ can see them under Settings. A daily job sends the termly report the day after a term ends; a `reportRuns` record with id `termly:<termId>` is the lock that stops two servers sending it twice.
+- **Alternatives considered:** Choosing a provider now (Africa's Talking, Twilio, SendGrid).
+- **Consequences:** Real providers plug in with `setProviders` without changing callers. Tested: the report is sent once per term.
+
+## D4-6: Event consent is separate from club consent
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** Events often take learners away from school to a venue, which club consent does not cover.
+- **Decision:** One `eventConsents` record per learner per event, with status, signed date and an optional signed form, following the Sprint 2 consent rules. Learners registered without it are flagged on the event and raise an alert in the 7 days before it. Event photos follow the Sprint 2 photo-consent check (D2-7), up to 10 per event. Champions register learners; there are no parent accounts.
+- **Alternatives considered:** Reusing club consent; a parent sign-up page.
+- **Consequences:** Guardian data stays with HQ. Results (award, rank) are stored on the event's projects rather than in a separate `eventResults` collection, because every result in the plan belongs to a project.
+
+## D4-7: Announcements go to app users only
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** HQ reaches champions through many WhatsApp groups today.
+- **Decision:** Announcements go to app users chosen by role, region and club, shown in the app with a bell count; SMS and WhatsApp copies go through the stub (D4-5) to the phone on the user's account. Never to guardians. A preview shows how many people it will reach before sending (R4-3).
+- **Alternatives considered:** Sending to guardians.
+- **Consequences:** Senders see how many have read each announcement. The recipient list is never sent to devices.
+
+## D4-8: Events and announcements are read online first, with a saved copy offline
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** Enock chose read-only events offline. Champions should still see events and announcements without internet.
+- **Decision:** Sync pulls events, participants, event consents, announcements and read marks to the device. Event and announcement screens ask the server first and fall back to the device copy when offline (`onlineFirst`); "mark as read" goes through the Sprint 3 outbox. Creating or changing events, and registering learners, need a connection. The HQ dashboard and alerts show the last saved numbers with their date when offline.
+- **Alternatives considered:** Reading only from the device (as clubs and learners do); full offline event registration (about 2 more days).
+- **Consequences:** Known gap: if a club is removed from an event's invitations, that event stays on the club's devices until the local database is reset. To be fixed with a scope reset in a later sprint.
+
 ## Decision template
 
 Copy this template for future entries:

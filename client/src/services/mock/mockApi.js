@@ -51,6 +51,7 @@ import {
 } from '@code-clubs/shared/schemas';
 import { createSeedData, DEMO_PASSWORD } from '@code-clubs/shared/demo';
 import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
+import { sprint4Routes } from './sprint4Routes.js';
 
 const STORAGE_KEY = 'cc-mock-db';
 const INVALID_LOGIN = ERROR_MESSAGES.invalidLogin;
@@ -84,8 +85,8 @@ function load() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) db = JSON.parse(saved);
-    // Demo data saved before Sprint 2 has no learners; start again from the seed.
-    if (db && !db.learners) db = null;
+    // Demo data saved before Sprint 4 has no terms; start again from the seed.
+    if (db && !db.terms) db = null;
   } catch {
     db = null;
   }
@@ -945,6 +946,9 @@ async function applySyncOperation(actor, op, aliases) {
       }
       return {};
     }
+    case 'announcement.read':
+      sprint4.markRead(actor, need(), op.recordedAt);
+      return {};
     default:
       throw badRequest(ERROR_MESSAGES.invalidFields);
   }
@@ -1020,6 +1024,7 @@ function syncPull(actor) {
             })),
           sessions,
           attendance: db.attendance.filter((a) => sessionIds.has(a.sessionId)),
+          ...sprint4.pullChanges(actor, filter, from),
         },
         deleted: { attendance: [] },
         cursor: 'demo',
@@ -1058,6 +1063,22 @@ function learnerAndSessionCounts(filter) {
     learnersMissingConsent: learners.length - withConsent,
   };
 }
+
+const sprint4 = sprint4Routes({
+  getDb: () => db,
+  authorize,
+  scopeFilter,
+  clubInFilter,
+  clubRecordInFilter,
+  currentAssignments,
+  validate,
+  paginate,
+  checkFile,
+  files,
+  errors: { badRequest, forbidden, notFound, conflict },
+  today,
+  now,
+});
 
 const routes = [
   ['POST', '/auth/login', ({ body }) => login(body), { public: true }],
@@ -1364,6 +1385,7 @@ const routes = [
 
   ...learnerRoutes(),
   ...sessionRoutes(),
+  ...sprint4.routes,
   ['POST', '/sync/push', ({ actor, body }) => syncPush(actor, body)],
   ['GET', '/sync/pull', ({ actor }) => syncPull(actor)],
   [

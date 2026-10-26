@@ -86,6 +86,8 @@ Each business module has routes, controllers, services and a repository.
 - `learners`: learner registration, status (active or left), guardian contacts (HQ-only reading), consent and signed consent forms (Sprint 2).
 - `sessions`: session reports, attendance, session photos and the 7-day edit window (Sprint 2).
 - `audit`: recording and reviewing sensitive administrative events.
+- `terms`, `insights`, `dashboard`, `reports`: school terms, the HQ dashboard, alerts and the termly report and PDF (Sprint 4).
+- `events`, `announcements`, `notifications`: events with invited clubs, participants, event consent, projects and photos; announcements; the email/SMS/WhatsApp provider stubs and their outbox (Sprint 4).
 - `sync`: push of offline changes through the other modules' services, pull of changes in scope, and the conflict log (Sprint 3, `docs/sync-protocol.md`).
 
 Routes define HTTP endpoints. Controllers translate requests and responses. Services enforce business rules and access scope. Repositories are the only code that talks to the database.
@@ -173,9 +175,19 @@ Built in Sprint 2; the full field list and reasons are in `docs/sprints/sprint-2
 - `attendance`: one per learner per session (D2-4).
 - GridFS buckets `consentFiles` and `sessionPhotos` (D2-3, D2-7).
 
+### Sprint 4: terms, events, announcements and reports
+
+Built in Sprint 4; see `docs/sprints/sprint-4.md` and D4-1 to D4-8.
+
+- `terms`: year, number (1–3), start and end dates.
+- `events`, `eventParticipants`, `eventConsents` (D4-6), `eventProjects` (with award and rank); event photos in GridFS (max 10).
+- `announcements` and `announcementReads` (D4-7).
+- `outboundMessages` (every email, SMS and WhatsApp the stubs would send), `settings` (report recipients), `reportRuns` (the once-per-term lock, D4-5).
+- Dashboard, alert and report numbers are computed by `shared/src/insights.js` on request, never stored (D4-2).
+
 ### Later sprints (designed now, built later)
 
-Events, Announcements, Equipment, Resources, Progress and, later, Certificates. See `docs/sprints/sprint-1.md` for the outline.
+Equipment, Resources, Progress and, later, Certificates. See `docs/sprints/sprint-1.md` for the outline.
 
 ## 8. RBAC and resource scope
 

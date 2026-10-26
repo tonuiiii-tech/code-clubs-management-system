@@ -8,6 +8,8 @@ import mongoose from 'mongoose';
 export const BUCKETS = Object.freeze({
   consentFiles: 'consentFiles',
   sessionPhotos: 'sessionPhotos',
+  eventPhotos: 'eventPhotos',
+  eventConsentFiles: 'eventConsentFiles',
 });
 
 const bucket = (name) =>

@@ -2,7 +2,7 @@
 
 A management system for STEAMLabs Africa's code clubs in Kenya: schools, clubs, club champions, learners, consent, session reports and attendance, and later events and reports. It is one installable web app (PWA) for laptops, tablets and phones, in English and Kiswahili. Club Champions and Coordinators can keep working with no internet; changes sync when the device is back online.
 
-**Status:** Sprint 3 (working offline and sync) built and in review. Sprints 1 and 2 are merged. Data is stored in MongoDB (decision D1-8). Demo mode lets you click through the app without a database. Use fictional learners only until STEAMLabs confirms its data protection registration (R2-1).
+**Status:** Sprint 4 (HQ dashboard, reports, events and announcements) built and in review. Sprints 1 to 3 are merged. Data is stored in MongoDB (decision D1-8). Demo mode lets you click through the app without a database. Use fictional learners only until STEAMLabs confirms its data protection registration (R2-1).
 
 ## Documentation
 
@@ -14,6 +14,7 @@ A management system for STEAMLabs Africa's code clubs in Kenya: schools, clubs, 
 - [Sprint 1 data layer](docs/sprints/sprint-1-data-layer.md): MongoDB collections, indexes and scope queries
 - [Sprint 2 plan](docs/sprints/sprint-2.md) and [summary](docs/sprints/sprint-2-summary.md): learners, consent, sessions and attendance
 - [Sprint 3 plan](docs/sprints/sprint-3.md) and [summary](docs/sprints/sprint-3-summary.md): working offline and sync
+- [Sprint 4 plan](docs/sprints/sprint-4.md) and [summary](docs/sprints/sprint-4-summary.md): HQ dashboard, alerts, termly reports, events and announcements
 - [Sync protocol](docs/sync-protocol.md): how devices and the server exchange changes
 
 ## Project layout

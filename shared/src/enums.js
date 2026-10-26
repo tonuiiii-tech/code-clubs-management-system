@@ -134,9 +134,39 @@ export const SYNC_OPERATION_TYPES = [
   'session.create',
   'session.update',
   'session.attendance',
+  // Sprint 4: marking an announcement as read.
+  'announcement.read',
 ];
 export const SYNC_PUSH_MAX_OPERATIONS = 50;
 /** Devices hold sessions and attendance from this many days back (and future sessions). */
 export const SYNC_SESSION_DAYS = 120;
 /** Local data is deleted after this many days without a successful sync (D3-2). */
 export const OFFLINE_MAX_DAYS = 14;
+
+// Sprint 4: HQ dashboard, reports, events and announcements (docs/sprints/sprint-4.md).
+/** Kenyan school terms (questionnaire Q9); HQ sets the dates each year. */
+export const TERM_NUMBERS = [1, 2, 3];
+export const EVENT_TYPES = ['hackathon', 'showcase', 'competition', 'camp'];
+export const EVENT_STATUSES = ['planned', 'open', 'closed', 'held', 'cancelled'];
+export const EVENT_PARTICIPANT_STATUSES = ['registered', 'attended', 'absent', 'withdrawn'];
+export const EVENT_MAX_PHOTOS = 10;
+/** Alert rules (section 4.2 of the plan, agreed with Enock on 2026-10-25). */
+export const ALERT_TYPES = [
+  'noRecentSession',
+  'lowAttendance',
+  'missingConsent',
+  'nearCapacity',
+  'eventConsentMissing',
+];
+export const ALERT_RULES = Object.freeze({
+  noSessionDays: 14,
+  lowAttendancePercent: 60,
+  lowAttendanceSessions: 4,
+  nearCapacityLearners: 28,
+  eventConsentDays: 7,
+});
+export const MESSAGE_CHANNELS = ['sms', 'whatsapp'];
+export const ANNOUNCEMENT_MAX_LENGTH = 1000;
+/** Reports show counts below this as "fewer than 5", so no child can be picked out (R4-1). */
+export const REPORT_MIN_GROUP = 5;
+export const AGE_BANDS = ['9-10', '11-12', '13-14'];

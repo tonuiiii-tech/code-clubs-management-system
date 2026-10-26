@@ -270,12 +270,14 @@ export function createSeedData() {
     assign(12, 14, 'assistant'),
   ];
 
+  const learnerData = createLearnerData(clubs);
   return {
     users,
     schools,
     clubs,
     assignments,
-    ...createLearnerData(clubs),
+    ...learnerData,
+    ...createEventData(clubs, learnerData.learners),
   };
 }
 
@@ -417,6 +419,191 @@ function createLearnerData(clubs, today = new Date()) {
   );
 
   return { learners, learnerContacts, consents, sessions, attendance };
+}
+
+/**
+ * Sprint 4: terms, events and announcements. Dates are counted from today like sessions, so the
+ * demo always has a current term, an upcoming event with a consent gap and a past event.
+ */
+function createEventData(clubs, learners, today = new Date()) {
+  const byCode = Object.fromEntries(clubs.map((c) => [c.code, c]));
+  const day = (n) => new Date(today.getTime() + n * 86_400_000).toISOString().slice(0, 10);
+  const year = today.getFullYear();
+
+  // The current term started eight weeks ago; the two before it are a holiday apart.
+  const terms = [
+    { number: 1, startDate: day(-56 - 21 - 91 - 21 - 91), endDate: day(-56 - 21 - 91 - 21) },
+    { number: 2, startDate: day(-56 - 21 - 91), endDate: day(-56 - 21) },
+    { number: 3, startDate: day(-56), endDate: day(35) },
+  ].map((t) => ({ id: uid(2400 + t.number), year, ...t, ...stamp }));
+
+  const event = (n, name, type, start, length, venue, region, status, codes, extra = {}) => ({
+    id: uid(1800 + n),
+    name,
+    type,
+    startDate: day(start),
+    endDate: day(start + length),
+    venue,
+    region,
+    description: '',
+    capacity: 40,
+    registrationCloses: day(start - 2),
+    status,
+    clubIds: codes.map((code) => byCode[code].id),
+    photoIds: [],
+    ...stamp,
+    ...extra,
+  });
+  const events = [
+    event(
+      1,
+      'Nairobi Scratch Showcase',
+      'showcase',
+      5,
+      0,
+      'Kenyatta International Convention Centre',
+      'nairobi_central',
+      'open',
+      ['NAC-001', 'NAC-002'],
+      { description: 'Learners show the games and stories they made this term.' },
+    ),
+    event(
+      2,
+      'National Code Clubs Hackathon',
+      'hackathon',
+      30,
+      1,
+      'STEAMLabs Hub, Nairobi',
+      null,
+      'planned',
+      ['NAC-001', 'WNY-001', 'CST-001', 'RVL-001'],
+      { capacity: 60 },
+    ),
+    event(
+      3,
+      'Kisumu Game Jam',
+      'competition',
+      -20,
+      0,
+      'Kisumu Social Hall',
+      'western_nyanza',
+      'held',
+      ['WNY-001'],
+    ),
+  ];
+
+  const byNumber = (n) => learners.find((l) => l.id === uid(1000 + n));
+  const participant = (n, eventN, learnerN, status) => {
+    const l = byNumber(learnerN);
+    return {
+      id: uid(1900 + n),
+      eventId: uid(1800 + eventN),
+      learnerId: l.id,
+      clubId: l.clubId,
+      region: l.region,
+      status,
+      ...stamp,
+    };
+  };
+  const eventParticipants = [
+    participant(1, 1, 1, 'registered'),
+    participant(2, 1, 2, 'registered'),
+    participant(3, 1, 3, 'registered'),
+    participant(4, 3, 10, 'attended'),
+    participant(5, 3, 11, 'attended'),
+  ];
+  // Imani (learner 3) has no event consent yet, so the showcase shows the alert.
+  const eventConsents = [
+    [1, 1, 1],
+    [2, 1, 2],
+    [3, 3, 10],
+    [4, 3, 11],
+  ].map(([n, eventN, learnerN]) => {
+    const l = byNumber(learnerN);
+    return {
+      id: uid(2000 + n),
+      eventId: uid(1800 + eventN),
+      learnerId: l.id,
+      clubId: l.clubId,
+      region: l.region,
+      status: 'given',
+      signedOn: day(-10),
+      fileId: null,
+      ...stamp,
+    };
+  });
+  const eventProjects = [
+    {
+      id: uid(2101),
+      eventId: uid(1803),
+      title: 'Lake Victoria Clean-up Game',
+      description: 'A Scratch game where a boat collects plastic from the lake.',
+      link: null,
+      learnerIds: [uid(1010), uid(1011)],
+      clubId: byCode['WNY-001'].id,
+      region: 'western_nyanza',
+      award: 'Best game design',
+      rank: 1,
+      ...stamp,
+    },
+  ];
+
+  const announcement = (n, title, body, audience, senderN, senderName, recipientIds, days) => ({
+    id: uid(2200 + n),
+    title,
+    body,
+    audience: { roles: [], regions: [], clubIds: [], ...audience },
+    channels: [],
+    recipientIds,
+    senderId: uid(senderN),
+    senderName,
+    ...stamp,
+    createdAt: `${day(days)}T07:00:00.000Z`,
+    updatedAt: `${day(days)}T07:00:00.000Z`,
+  });
+  const champions = [11, 12, 13, 14, 15, 16, 17, 18].map(uid);
+  const announcements = [
+    announcement(
+      1,
+      'Term reports due Friday',
+      'Please report every session held this term by Friday so the termly report is complete.',
+      { roles: ['champion'] },
+      2,
+      'Otieno Ouma',
+      champions,
+      -3,
+    ),
+    announcement(
+      2,
+      'Nairobi Scratch Showcase',
+      'Register your learners for the showcase and collect the event consent forms this week.',
+      { regions: ['nairobi_central'], roles: ['champion'] },
+      3,
+      'Mwende Mutua',
+      [uid(11), uid(12), uid(15)],
+      -1,
+    ),
+  ];
+  const announcementReads = [
+    {
+      id: uid(2301),
+      announcementId: uid(2201),
+      userId: uid(11),
+      readAt: `${day(-2)}T09:00:00.000Z`,
+      createdAt: `${day(-2)}T09:00:00.000Z`,
+      updatedAt: `${day(-2)}T09:00:00.000Z`,
+    },
+  ];
+
+  return {
+    terms,
+    events,
+    eventParticipants,
+    eventConsents,
+    eventProjects,
+    announcements,
+    announcementReads,
+  };
 }
 
 /** One account per role for the "Sign in as" buttons on the login page (mock mode only). */

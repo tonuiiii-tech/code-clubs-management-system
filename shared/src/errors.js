@@ -66,6 +66,28 @@ export const ERROR_MESSAGES = Object.freeze({
   invalidRecordedAt: 'The time of this change is in the future. Check the device clock.',
   syncNotAvailable: 'Offline sync is for Club Champions and Coordinators',
   needsConnection: 'This needs an internet connection',
+  // Terms and reports (Sprint 4)
+  termNotFound: 'Term not found',
+  duplicateTerm: 'This term already exists for that year',
+  termOverlap: 'These dates overlap another term',
+  noCurrentTerm: 'No term covers today. Add this year’s term dates under Settings.',
+  // Events
+  eventNotFound: 'Event not found',
+  eventOwnRegion: 'You can only manage events in your own region',
+  eventClubNotInRegion: 'Invited clubs must be in the event’s region',
+  eventClosed: 'Registration for this event is closed',
+  eventFull: 'This event is full',
+  eventClubNotInvited: 'This learner’s club is not invited to the event',
+  learnerInactive: 'This learner has left the club',
+  alreadyRegistered: 'This learner is already registered for the event',
+  participantNotFound: 'This learner is not registered for the event',
+  eventProjectNotFound: 'Project not found',
+  eventProjectLearners: 'Project members must be registered for the event',
+  tooManyEventPhotos: 'An event can have at most 10 photos',
+  // Announcements
+  announcementNotFound: 'Announcement not found',
+  announcementNoRecipients: 'Nobody matches this audience',
+  announcementOwnRegion: 'You can only send announcements to your own regions',
 });
 
 const KEY_BY_MESSAGE = new Map(Object.entries(ERROR_MESSAGES).map(([key, text]) => [text, key]));

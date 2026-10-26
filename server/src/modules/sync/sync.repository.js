@@ -1,8 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import {
+  Announcement,
+  AnnouncementRead,
   Attendance,
   Club,
   Consent,
+  Event,
+  EventConsent,
+  EventParticipant,
   Learner,
   LearnerContact,
   School,
@@ -12,7 +17,12 @@ import {
   Tombstone,
 } from '../../db/models.js';
 import { paginate, toRecord } from '../../db/records.js';
-import { clubRecordScopeQuery, clubScopeQuery, schoolScopeQuery } from '../../db/scopeQueries.js';
+import {
+  clubRecordScopeQuery,
+  clubScopeQuery,
+  eventScopeQuery,
+  schoolScopeQuery,
+} from '../../db/scopeQueries.js';
 
 /** Only this file talks to the database for sync (D1-16). */
 
@@ -105,6 +115,29 @@ export async function changedAttendance(scopeFilter, after, limit, fromDate) {
   return changes(Attendance, await clubRecordScopeQuery(scopeFilter), after, limit, {
     date: { $gte: fromDate },
   });
+}
+
+// Sprint 4: events and announcements are read-only on a device (D4-8).
+export async function changedEvents(scopeFilter, after, limit, fromDate) {
+  return changes(Event, await eventScopeQuery(scopeFilter), after, limit, {
+    endDate: { $gte: fromDate },
+  });
+}
+
+export async function changedEventParticipants(scopeFilter, after, limit) {
+  return changes(EventParticipant, await clubRecordScopeQuery(scopeFilter), after, limit);
+}
+
+export async function changedEventConsents(scopeFilter, after, limit) {
+  return changes(EventConsent, await clubRecordScopeQuery(scopeFilter), after, limit);
+}
+
+export async function changedAnnouncements(userId, after, limit) {
+  return changes(Announcement, { recipientIds: userId }, after, limit);
+}
+
+export async function changedAnnouncementReads(userId, after, limit) {
+  return changes(AnnouncementRead, { userId }, after, limit);
 }
 
 export async function deletedRecords(scopeFilter, after, limit) {

@@ -9,7 +9,19 @@ import Dexie from 'dexie';
  */
 export const dbName = (userId) => `cc-offline-${userId}`;
 
-export const DATA_TABLES = ['schools', 'clubs', 'learners', 'consents', 'sessions', 'attendance'];
+export const DATA_TABLES = [
+  'schools',
+  'clubs',
+  'learners',
+  'consents',
+  'sessions',
+  'attendance',
+  'events',
+  'eventParticipants',
+  'eventConsents',
+  'announcements',
+  'announcementReads',
+];
 
 export function openUserDb(userId) {
   const db = new Dexie(dbName(userId));
@@ -25,6 +37,14 @@ export function openUserDb(userId) {
     // Consent forms and photos waiting to upload; deleted once sent (D3-8).
     pendingFiles: 'opId',
     meta: 'key',
+  });
+  // Sprint 4: events and announcements, read-only on the device (D4-8).
+  db.version(2).stores({
+    events: 'id',
+    eventParticipants: 'id, eventId',
+    eventConsents: 'id, eventId',
+    announcements: 'id',
+    announcementReads: 'id',
   });
   return db;
 }
