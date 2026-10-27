@@ -273,6 +273,39 @@ describe('Accounts a Programme Manager manages (D5-12)', () => {
   });
 });
 
+describe('Accounts a coordinator creates (D5-13)', () => {
+  it('creates a Club Champion account, and nothing else', async () => {
+    const coordinator = await signIn('achieng.odhiambo@demo.steamlabs.test');
+    const champion = await request(app)
+      .post('/api/v1/users')
+      .set(auth(coordinator.token))
+      .send({
+        fullName: 'Wanjala Barasa',
+        email: 'wanjala.barasa@demo.steamlabs.test',
+        role: 'champion',
+        championProfile: { type: 'volunteer' },
+      });
+    expect(champion.status).toBe(201);
+    const peer = await request(app)
+      .post('/api/v1/users')
+      .set(auth(coordinator.token))
+      .send({
+        fullName: 'Nafula Simiyu',
+        email: 'nafula.simiyu@demo.steamlabs.test',
+        role: 'coordinator',
+        regions: ['western_nyanza'],
+      });
+    expect(peer.status).toBe(403);
+    expect(peer.body.error.message).toBe(ERROR_MESSAGES.roleNotManageable);
+    // Editing and deactivating stay with the Programme Manager.
+    const off = await request(app)
+      .patch(`/api/v1/users/${champion.body.data.id}/status`)
+      .set(auth(coordinator.token))
+      .send({ status: 'inactive' });
+    expect(off.status).toBe(403);
+  });
+});
+
 describe('Sessions on MongoDB', () => {
   it('rotates refresh tokens and revokes the family when an old one is reused', async () => {
     const { cookie } = await signIn(EMAIL.pm);

@@ -35,6 +35,14 @@ describe('Permission policy', () => {
     expect(canManageRole(user(ROLES.COORDINATOR), ROLES.CHAMPION)).toBe(false);
   });
 
+  it('lets a coordinator create Club Champion accounts only (D5-13)', () => {
+    const coordinator = user(ROLES.COORDINATOR);
+    expect(canManageRole(coordinator, ROLES.CHAMPION, 'user:create')).toBe(true);
+    expect(canManageRole(coordinator, ROLES.COORDINATOR, 'user:create')).toBe(false);
+    expect(canManageRole(coordinator, ROLES.PROGRAMME_MANAGER, 'user:create')).toBe(false);
+    expect(can(user(ROLES.CHAMPION), 'user:create')).toBe(false);
+  });
+
   it('limits coordinators and champions to their assignments', () => {
     expect(scopeFor(user(ROLES.COORDINATOR), 'club:write')).toBe('assigned');
     expect(scopeFor(user(ROLES.CHAMPION), 'club:read')).toBe('assigned');

@@ -174,9 +174,9 @@ const currentAssignments = (clubId) =>
   db.assignments.filter((a) => a.clubId === clubId && !a.endDate);
 
 /** True when the school already has a club that is not closed, other than this one (D5-11). */
-/** A Programme Manager manages only coordinator and champion accounts (D5-12). */
-function assertCanManage(actor, ...roles) {
-  if (!roles.every((role) => canManageRole(actor, role))) {
+/** Only the roles in MANAGEABLE_ROLES: a coordinator creates champions only (D5-12, D5-13). */
+function assertCanManage(actor, roles, permission = 'user:manage') {
+  if (!roles.every((role) => canManageRole(actor, role, permission))) {
     throw forbidden(ERROR_MESSAGES.roleNotManageable);
   }
 }
@@ -1169,9 +1169,9 @@ const routes = [
     'POST',
     '/users',
     ({ actor, body }) => {
-      authorize(actor, 'user:manage');
+      authorize(actor, 'user:create');
       const input = validate(createUserSchema, body, 'body');
-      assertCanManage(actor, input.role);
+      assertCanManage(actor, [input.role], 'user:create');
       if (db.users.some((u) => u.email === input.email)) {
         throw conflict(ERROR_MESSAGES.duplicateEmail);
       }
@@ -1202,7 +1202,7 @@ const routes = [
       if (id === actor.id) throw forbidden(ERROR_MESSAGES.ownStatus);
       const user = db.users.find((u) => u.id === id);
       if (!user) throw notFound();
-      assertCanManage(actor, user.role);
+      assertCanManage(actor, [user.role]);
       Object.assign(user, {
         status,
         ...(status === 'inactive' && { tokenVersion: user.tokenVersion + 1 }),
@@ -1224,7 +1224,7 @@ const routes = [
       }
       const user = db.users.find((u) => u.id === id);
       if (!user) throw notFound();
-      assertCanManage(actor, user.role, changes.role ?? user.role);
+      assertCanManage(actor, [user.role, changes.role ?? user.role]);
       Object.assign(user, changes, { updatedAt: now(), updatedBy: actor.id });
       return [200, { data: toPublicUser(user) }];
     },
