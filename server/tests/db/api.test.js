@@ -251,14 +251,11 @@ describe('Accounts a Programme Manager manages (D5-12)', () => {
   });
 
   it('cannot create, promote to or change administrator and manager accounts', async () => {
-    const admin = await request(app)
-      .post('/api/v1/users')
-      .set(auth(pm.token))
-      .send({
-        fullName: 'Imani Wekesa',
-        email: 'imani.wekesa@demo.steamlabs.test',
-        role: 'system_admin',
-      });
+    const admin = await request(app).post('/api/v1/users').set(auth(pm.token)).send({
+      fullName: 'Imani Wekesa',
+      email: 'imani.wekesa@demo.steamlabs.test',
+      role: 'system_admin',
+    });
     expect(admin.status).toBe(403);
     expect(admin.body.error.message).toBe(ERROR_MESSAGES.roleNotManageable);
     // Mwende Mutua (coordinator) cannot be made a Programme Manager by a Programme Manager.
