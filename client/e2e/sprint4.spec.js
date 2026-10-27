@@ -97,6 +97,9 @@ test('HQ sends an announcement; the champion sees it, opens it and the sender se
   await page.getByRole('link', { name: /new announcement/ }).click();
   await page.getByRole('button', { name: title }).click();
   await expect(page.getByText('Kits reach Nairobi clubs next week.')).toBeVisible();
+  // It stays open once it is marked read (it used to close again when the list reloaded).
+  await page.waitForTimeout(1000);
+  await expect(page.getByText('Kits reach Nairobi clubs next week.')).toBeVisible();
   await signOut(page);
 
   await signInAs(page, 'Programme Manager');

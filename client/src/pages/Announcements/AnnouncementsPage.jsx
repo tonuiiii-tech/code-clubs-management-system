@@ -102,7 +102,7 @@ export function AnnouncementsPage() {
                 box === 'sent' ? (
                   <SentItem key={a.id} announcement={a} />
                 ) : (
-                  <InboxItem key={a.id} announcement={a} onRead={list.reload} />
+                  <InboxItem key={a.id} announcement={a} />
                 ),
               )}
               <ListFooter result={list.data} onPageChange={setPage} />
@@ -116,16 +116,18 @@ export function AnnouncementsPage() {
 
 const when = (a) => new Date(a.createdAt).toLocaleString();
 
-function InboxItem({ announcement: a, onRead }) {
+function InboxItem({ announcement: a }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  // Kept here rather than reloading the list, which would close the message just opened.
+  const [read, setRead] = useState(a.read);
 
   async function toggle() {
     setOpen((o) => !o);
-    if (!a.read) {
+    if (!read) {
+      setRead(true);
       await markAnnouncementRead(a.id).catch(() => {});
       notifyAnnouncementsChanged();
-      onRead();
     }
   }
 
@@ -135,7 +137,7 @@ function InboxItem({ announcement: a, onRead }) {
         <button type="button" className="link-button" onClick={toggle} aria-expanded={open}>
           <strong>{a.title}</strong>
         </button>
-        {!a.read && <Badge variant="primary">{t('announcements.unread')}</Badge>}
+        {!read && <Badge variant="primary">{t('announcements.unread')}</Badge>}
       </div>
       <small className="muted">
         {t('announcements.from', { name: a.senderName })} · {when(a)}
