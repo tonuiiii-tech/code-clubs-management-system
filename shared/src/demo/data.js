@@ -255,19 +255,16 @@ export function createSeedData() {
     startDate: '2026-01-12',
     endDate: null,
   });
+  // One club per champion (D5-9). Peter Kariuki is waiting for a club; Lanet, Bahari Coders,
+  // Kapsoya and Naivasha are waiting for a champion.
   const assignments = [
     assign(1, 11, 'lead'),
-    assign(2, 11, 'lead'),
-    assign(2, 15, 'assistant'),
+    assign(2, 15, 'lead'),
     assign(3, 12, 'lead'),
     assign(4, 13, 'lead'),
     assign(5, 17, 'lead'),
     assign(6, 14, 'lead'),
     assign(7, 16, 'lead'),
-    assign(8, 13, 'assistant'),
-    assign(10, 18, 'lead'),
-    assign(11, 17, 'assistant'),
-    assign(12, 14, 'assistant'),
   ];
 
   const learnerData = createLearnerData(clubs);

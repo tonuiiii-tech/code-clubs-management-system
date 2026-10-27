@@ -42,7 +42,6 @@ const registry = await import('./registry.js');
 const { dbName } = await import('./db.js');
 
 const NAC_001 = uid(201);
-const NAC_002 = uid(202);
 const ZAWADI = uid(1001);
 const RECENT_SESSION = uid(1603);
 
@@ -84,7 +83,7 @@ describe('the device copy', () => {
   it('holds the champion’s own clubs after the first sync, and answers like the API', async () => {
     expect(getSyncState()).toMatchObject({ enabled: true, ready: true, pending: 0 });
     const clubs = await local.listClubs();
-    expect(clubs.data.map((c) => c.id).sort()).toEqual([NAC_001, NAC_002].sort());
+    expect(clubs.data.map((c) => c.id).sort()).toEqual([NAC_001]);
     const learners = await local.listLearners({ clubId: NAC_001, pageSize: 100 });
     expect(learners.data.length).toBeGreaterThan(0);
     expect(learners.data[0]).toMatchObject({
@@ -104,7 +103,9 @@ describe('records saved online during the first sync', () => {
   it('asks the server for a record the device does not have yet', async () => {
     const { localFirst } = await import('./index.js');
     const { getLearner } = await import('../services/learnersService.js');
-    // Saved straight on the server, as when the first pull was still running.
+    // Saved straight on the server, as when the first pull was still running. The device is
+    // offline meanwhile, so a background sync cannot bring the record in before the check.
+    net.offline = true;
     const created = await mockRequest({
       method: 'POST',
       path: '/learners',
@@ -113,6 +114,7 @@ describe('records saved online during the first sync', () => {
     });
     const id = created.body.data.id;
     await expect(local.getLearner(id)).rejects.toMatchObject({ status: 404 });
+    net.offline = false;
     expect((await getLearner(id)).data.id).toBe(id);
 
     // Offline, a missing record stays missing instead of failing on the network.
@@ -139,11 +141,11 @@ describe('working offline', () => {
       phone: '+254700000777',
     });
     const { data: session } = await local.createSession({
-      clubId: NAC_002,
+      clubId: NAC_001,
       date: new Date().toISOString().slice(0, 10),
       topic: 'Unplugged: sorting networks',
     });
-    const marks = (await local.listLearners({ clubId: NAC_002, status: 'active' })).data.map(
+    const marks = (await local.listLearners({ clubId: NAC_001, status: 'active' })).data.map(
       (l) => ({ learnerId: l.id, status: 'present' }),
     );
     await local.saveAttendance(session.id, marks);
@@ -256,7 +258,7 @@ describe('shared devices (D3-2)', () => {
 });
 
 describe('Sprint 5 on the device', () => {
-  const AMANI = uid(1007);
+  const TUMAINI = uid(1004);
   const LAPTOP_1 = uid(2601);
   const WORKSHEET = uid(2804);
   const LOOPS_QUIZ = uid(3001);
@@ -268,7 +270,7 @@ describe('Sprint 5 on the device', () => {
       [LAPTOP_1, uid(2602), uid(2603)].sort(),
     );
     expect(await db.resources.count()).toBe(4);
-    expect(await db.learnerProjects.count()).toBe(4);
+    expect(await db.learnerProjects.count()).toBe(3);
     const quiz = await local.getAssessment(LOOPS_QUIZ);
     expect(quiz.data.scored).toBe(5);
     expect(quiz.data.averageScore).toBe(70);
@@ -277,23 +279,23 @@ describe('Sprint 5 on the device', () => {
   it('records a project, an assessment, scores and a report offline, and sends each once', async () => {
     net.offline = true;
     const project = await local.createProject({
-      clubId: NAC_002,
-      learnerIds: [AMANI],
+      clubId: NAC_001,
+      learnerIds: [TUMAINI],
       title: 'Paper robot',
       track: 'unplugged',
       date: today(),
     });
     await local.updateProject(project.data.id, { title: 'Paper robot arm' });
     const quiz = await local.createAssessment({
-      clubId: NAC_002,
+      clubId: NAC_001,
       title: 'Sorting quiz',
       track: 'unplugged',
       date: today(),
       maxScore: 5,
     });
-    await local.saveScores(quiz.data.id, [{ learnerId: AMANI, score: 4 }]);
+    await local.saveScores(quiz.data.id, [{ learnerId: TUMAINI, score: 4 }]);
     await expect(
-      local.saveScores(quiz.data.id, [{ learnerId: AMANI, score: 6 }]),
+      local.saveScores(quiz.data.id, [{ learnerId: TUMAINI, score: 6 }]),
     ).rejects.toMatchObject({
       status: 400,
     });
@@ -310,7 +312,7 @@ describe('Sprint 5 on the device', () => {
     const projects = await mockRequest({
       method: 'GET',
       path: '/progress/projects',
-      query: { clubId: NAC_002 },
+      query: { clubId: NAC_001 },
       token: net.token,
     });
     const mine = projects.body.data.filter((p) => p.id === project.data.id);
@@ -320,7 +322,7 @@ describe('Sprint 5 on the device', () => {
       path: `/progress/assessments/${quiz.data.id}`,
       token: net.token,
     });
-    expect(saved.body.data.scores.find((s) => s.learnerId === AMANI).score).toBe(4);
+    expect(saved.body.data.scores.find((s) => s.learnerId === TUMAINI).score).toBe(4);
     const item = await mockRequest({
       method: 'GET',
       path: `/equipment/${LAPTOP_1}`,

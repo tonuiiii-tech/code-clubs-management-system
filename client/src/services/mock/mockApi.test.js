@@ -4,7 +4,7 @@ import { DEMO_PASSWORD, uid } from '@code-clubs/shared/demo';
 
 const ADMIN = 'wanjiru.kamau@demo.steamlabs.test';
 const COORDINATOR_NAIROBI = 'mwende.mutua@demo.steamlabs.test';
-const CHAMPION_FAITH = 'faith.njeri@demo.steamlabs.test'; // leads NAC-001 and NAC-002
+const CHAMPION_FAITH = 'faith.njeri@demo.steamlabs.test'; // leads NAC-001
 
 async function signIn(email) {
   const res = await mockRequest({
@@ -51,7 +51,7 @@ describe('mock API: same contract and rules as the server', () => {
   it('lets a champion see only the clubs they run', async () => {
     const token = await signIn(CHAMPION_FAITH);
     const res = await call(token, 'GET', '/clubs');
-    expect(res.body.data.map((c) => c.code)).toEqual(['NAC-001', 'NAC-002']);
+    expect(res.body.data.map((c) => c.code)).toEqual(['NAC-001']);
   });
 
   it('answers 404, not 403, when a champion opens another club', async () => {
@@ -125,13 +125,20 @@ describe('mock API: same contract and rules as the server', () => {
     expect(res.body.data).toMatchObject({ code: 'NAC-004', region: 'nairobi_central' });
   });
 
-  it('assigns only active club champions and keeps history when an assignment ends', async () => {
+  it('assigns only active club champions, one club each, and keeps history when an assignment ends', async () => {
     const token = await signIn(ADMIN);
     const club = uid(209);
     const notChampion = await call(token, 'PUT', `/clubs/${club}/champions/${uid(2)}`, {
       body: { role: 'lead' },
     });
     expect(notChampion.status).toBe(400);
+
+    // Joseph Mutiso runs CST-001, so he must leave it first (D5-9).
+    const busy = await call(token, 'PUT', `/clubs/${club}/champions/${uid(16)}`, {
+      body: { role: 'lead' },
+    });
+    expect(busy.status).toBe(409);
+    await call(token, 'DELETE', `/clubs/${uid(207)}/champions/${uid(16)}`);
 
     const assigned = await call(token, 'PUT', `/clubs/${club}/champions/${uid(16)}`, {
       body: { role: 'lead' },
@@ -147,7 +154,7 @@ describe('mock API: same contract and rules as the server', () => {
     const admin = await call(await signIn(ADMIN), 'GET', '/dashboard/summary');
     const champion = await call(await signIn(CHAMPION_FAITH), 'GET', '/dashboard/summary');
     expect(admin.body.data.activeClubs).toBe(10);
-    expect(champion.body.data).toMatchObject({ activeClubs: 2, schools: 2 });
+    expect(champion.body.data).toMatchObject({ activeClubs: 1, schools: 1 });
   });
 
   it('stops admins from changing their own role or deactivating themselves', async () => {

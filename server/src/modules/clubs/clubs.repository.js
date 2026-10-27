@@ -68,6 +68,11 @@ export async function upsertChampionAssignment({ clubId, userId, role, startDate
   return assignment;
 }
 
+/** True when the champion currently runs a club other than this one. */
+export async function championHasOtherClub(userId, clubId) {
+  return Boolean(await ClubChampion.exists({ userId, endDate: null, clubId: { $ne: clubId } }));
+}
+
 /** Ending keeps the record as history (D1-15). */
 export async function endChampionAssignment(clubId, userId, endDate) {
   await ClubChampion.updateMany({ clubId, userId, endDate: null }, { $set: { endDate } });

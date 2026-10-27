@@ -19,8 +19,10 @@ const EMAIL = {
   otherCoordinator: 'achieng.odhiambo@demo.steamlabs.test',
   champion: 'faith.njeri@demo.steamlabs.test',
   otherChampion: 'amina.salim@demo.steamlabs.test',
+  // Leads NAC-002, which meets at a community centre (one club per champion, D5-9).
+  grace: 'grace.wambui@demo.steamlabs.test',
 };
-// Demo records: NAC-001 and NAC-002 are Faith's clubs in Nairobi; WNY-001 is Amina's in Kisumu.
+// Demo records: NAC-001 is Faith's club and NAC-002 Grace's, in Nairobi; WNY-001 is Amina's in Kisumu.
 const NAC_001 = uid(201);
 const NAC_002 = uid(202);
 const NAC_003 = uid(203);
@@ -79,7 +81,7 @@ describe('Learners', () => {
   it('shows a champion only the learners of their clubs, and 404s others', async () => {
     const list = await api('champion').get('/learners?pageSize=100');
     expect(list.status).toBe(200);
-    expect(new Set(list.body.data.map((l) => l.clubId))).toEqual(new Set([NAC_001, NAC_002]));
+    expect(new Set(list.body.data.map((l) => l.clubId))).toEqual(new Set([NAC_001]));
     expect((await api('champion').get(`/learners/${AKINYI}`)).status).toBe(404);
     expect((await api('otherChampion').get(`/learners/${ZAWADI}`)).status).toBe(404);
   });
@@ -168,7 +170,7 @@ describe('Learners', () => {
     );
     expect(noAdmission.status).toBe(400);
     // NAC-002 meets at a community centre.
-    const community = await api('champion').post(
+    const community = await api('grace').post(
       '/learners',
       newLearner({ clubId: NAC_002, admissionNumber: undefined, firstName: 'Nuru' }),
     );
@@ -278,7 +280,7 @@ describe('Sessions and attendance', () => {
   });
 
   it('reports a session with the club times and takes attendance in one step', async () => {
-    const created = await api('champion').post('/sessions', {
+    const created = await api('grace').post('/sessions', {
       clubId: NAC_002,
       date: daysAgo(0),
       topic: 'Unplugged: binary bracelets',
@@ -292,19 +294,19 @@ describe('Sessions and attendance', () => {
     });
     const id = created.body.data.id;
 
-    const again = await api('champion').post('/sessions', {
+    const again = await api('grace').post('/sessions', {
       clubId: NAC_002,
       date: daysAgo(0),
       topic: 'Again',
     });
     expect(again.status).toBe(409);
 
-    const wrongClub = await api('champion').put(`/sessions/${id}/attendance`, {
+    const wrongClub = await api('grace').put(`/sessions/${id}/attendance`, {
       records: [{ learnerId: ZAWADI, status: 'present' }],
     });
     expect(wrongClub.status).toBe(400);
 
-    const saved = await api('champion').put(`/sessions/${id}/attendance`, {
+    const saved = await api('grace').put(`/sessions/${id}/attendance`, {
       records: [
         { learnerId: uid(1007), status: 'present' },
         { learnerId: uid(1008), status: 'late' },
@@ -316,7 +318,7 @@ describe('Sessions and attendance', () => {
     expect(saved.body.data.attendance[0]).toMatchObject({ firstName: 'Kamau', status: 'late' });
 
     // Saving again replaces the list.
-    const replaced = await api('champion').put(`/sessions/${id}/attendance`, {
+    const replaced = await api('grace').put(`/sessions/${id}/attendance`, {
       records: [{ learnerId: uid(1007), status: 'absent' }],
     });
     expect(replaced.body.data.attendance).toEqual([
@@ -325,22 +327,22 @@ describe('Sessions and attendance', () => {
   });
 
   it('needs a topic for a held session and allows only planned ones in the future', async () => {
-    const noTopic = await api('champion').post('/sessions', { clubId: NAC_002, date: daysAgo(2) });
+    const noTopic = await api('grace').post('/sessions', { clubId: NAC_002, date: daysAgo(2) });
     expect(noTopic.status).toBe(400);
     const future = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
-    const held = await api('champion').post('/sessions', {
+    const held = await api('grace').post('/sessions', {
       clubId: NAC_002,
       date: future,
       topic: 'Later',
     });
     expect(held.status).toBe(400);
-    const planned = await api('champion').post('/sessions', {
+    const planned = await api('grace').post('/sessions', {
       clubId: NAC_002,
       date: future,
       status: 'planned',
     });
     expect(planned.status).toBe(201);
-    const attendance = await api('champion').put(`/sessions/${planned.body.data.id}/attendance`, {
+    const attendance = await api('grace').put(`/sessions/${planned.body.data.id}/attendance`, {
       records: [],
     });
     expect(attendance.status).toBe(400);
@@ -352,7 +354,7 @@ describe('Sessions and attendance', () => {
   it('locks a report for champions after 7 days, but not for coordinators (D2-5)', async () => {
     const champion = await api('champion').patch(`/sessions/${OLD_SESSION}`, { notes: 'Late' });
     expect(champion.status).toBe(403);
-    const backdated = await api('champion').post('/sessions', {
+    const backdated = await api('grace').post('/sessions', {
       clubId: NAC_002,
       date: daysAgo(10),
       topic: 'Old',

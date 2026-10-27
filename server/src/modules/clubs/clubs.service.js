@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { REGION_CODE_PREFIX, ROLES } from '@code-clubs/shared/enums';
-import { badRequest, forbidden, notFound } from '../../utils/httpError.js';
+import { badRequest, conflict, forbidden, notFound } from '../../utils/httpError.js';
 import { scopeFilter } from '../scope.js';
 import { recordAudit } from '../audit/audit.service.js';
 import { getSchool } from '../schools/schools.service.js';
@@ -93,6 +93,10 @@ export async function assignChampion(actor, scope, clubId, userId, input, { requ
   const champion = await findUserById(userId);
   if (!champion || champion.status !== 'active' || champion.role !== ROLES.CHAMPION) {
     throw badRequest(ERROR_MESSAGES.onlyActiveChampions);
+  }
+  // A champion runs one club, and so one school (Enock, 2026-10-27, D5-9).
+  if (await repo.championHasOtherClub(userId, clubId)) {
+    throw conflict(ERROR_MESSAGES.championHasClub);
   }
   const assignment = await repo.upsertChampionAssignment({
     clubId,

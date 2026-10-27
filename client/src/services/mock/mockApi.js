@@ -1123,6 +1123,9 @@ const routes = [
         .filter((u) => userInFilter(u, filter))
         .filter((u) => (!q.role || u.role === q.role) && (!q.status || u.status === q.status))
         .filter((u) => matches(q.q, u.fullName, u.email))
+        .filter(
+          (u) => !q.withoutClub || !db.assignments.some((a) => a.userId === u.id && !a.endDate),
+        )
         .sort(byName('fullName'))
         .map(toPublicUser);
       return [200, paginate(rows, q)];
@@ -1379,6 +1382,10 @@ const routes = [
       const champion = db.users.find((u) => u.id === userId);
       if (!champion || champion.status !== 'active' || champion.role !== ROLES.CHAMPION) {
         throw badRequest(ERROR_MESSAGES.onlyActiveChampions);
+      }
+      // A champion runs one club, and so one school (D5-9).
+      if (db.assignments.some((a) => a.userId === userId && !a.endDate && a.clubId !== club.id)) {
+        throw conflict(ERROR_MESSAGES.championHasClub);
       }
       let assignment = currentAssignments(club.id).find((a) => a.userId === userId);
       if (assignment) {

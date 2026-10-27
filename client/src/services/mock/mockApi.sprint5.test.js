@@ -20,6 +20,7 @@ const WNY_001 = uid(204);
 const ZAWADI = uid(1001);
 const BARAKA = uid(1002);
 const IMANI = uid(1003);
+const TUMAINI = uid(1004);
 const AMANI = uid(1007);
 const CURRENT_TERM = uid(2403);
 const LAPTOP_1 = uid(2601);
@@ -224,8 +225,8 @@ describe('mock API: equipment, resources and progress (Sprint 5)', () => {
         type: 'project.save',
         data: {
           id: newId(1),
-          clubId: NAC_002,
-          learnerIds: [AMANI],
+          clubId: NAC_001,
+          learnerIds: [TUMAINI],
           title: 'Paper robot',
           track: 'unplugged',
           date: day(0),
@@ -237,7 +238,7 @@ describe('mock API: equipment, resources and progress (Sprint 5)', () => {
         type: 'assessment.save',
         data: {
           id: newId(2),
-          clubId: NAC_002,
+          clubId: NAC_001,
           title: 'Sorting quiz',
           track: 'unplugged',
           date: day(0),
@@ -249,7 +250,7 @@ describe('mock API: equipment, resources and progress (Sprint 5)', () => {
         opId: opId(3),
         type: 'assessment.scores',
         recordId: newId(2),
-        data: { scores: [{ learnerId: AMANI, score: 4 }] },
+        data: { scores: [{ learnerId: TUMAINI, score: 4 }] },
         recordedAt,
       },
       {
@@ -263,9 +264,9 @@ describe('mock API: equipment, resources and progress (Sprint 5)', () => {
     const res = await champion('POST', '/sync/push', { body: { operations } });
     expect(res.body.data.results.map((r) => r.status)).toEqual(Array(4).fill('applied'));
     await champion('POST', '/sync/push', { body: { operations } });
-    const projects = await champion('GET', '/progress/projects', { query: { clubId: NAC_002 } });
+    const projects = await champion('GET', '/progress/projects', { query: { clubId: NAC_001 } });
     expect(projects.body.data.filter((p) => p.id === newId(1))).toHaveLength(1);
     const assessment = await champion('GET', `/progress/assessments/${newId(2)}`);
-    expect(assessment.body.data.scores.find((s) => s.learnerId === AMANI).score).toBe(4);
+    expect(assessment.body.data.scores.find((s) => s.learnerId === TUMAINI).score).toBe(4);
   });
 });

@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { uid } from '@code-clubs/shared/demo';
+import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 import { clearDatabase, useTestDatabase } from '../support/database.js';
 import { seed } from '../../scripts/seed.js';
 import { createApp } from '../../src/app.js';
@@ -53,7 +54,7 @@ describe('API on MongoDB', () => {
 
   it('lets a champion see only their clubs, and 404s other clubs', async () => {
     const list = await request(app).get('/api/v1/clubs').set(auth(champion.token));
-    expect(list.body.data.map((c) => c.code)).toEqual(['NAC-001', 'NAC-002']);
+    expect(list.body.data.map((c) => c.code)).toEqual(['NAC-001']);
     const other = await request(app)
       .get(`/api/v1/clubs/${uid(204)}`)
       .set(auth(champion.token));
@@ -124,6 +125,17 @@ describe('API on MongoDB', () => {
 
   it('assigns and ends a champion assignment, and records it in the audit log', async () => {
     const club = uid(209);
+    // Joseph Mutiso runs CST-001: a champion has one club, so he must leave it first (D5-9).
+    const busy = await request(app)
+      .put(`/api/v1/clubs/${club}/champions/${uid(16)}`)
+      .set(auth(admin.token))
+      .send({ role: 'lead' });
+    expect(busy.status).toBe(409);
+    expect(busy.body.error.message).toBe(ERROR_MESSAGES.championHasClub);
+    await request(app)
+      .delete(`/api/v1/clubs/${uid(207)}/champions/${uid(16)}`)
+      .set(auth(admin.token));
+
     const put = await request(app)
       .put(`/api/v1/clubs/${club}/champions/${uid(16)}`)
       .set(auth(admin.token))
@@ -145,11 +157,24 @@ describe('API on MongoDB', () => {
     expect(log.body.data.map((e) => e.action)).toEqual(
       expect.arrayContaining(['club.assignChampion', 'club.unassignChampion']),
     );
+    // Back to CST-001 for the tests that follow.
+    await request(app)
+      .put(`/api/v1/clubs/${uid(207)}/champions/${uid(16)}`)
+      .set(auth(admin.token))
+      .send({ role: 'lead' });
+  });
+
+  it('lists the champions who have no club yet, the only ones who can be assigned (D5-9)', async () => {
+    const res = await request(app)
+      .get('/api/v1/users?role=champion&status=active&withoutClub=true')
+      .set(auth(admin.token));
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((u) => u.fullName)).toEqual(['Peter Kariuki']);
   });
 
   it('returns dashboard counts within scope', async () => {
     const res = await request(app).get('/api/v1/dashboard/summary').set(auth(champion.token));
-    expect(res.body.data).toMatchObject({ activeClubs: 2, schools: 2 });
+    expect(res.body.data).toMatchObject({ activeClubs: 1, schools: 1 });
   });
 
   it('creates a user with a temporary password that works once', async () => {

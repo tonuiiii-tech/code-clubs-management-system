@@ -158,6 +158,7 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Context:** Clubs are hosted by schools, community centres or libraries. A club can have several champions, and a champion can run several clubs.
 - **Decision:** School is an entity that clubs reference. Each club–champion assignment is its own record with start and end dates.
 - **Consequences:** No retyping of host details; assignment history is preserved; offline edits to different assignments will not overwrite each other in Sprint 3.
+- **Update (2026-10-27):** A champion now runs one club at a time; see D5-9. A club can still have several champions.
 
 ## D1-16: Data access through repositories
 
@@ -539,6 +540,15 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Decision:** Equipment and the resource list are read from the server first and from the device copy when offline, like events (D4-8). A champion's damage report goes straight to the server when online and through the outbox when not. The first page of every pull now carries `inScope`, the ids of events, items, resources and projects the user may keep; the device deletes the others. Alerts can be hidden for 7 days by each person (R4-4), stored in `alertDismissals`.
 - **Alternatives considered:** Tombstones for every record that leaves scope.
 - **Consequences:** Closes the D4-8 gap (tested: an uninvited event is no longer in `inScope`). The device copy of an item has no loan history.
+
+## D5-9: A Club Champion runs one club, and so one school
+
+- **Status:** Accepted (Enock, 2026-10-27)
+- **Date:** 2026-10-27
+- **Context:** The questionnaire (Q12) said one facilitator can run several clubs, so D1-15 allowed it and the demo gave some champions two clubs. Enock decided a champion handles only their own club and its school.
+- **Decision:** A champion has at most one current club assignment. Assigning a champion who already runs another club is refused (409, "end that assignment first"), on the server and in demo mode; it is not moved silently. The Assign champion picker lists only active champions with no current club (`GET /users?withoutClub=true`). Champions no longer see a Schools section in the menu; they reach their club's school from the club page. A club can still have a lead and assistants. The seed gives each demo champion one club and ends demo champions' assignments to other clubs (for example ones the browser tests made).
+- **Alternatives considered:** Ending the old assignment automatically when a new one is made (a mis-click would silently take a champion away from their club); a unique database index on current assignments (it would fail to build on databases that still hold two assignments for one champion, and stop the server starting).
+- **Consequences:** Scope rules are unchanged: they already limited a champion to the clubs they run. Moving a champion is two steps (end, then assign). Two coordinators assigning the same champion at the same moment could still both succeed (R5-7).
 
 ## Decision template
 

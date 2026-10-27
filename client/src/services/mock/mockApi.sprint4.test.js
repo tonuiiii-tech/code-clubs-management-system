@@ -18,8 +18,8 @@ const NAC_002 = uid(202);
 const WNY_001 = uid(204);
 const ZAWADI = uid(1001);
 const IMANI = uid(1003);
+const TUMAINI = uid(1004);
 const NEEMA = uid(1005);
-const AMANI = uid(1007);
 const CURRENT_TERM = uid(2403);
 const SHOWCASE = uid(1801);
 const HACKATHON = uid(1802);
@@ -85,7 +85,7 @@ describe('mock API: dashboard, reports, events, announcements (Sprint 4)', () =>
       ).status,
     ).toBe(409);
     const ok = await champion('POST', `/events/${SHOWCASE}/participants`, {
-      body: { learnerIds: [NEEMA, AMANI] },
+      body: { learnerIds: [NEEMA, TUMAINI] },
     });
     expect(ok.status).toBe(201);
     const photo = await champion('POST', `/events/${SHOWCASE}/photos`, { body: PNG });
