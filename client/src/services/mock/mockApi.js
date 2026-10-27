@@ -18,6 +18,7 @@ import {
 } from '@code-clubs/shared/enums';
 import { SCOPES, canManageRole, scopeFor } from '@code-clubs/shared/permissions';
 import {
+  acceptInviteSchema,
   assignChampionSchema,
   attendanceSchema,
   birthYearFromAge,
@@ -128,7 +129,7 @@ const files = new Map();
 
 const toPublicUser = (user) => {
   if (!user) return user;
-  const { password: _p, tokenVersion: _t, ...safe } = user;
+  const { password: _p, tokenVersion: _t, inviteToken: _i, ...safe } = user;
   return safe;
 };
 const today = () => new Date().toISOString().slice(0, 10);
@@ -258,6 +259,35 @@ function refresh() {
 function logout() {
   db.refresh = null;
   return [204, null];
+}
+
+/** The demo has no email, so the invitation link always comes back to the sender (D5-15). */
+function sendInvite(user) {
+  const token = `${crypto.randomUUID()}${crypto.randomUUID()}`.replaceAll('-', '');
+  const inviteExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  Object.assign(user, { invitePending: true, inviteToken: token, inviteExpiresAt });
+  const origin = typeof window === 'undefined' ? '' : window.location.origin;
+  return { inviteExpiresAt, inviteLink: `${origin}/invite/${token}` };
+}
+
+function acceptInvite(body) {
+  const { token, password } = validate(acceptInviteSchema, body, 'body');
+  const user = db.users.find((u) => u.inviteToken && u.inviteToken === token);
+  if (
+    !user?.invitePending ||
+    user.status !== 'active' ||
+    new Date(user.inviteExpiresAt) < new Date()
+  ) {
+    throw badRequest(ERROR_MESSAGES.inviteInvalid);
+  }
+  Object.assign(user, {
+    password,
+    tokenVersion: user.tokenVersion + 1,
+    invitePending: false,
+    inviteToken: null,
+    inviteExpiresAt: null,
+  });
+  return [200, { data: { email: user.email } }];
 }
 
 function changePassword(actor, body) {
@@ -1125,6 +1155,7 @@ const routes = [
   ['POST', '/auth/logout', () => logout(), { public: true }],
   ['GET', '/auth/me', ({ actor }) => [200, { data: toPublicUser(actor) }]],
   ['POST', '/auth/change-password', ({ actor, body }) => changePassword(actor, body)],
+  ['POST', '/auth/accept-invite', ({ body }) => acceptInvite(body), { public: true }],
 
   [
     'GET',
@@ -1175,10 +1206,11 @@ const routes = [
       if (db.users.some((u) => u.email === input.email)) {
         throw conflict(ERROR_MESSAGES.duplicateEmail);
       }
+      const { invite, ...fields } = input;
       const temporaryPassword = `Temp-${crypto.randomUUID().slice(0, 8)}`;
       const user = {
         id: crypto.randomUUID(),
-        ...input,
+        ...fields,
         status: 'active',
         permissionGrants: [],
         password: temporaryPassword,
@@ -1189,7 +1221,24 @@ const routes = [
         updatedBy: actor.id,
       };
       db.users.push(user);
-      return [201, { data: toPublicUser(user), temporaryPassword }];
+      if (!invite) return [201, { data: toPublicUser(user), temporaryPassword }];
+      const sent = sendInvite(user);
+      return [201, { data: toPublicUser(user), invited: true, ...sent }];
+    },
+  ],
+  [
+    'POST',
+    '/users/:id/invite',
+    ({ actor, params }) => {
+      authorize(actor, 'user:create');
+      const user = db.users.find((u) => u.id === idParam(params.id));
+      if (!user) throw notFound();
+      const mayResend = canManageRole(actor, user.role) || user.createdBy === actor.id;
+      if (!mayResend || !canManageRole(actor, user.role, 'user:create')) {
+        throw forbidden(ERROR_MESSAGES.roleNotManageable);
+      }
+      if (!user.invitePending) throw conflict(ERROR_MESSAGES.notInvited);
+      return [200, sendInvite(user)];
     },
   ],
   [

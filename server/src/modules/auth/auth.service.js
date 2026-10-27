@@ -4,8 +4,13 @@ import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
 import { badRequest, unauthorized } from '../../utils/httpError.js';
 import { recordAudit } from '../audit/audit.service.js';
-import { findUserByEmail, findUserById, updateUserById } from '../users/users.repository.js';
-import { BCRYPT_COST, toPublicUser } from '../users/users.service.js';
+import {
+  findUserByEmail,
+  findUserById,
+  findUserByInviteTokenHash,
+  updateUserById,
+} from '../users/users.repository.js';
+import { BCRYPT_COST, hashInviteToken, toPublicUser } from '../users/users.service.js';
 import * as repo from './auth.repository.js';
 import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 
@@ -118,6 +123,34 @@ export async function changePassword(user, { currentPassword, newPassword }, { r
     entityId: user.id,
     requestId,
   });
+}
+
+/** Sets the first password from an invitation link; the link then stops working (D5-15). */
+export async function acceptInvite({ token, password }, { requestId }) {
+  const user = await findUserByInviteTokenHash(hashInviteToken(token));
+  if (
+    !user?.invitePending ||
+    user.status !== 'active' ||
+    !user.inviteExpiresAt ||
+    user.inviteExpiresAt < new Date()
+  ) {
+    throw badRequest(ERROR_MESSAGES.inviteInvalid);
+  }
+  await updateUserById(user.id, {
+    passwordHash: await bcrypt.hash(password, BCRYPT_COST),
+    tokenVersion: user.tokenVersion + 1,
+    invitePending: false,
+    inviteTokenHash: null,
+    inviteExpiresAt: null,
+  });
+  await recordAudit({
+    actor: user,
+    action: 'auth.acceptInvite',
+    entityType: 'user',
+    entityId: user.id,
+    requestId,
+  });
+  return { email: user.email };
 }
 
 export async function logout(refreshToken) {

@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
+  Badge,
   Button,
+  Dialog,
   Menu,
   PageHeader,
   Table,
@@ -24,7 +26,8 @@ import { SearchInput } from '../../components/SearchInput.jsx';
 import { StatusBadge } from '../../components/StatusBadge.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { useUrlFilters } from '../../utils/useUrlFilters.js';
-import { listUsers, setUserStatus } from '../../services/usersService.js';
+import { listUsers, resendInvite, setUserStatus } from '../../services/usersService.js';
+import { InviteSent } from './UserFormPage.jsx';
 
 export function UsersPage() {
   const { t } = useTranslation();
@@ -36,7 +39,18 @@ export function UsersPage() {
   const { loading, error, data, reload } = useApi(listUsers, { ...filters, page });
   const [deactivating, setDeactivating] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [reinvited, setReinvited] = useState(null);
   const rows = data?.data ?? [];
+
+  async function reinvite(user) {
+    try {
+      const result = await resendInvite(user.id);
+      setReinvited({ user, result });
+      reload();
+    } catch (err) {
+      toast({ title: t('common.error'), description: err.message, tone: 'danger' });
+    }
+  }
 
   async function changeStatus(user, status) {
     setBusy(true);
@@ -109,6 +123,39 @@ export function UsersPage() {
               // A Programme Manager sees every account but changes only coordinators and
               // champions (D5-12).
               const canChange = manageable(user.role);
+              // Same rule as the server: a coordinator resends only invitations they sent (D5-15).
+              const canReinvite =
+                user.invitePending &&
+                canManageRole(me, user.role, 'user:create') &&
+                (canChange || user.createdBy === me.id);
+              const actions = [
+                ...(canChange
+                  ? [
+                      {
+                        label: t('common.edit'),
+                        onSelect: () => navigate(`/users/${user.id}/edit`),
+                      },
+                      // Nobody can lock themselves out (the server refuses it too).
+                      ...(isMe
+                        ? []
+                        : [
+                            user.status === 'active'
+                              ? {
+                                  label: t('users.deactivate'),
+                                  tone: 'danger',
+                                  onSelect: () => setDeactivating(user),
+                                }
+                              : {
+                                  label: t('users.activate'),
+                                  onSelect: () => changeStatus(user, 'active'),
+                                },
+                          ]),
+                    ]
+                  : []),
+                ...(canReinvite
+                  ? [{ label: t('users.resendInvite'), onSelect: () => reinvite(user) }]
+                  : []),
+              ];
               return (
                 <TableRow key={user.id}>
                   <TableCell>
@@ -121,34 +168,12 @@ export function UsersPage() {
                     {user.regions?.map((r) => t(`regions.${r}`)).join(', ') || t('common.none')}
                   </TableCell>
                   <TableCell>
-                    <StatusBadge status={user.status} />
+                    <StatusBadge status={user.status} />{' '}
+                    {user.invitePending && <Badge variant="primary">{t('users.invited')}</Badge>}
                   </TableCell>
                   <TableCell>
-                    {canChange && (
-                      <Menu
-                        label={`${t('common.actions')}: ${user.fullName}`}
-                        items={[
-                          {
-                            label: t('common.edit'),
-                            onSelect: () => navigate(`/users/${user.id}/edit`),
-                          },
-                          // Nobody can lock themselves out (the server refuses it too).
-                          ...(isMe
-                            ? []
-                            : [
-                                user.status === 'active'
-                                  ? {
-                                      label: t('users.deactivate'),
-                                      tone: 'danger',
-                                      onSelect: () => setDeactivating(user),
-                                    }
-                                  : {
-                                      label: t('users.activate'),
-                                      onSelect: () => changeStatus(user, 'active'),
-                                    },
-                              ]),
-                        ]}
-                      />
+                    {actions.length > 0 && (
+                      <Menu label={`${t('common.actions')}: ${user.fullName}`} items={actions} />
                     )}
                   </TableCell>
                 </TableRow>
@@ -168,6 +193,20 @@ export function UsersPage() {
       >
         {deactivating?.fullName}
       </ConfirmDialog>
+      <Dialog
+        open={Boolean(reinvited)}
+        onClose={() => setReinvited(null)}
+        title={t('users.inviteSentTitle')}
+        footer={<Button onClick={() => setReinvited(null)}>{t('common.close')}</Button>}
+      >
+        {reinvited && (
+          <InviteSent
+            name={reinvited.user.fullName}
+            email={reinvited.user.email}
+            result={reinvited.result}
+          />
+        )}
+      </Dialog>
     </>
   );
 }

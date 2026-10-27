@@ -30,11 +30,13 @@ export const createUserSchema = z
     regions: z.array(z.enum(REGION_VALUES)).default([]),
     championProfile: championProfileSchema.optional(),
     preferredLanguage: z.enum(LANGUAGES).default('en'),
+    // true: email an invitation link to set a password; false: show a temporary password (D5-15).
+    invite: z.boolean().default(false),
   })
   .strict();
 
 /** Administrator update. Administrators cannot change their own role (checked in the service). */
-export const updateUserSchema = createUserSchema.partial().strict();
+export const updateUserSchema = createUserSchema.omit({ invite: true }).partial().strict();
 
 export const updateUserStatusSchema = z.object({ status: z.enum(USER_STATUSES) }).strict();
 

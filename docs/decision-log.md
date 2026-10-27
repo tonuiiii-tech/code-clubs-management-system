@@ -613,6 +613,15 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Alternatives considered:** Keeping uppercase eyebrows and taking the brand out of every eyebrow (easy to break again).
 - **Consequences:** Eyebrows are quieter than on steamlabsafrica.com. The Raspberry Pi Foundation logo is added once HQ sends the official file (D3-12).
 
+## D5-15: People can be added by an emailed invitation
+
+- **Status:** Accepted (Enock, 2026-10-27)
+- **Date:** 2026-10-27
+- **Context:** Enock: "add an option for sending an invitation as a way to add users". Until now, adding a person showed a temporary password that had to be handed over.
+- **Decision:** The Add user form asks how the person gets in: an invitation email (the default) or a temporary password. An invitation creates the account with a random password nobody sees and emails a one-time link (`/invite/<token>`, 32 random bytes, only its SHA-256 hash stored) that expires after 7 days. Opening it, the person chooses their own password (at least 10 characters), the link stops working, and they sign in as usual. The Users list marks such accounts "Invited", and whoever may create that role can resend (a coordinator only the invitations they sent); a new link replaces the old one. Accepting is rate-limited per IP. Invite, resend and accept are written to the audit log. The email is in the person's preferred language.
+- **Alternatives considered:** A separate "invited" account status (it would touch every status filter and the sync rules for little gain); SMS invitations (can follow through the same stub when a provider is chosen).
+- **Consequences:** Email goes through the provider stub (D4-5), which sends nothing. Until a real provider is set up at the VPS move, the link is shown once to the sender to pass on, like a temporary password. `APP_URL` sets the address in links (default: the first `CORS_ORIGIN`).
+
 ## Decision template
 
 Copy this template for future entries:

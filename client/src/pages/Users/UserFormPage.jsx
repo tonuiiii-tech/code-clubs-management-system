@@ -12,6 +12,7 @@ import {
   Field,
   Input,
   PageHeader,
+  RadioGroup,
   useToast,
 } from 'steamlabsui';
 import {
@@ -42,6 +43,8 @@ const EMPTY = {
   safeguardingStatus: 'pending',
   safeguardingDate: '',
   preferredLanguage: 'en',
+  // How a new person gets in: an emailed invitation or a temporary password (D5-15).
+  access: 'invite',
 };
 
 function toFormValues(user) {
@@ -115,6 +118,7 @@ function UserForm({ user }) {
       : { ...EMPTY, role: roleChoices.length === 1 ? roleChoices[0] : '' },
     toInput: (values) => {
       const input = toInput(values);
+      if (!editing) input.invite = values.access === 'invite';
       if (editingSelf) delete input.role;
       return input;
     },
@@ -240,12 +244,34 @@ function UserForm({ user }) {
               </div>
             )}
 
+            {!editing && (
+              <RadioGroup
+                legend={t('users.access')}
+                name="access"
+                value={values.access}
+                onValueChange={(value) => set('access', value)}
+                style={{ marginTop: '1.5rem' }}
+                options={[
+                  {
+                    value: 'invite',
+                    label: t('users.accessInvite'),
+                    hint: t('users.accessInviteHint'),
+                  },
+                  {
+                    value: 'password',
+                    label: t('users.accessPassword'),
+                    hint: t('users.accessPasswordHint'),
+                  },
+                ]}
+              />
+            )}
+
             <div className="form-actions">
               <Button variant="outline" type="button" onClick={() => navigate('/users')}>
                 {t('common.cancel')}
               </Button>
               <Button type="submit" loading={form.submitting}>
-                {t('common.save')}
+                {!editing && values.access === 'invite' ? t('users.sendInvite') : t('common.save')}
               </Button>
             </div>
           </form>
@@ -255,15 +281,37 @@ function UserForm({ user }) {
       <Dialog
         open={Boolean(created)}
         onClose={() => navigate('/users')}
-        title={t('users.temporaryPasswordTitle')}
+        title={created?.invited ? t('users.inviteSentTitle') : t('users.temporaryPasswordTitle')}
         hideClose
         footer={<Button onClick={() => navigate('/users')}>{t('common.close')}</Button>}
       >
-        <div className="stack">
-          <p>{t('users.temporaryPasswordBody', { name: created?.data.fullName })}</p>
-          <p className="temp-password">{created?.temporaryPassword}</p>
-        </div>
+        {created?.invited ? (
+          <InviteSent name={created.data.fullName} email={created.data.email} result={created} />
+        ) : (
+          <div className="stack">
+            <p>{t('users.temporaryPasswordBody', { name: created?.data.fullName })}</p>
+            <p className="temp-password">{created?.temporaryPassword}</p>
+          </div>
+        )}
       </Dialog>
     </>
+  );
+}
+
+/**
+ * What happened to an invitation. Until an email provider is connected (D4-5) the server returns
+ * the link instead of sending it, so it is shown once to pass on, like a temporary password.
+ */
+export function InviteSent({ name, email, result }) {
+  const { t } = useTranslation();
+  const expires = new Date(result.inviteExpiresAt).toLocaleDateString();
+  if (!result.inviteLink) {
+    return <p>{t('users.inviteSentBody', { name, email, date: expires })}</p>;
+  }
+  return (
+    <div className="stack">
+      <p>{t('users.inviteLinkBody', { name, date: expires })}</p>
+      <p className="temp-password invite-link">{result.inviteLink}</p>
+    </div>
   );
 }

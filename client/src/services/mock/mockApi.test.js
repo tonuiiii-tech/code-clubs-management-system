@@ -231,6 +231,39 @@ describe('mock API: same contract and rules as the server', () => {
     expect(off.status).toBe(403);
   });
 
+  it('invites a person who sets their own password once (D5-15)', async () => {
+    const token = await signIn(ADMIN);
+    const res = await call(token, 'POST', '/users', {
+      body: {
+        fullName: 'Amina Chebet',
+        email: 'amina.chebet@demo.steamlabs.test',
+        role: 'coordinator',
+        regions: ['coast'],
+        invite: true,
+      },
+    });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ invited: true, data: { invitePending: true } });
+    expect(JSON.stringify(res.body.data)).not.toMatch(/inviteToken/);
+    const inviteToken = res.body.inviteLink.split('/invite/')[1];
+    const accept = (password) =>
+      mockRequest({
+        method: 'POST',
+        path: '/auth/accept-invite',
+        body: { token: inviteToken, password },
+      });
+    expect((await accept('a-new-password-1')).status).toBe(200);
+    const login = await mockRequest({
+      method: 'POST',
+      path: '/auth/login',
+      body: { email: 'amina.chebet@demo.steamlabs.test', password: 'a-new-password-1' },
+    });
+    expect(login.status).toBe(200);
+    const again = await accept('another-password-2');
+    expect(again.status).toBe(400);
+    expect(again.body.error.message).toBe(ERROR_MESSAGES.inviteInvalid);
+  });
+
   it('stops admins from changing their own role or deactivating themselves', async () => {
     const token = await signIn(ADMIN);
     const role = await call(token, 'PATCH', `/users/${uid(1)}`, { body: { role: 'champion' } });

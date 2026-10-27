@@ -19,3 +19,20 @@ export const loginRateLimit = rateLimit({
       },
     }),
 });
+
+/** Invitation links: 10 tries per 15 minutes per IP, so tokens cannot be guessed (D5-15). */
+export const inviteRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => ipKeyGenerator(req.ip),
+  handler: (_req, res) =>
+    res.status(429).json({
+      error: {
+        code: 'TOO_MANY_ATTEMPTS',
+        message: ERROR_MESSAGES.tooManyAttempts,
+      },
+    }),
+});
