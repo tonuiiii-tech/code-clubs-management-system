@@ -1,4 +1,4 @@
-import { User } from '../../db/models.js';
+import { ClubChampion, User } from '../../db/models.js';
 import { insertUnique, paginate, textSearch, toRecord, updateUnique } from '../../db/records.js';
 import { userScopeQuery } from '../../db/scopeQueries.js';
 import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
@@ -32,6 +32,9 @@ export async function listUsers(scopeFilter, query) {
       query.role ? { role: query.role } : {},
       query.status ? { status: query.status } : {},
       textSearch(query.q, ['fullName', 'email']),
+      query.withoutClub
+        ? { _id: { $nin: await ClubChampion.distinct('userId', { endDate: null }) } }
+        : {},
     ],
   };
   return paginate(User, filter, query, { fullName: 1 });

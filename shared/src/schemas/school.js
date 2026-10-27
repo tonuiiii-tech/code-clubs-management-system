@@ -32,4 +32,9 @@ export const listSchoolsQuerySchema = paginationSchema.extend({
   type: z.enum(SCHOOL_TYPES).optional(),
   status: z.enum(RECORD_STATUSES).optional(),
   q: z.string().trim().max(80).optional(),
+  // Schools with no open club, the only ones a new club can be added to (D5-11).
+  withoutClub: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((v) => v === 'true'),
 });

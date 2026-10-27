@@ -21,6 +21,7 @@ const EMAIL = {
   otherCoordinator: 'achieng.odhiambo@demo.steamlabs.test',
   champion: 'faith.njeri@demo.steamlabs.test',
   otherChampion: 'amina.salim@demo.steamlabs.test',
+  grace: 'grace.wambui@demo.steamlabs.test', // NAC-002
 };
 // Demo records: NAC-001 and NAC-002 are Faith's clubs in Nairobi; WNY-001 is Amina's in Kisumu.
 const NAC_001 = uid(201);
@@ -296,8 +297,12 @@ describe('Events', () => {
     const champion = api('champion');
 
     expect(
-      (await champion.post(`/events/${id}/participants`, { learnerIds: [AMANI] })).status,
+      (await api('coordinator').post(`/events/${id}/participants`, { learnerIds: [AMANI] })).status,
     ).toBe(409); // NAC-002 not invited
+    // Its champion does not see the event at all.
+    expect(
+      (await api('grace').post(`/events/${id}/participants`, { learnerIds: [AMANI] })).status,
+    ).toBe(404);
     expect(
       (await champion.post(`/events/${id}/participants`, { learnerIds: [JABARI] })).status,
     ).toBe(409); // left

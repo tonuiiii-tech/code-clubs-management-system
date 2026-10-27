@@ -24,7 +24,8 @@ export const POLICY = Object.freeze({
     [COORDINATOR]: ASSIGNED,
     [CHAMPION]: SELF,
   },
-  'user:manage': { [SYSTEM_ADMIN]: ALL },
+  // Which roles' accounts each manager may create, edit and deactivate: MANAGEABLE_ROLES (D5-12).
+  'user:manage': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL },
   'user:updateSelf': {
     [SYSTEM_ADMIN]: SELF,
     [PROGRAMME_MANAGER]: SELF,
@@ -173,6 +174,21 @@ export const POLICY = Object.freeze({
 });
 
 export const PERMISSIONS = Object.freeze(Object.keys(POLICY));
+
+/**
+ * Account roles each role may create, edit and (de)activate (D5-12). The Programme Manager
+ * creates the Code Clubs Coordinators and Club Champions; only a System Administrator manages
+ * Programme Managers and other administrators.
+ */
+export const MANAGEABLE_ROLES = Object.freeze({
+  [SYSTEM_ADMIN]: Object.freeze([SYSTEM_ADMIN, PROGRAMME_MANAGER, COORDINATOR, CHAMPION]),
+  [PROGRAMME_MANAGER]: Object.freeze([COORDINATOR, CHAMPION]),
+});
+
+/** True when the user may manage accounts that have this role. */
+export function canManageRole(user, role) {
+  return can(user, 'user:manage') && (MANAGEABLE_ROLES[user.role] ?? []).includes(role);
+}
 
 /**
  * Returns the scope a user has for a permission, or null when denied.

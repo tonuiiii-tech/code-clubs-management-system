@@ -16,7 +16,7 @@ import {
   UPLOAD_MAX_BYTES,
   UPLOAD_TYPES,
 } from '@code-clubs/shared/enums';
-import { SCOPES, scopeFor } from '@code-clubs/shared/permissions';
+import { SCOPES, canManageRole, scopeFor } from '@code-clubs/shared/permissions';
 import {
   assignChampionSchema,
   attendanceSchema,
@@ -172,6 +172,20 @@ function scopeFilter(user, scope) {
 
 const currentAssignments = (clubId) =>
   db.assignments.filter((a) => a.clubId === clubId && !a.endDate);
+
+/** True when the school already has a club that is not closed, other than this one (D5-11). */
+/** A Programme Manager manages only coordinator and champion accounts (D5-12). */
+function assertCanManage(actor, ...roles) {
+  if (!roles.every((role) => canManageRole(actor, role))) {
+    throw forbidden(ERROR_MESSAGES.roleNotManageable);
+  }
+}
+
+function schoolHasOtherClub(schoolId, exceptClubId = null) {
+  return db.clubs.some(
+    (c) => c.schoolId === schoolId && c.status !== 'closed' && c.id !== exceptClubId,
+  );
+}
 
 function clubInFilter(club, filter) {
   if (filter.all) return true;
@@ -1123,6 +1137,9 @@ const routes = [
         .filter((u) => userInFilter(u, filter))
         .filter((u) => (!q.role || u.role === q.role) && (!q.status || u.status === q.status))
         .filter((u) => matches(q.q, u.fullName, u.email))
+        .filter(
+          (u) => !q.withoutClub || !db.assignments.some((a) => a.userId === u.id && !a.endDate),
+        )
         .sort(byName('fullName'))
         .map(toPublicUser);
       return [200, paginate(rows, q)];
@@ -1154,6 +1171,7 @@ const routes = [
     ({ actor, body }) => {
       authorize(actor, 'user:manage');
       const input = validate(createUserSchema, body, 'body');
+      assertCanManage(actor, input.role);
       if (db.users.some((u) => u.email === input.email)) {
         throw conflict(ERROR_MESSAGES.duplicateEmail);
       }
@@ -1184,6 +1202,7 @@ const routes = [
       if (id === actor.id) throw forbidden(ERROR_MESSAGES.ownStatus);
       const user = db.users.find((u) => u.id === id);
       if (!user) throw notFound();
+      assertCanManage(actor, user.role);
       Object.assign(user, {
         status,
         ...(status === 'inactive' && { tokenVersion: user.tokenVersion + 1 }),
@@ -1205,6 +1224,7 @@ const routes = [
       }
       const user = db.users.find((u) => u.id === id);
       if (!user) throw notFound();
+      assertCanManage(actor, user.role, changes.role ?? user.role);
       Object.assign(user, changes, { updatedAt: now(), updatedBy: actor.id });
       return [200, { data: toPublicUser(user) }];
     },
@@ -1226,6 +1246,7 @@ const routes = [
             (!q.status || s.status === q.status),
         )
         .filter((s) => matches(q.q, s.name, s.subCounty, s.ward))
+        .filter((s) => !q.withoutClub || !schoolHasOtherClub(s.id))
         .sort(byName('name'));
       return [200, paginate(rows, q)];
     },
@@ -1316,6 +1337,8 @@ const routes = [
       if (filter.regions && !filter.regions.includes(school.region)) {
         throw forbidden(ERROR_MESSAGES.clubOwnRegion);
       }
+      // One Code Club per school; a closed one does not count (D5-11).
+      if (schoolHasOtherClub(school.id)) throw conflict(ERROR_MESSAGES.schoolHasClub);
       const prefix = REGION_CODE_PREFIX[school.region];
       const used = db.clubs.filter((c) => c.code.startsWith(`${prefix}-`)).length;
       const club = {
@@ -1353,6 +1376,15 @@ const routes = [
           { field: 'body.endTime', message: 'End time must be after start time' },
         ]);
       }
+      const movesOrReopens = changes.schoolId !== undefined || changes.status !== undefined;
+      if (
+        movesOrReopens &&
+        merged.schoolId &&
+        merged.status !== 'closed' &&
+        schoolHasOtherClub(merged.schoolId, club.id)
+      ) {
+        throw conflict(ERROR_MESSAGES.schoolHasClub);
+      }
       Object.assign(club, changes, { updatedAt: now(), updatedBy: actor.id });
       return [200, { data: club }];
     },
@@ -1379,6 +1411,10 @@ const routes = [
       const champion = db.users.find((u) => u.id === userId);
       if (!champion || champion.status !== 'active' || champion.role !== ROLES.CHAMPION) {
         throw badRequest(ERROR_MESSAGES.onlyActiveChampions);
+      }
+      // A champion runs one club, and so one school (D5-9).
+      if (db.assignments.some((a) => a.userId === userId && !a.endDate && a.clubId !== club.id)) {
+        throw conflict(ERROR_MESSAGES.championHasClub);
       }
       let assignment = currentAssignments(club.id).find((a) => a.userId === userId);
       if (assignment) {

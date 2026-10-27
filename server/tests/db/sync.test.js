@@ -95,8 +95,8 @@ describe('Pull', () => {
   it('sends a champion their own clubs only, without contacts or consent forms', async () => {
     const [page] = await pullAll('champion');
     const { changes } = page;
-    expect(changes.clubs.map((c) => c.id).sort()).toEqual([NAC_001, NAC_002].sort());
-    expect(changes.learners.every((l) => [NAC_001, NAC_002].includes(l.clubId))).toBe(true);
+    expect(changes.clubs.map((c) => c.id)).toEqual([NAC_001]);
+    expect(changes.learners.every((l) => l.clubId === NAC_001)).toBe(true);
     expect(changes.learners.some((l) => l.id === AKINYI)).toBe(false);
     expect(changes.sessions.some((s) => s.id === KISUMU_SESSION)).toBe(false);
     const zawadi = changes.learners.find((l) => l.id === ZAWADI);
@@ -155,15 +155,19 @@ describe('Pull', () => {
 
   it('starts again from scratch when the user’s scope changes', async () => {
     const [before] = await pullAll('champion');
-    const assign = await request(app)
-      .put(`/api/v1/clubs/${WNY_001}/champions/${FAITH}`)
-      .set(auth('admin'))
-      .send({ role: 'assistant' });
-    expect(assign.status).toBe(200);
+    // Faith moves from NAC-001 to WNY-001 (one club per champion, D5-9), then back.
+    const move = async (from, to, role) => {
+      await request(app).delete(`/api/v1/clubs/${from}/champions/${FAITH}`).set(auth('admin'));
+      return request(app)
+        .put(`/api/v1/clubs/${to}/champions/${FAITH}`)
+        .set(auth('admin'))
+        .send({ role });
+    };
+    expect((await move(NAC_001, WNY_001, 'assistant')).status).toBe(200);
     const after = await api('champion').pull({ cursor: before.cursor, scopeKey: before.scopeKey });
     expect(after.body.data.reset).toBe(true);
     expect(after.body.data.changes.learners.some((l) => l.id === AKINYI)).toBe(true);
-    await request(app).delete(`/api/v1/clubs/${WNY_001}/champions/${FAITH}`).set(auth('admin'));
+    expect((await move(WNY_001, NAC_001, 'lead')).status).toBe(200);
   });
 
   it('refuses a cursor it did not make', async () => {
@@ -395,14 +399,14 @@ describe('Sessions and attendance offline', () => {
   it('merges attendance taken on two devices, learner by learner (D2-4)', async () => {
     const session = op('session.create', {
       id: randomUUID(),
-      clubId: NAC_002,
+      clubId: NAC_001,
       date: daysAgo(2),
       status: 'held',
       topic: 'Unplugged: binary bracelets',
     });
     expect((await api('champion').push([session])).body.data.results[0].status).toBe('applied');
     const id = session.data.id;
-    const learners = (await api('champion').get(`/learners?clubId=${NAC_002}&status=active`)).body
+    const learners = (await api('champion').get(`/learners?clubId=${NAC_001}&status=active`)).body
       .data;
     const [l1, l2] = learners;
     await api('champion').push([

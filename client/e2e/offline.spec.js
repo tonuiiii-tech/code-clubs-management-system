@@ -63,14 +63,12 @@ test('a champion works offline and the changes sync when the connection is back'
   await expect(page.getByText('Given after sync')).toBeVisible();
   await expect(status).toHaveText('Offline · 1 change waiting to sync');
 
-  // Report a session at NAC-002 and take attendance, still offline. Real data persists, so try
+  // Report a session at NAC-001 and take attendance, still offline. Real data persists, so try
   // days in the edit window until one is free.
   await nav.getByRole('link', { name: 'Sessions' }).click();
   await page.getByRole('link', { name: 'Report a session' }).click();
   await expect(page.getByRole('heading', { name: 'Report a session' })).toBeVisible();
-  await page
-    .getByLabel(field('Club'))
-    .selectOption({ label: 'NAC-002 · Kawangware Code Explorers' });
+  await page.getByLabel(field('Club')).selectOption({ label: 'NAC-001 · Mwangaza Scratch Stars' });
   await page.getByLabel(field('Topic covered')).fill(`Unplugged: sorting networks${RUN}`);
   for (const days of [0, 1, 2, 3, 4, 5, 6]) {
     await page.getByLabel(field('Date')).fill(isoDaysAgo(days));

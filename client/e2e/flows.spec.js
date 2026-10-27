@@ -72,12 +72,23 @@ test('admin adds a school, then a club there, then assigns a champion', async ({
   await expect(page.getByRole('heading', { name: `Gatina Code Club${RUN}` })).toBeVisible();
   await expect(page.getByText(REAL ? /^NAC-\d{3}$/ : 'NAC-004')).toBeVisible();
 
+  // A champion runs one club (D5-9): Kevin Omondi runs WNY-003, so only Peter Kariuki, who has
+  // none, can be chosen.
   await page.getByRole('button', { name: 'Assign champion' }).click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByLabel(field('Champion')).selectOption({ label: 'Kevin Omondi' });
+  const champion = dialog.getByLabel(field('Champion'));
+  await expect(champion.getByRole('option', { name: 'Kevin Omondi' })).toHaveCount(0);
+  // His safeguarding check is still pending, which the option shows after his name.
+  const peter = champion.getByRole('option', { name: /^Peter Kariuki/ });
+  await champion.selectOption(await peter.getAttribute('value'));
   await dialog.getByLabel(field('Role in this club')).selectOption('lead');
   await dialog.getByRole('button', { name: 'Assign champion' }).click();
-  await expect(page.getByText('Kevin Omondi')).toBeVisible();
+  await expect(page.getByText('Peter Kariuki')).toBeVisible();
+
+  // End it again, so Peter is free for the next run against a real database.
+  await page.getByRole('button', { name: 'End assignment' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'End assignment' }).click();
+  await expect(page.getByText('Assignment ended')).toBeVisible();
 });
 
 test('a champion sees only their own clubs and cannot open others', async ({ page }) => {
@@ -88,8 +99,10 @@ test('a champion sees only their own clubs and cannot open others', async ({ pag
     .getByRole('navigation', { name: 'Main navigation' })
     .getByRole('link', { name: 'Clubs' })
     .click();
-  await expect(page.getByRole('row')).toHaveCount(3); // header + NAC-001 + NAC-002
+  // One club per champion (D5-9), and no Schools section.
+  await expect(page.getByRole('row')).toHaveCount(2); // header + NAC-001
   await expect(page.getByText('Mwangaza Scratch Stars')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Schools' })).toHaveCount(0);
 
   // WNY-001 belongs to another champion: it looks exactly like a missing page.
   await page.goto('/clubs/00000000-0000-4000-8000-000000000204');

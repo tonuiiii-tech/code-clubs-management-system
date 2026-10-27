@@ -217,7 +217,9 @@ function ClubChampions({ club }) {
   );
 }
 
-const activeChampions = () => listUsers({ role: 'champion', status: 'active', pageSize: 100 });
+// A champion runs one club (D5-9), so only those without one can be chosen.
+const activeChampions = () =>
+  listUsers({ role: 'champion', status: 'active', withoutClub: 'true', pageSize: 100 });
 
 function AssignChampionDialog({ club, current, onClose, onAssigned }) {
   const { t } = useTranslation();
@@ -266,7 +268,7 @@ function AssignChampionDialog({ club, current, onClose, onAssigned }) {
     >
       <DataState loading={candidates.loading} error={candidates.error}>
         {options.length === 0 ? (
-          <EmptyState title={t('users.empty')} />
+          <EmptyState title={t('clubs.noFreeChampions')} />
         ) : (
           <div className="stack">
             {error && <Alert tone="danger">{error}</Alert>}

@@ -19,6 +19,7 @@ const EMAIL = {
   coordinator: 'mwende.mutua@demo.steamlabs.test',
   champion: 'faith.njeri@demo.steamlabs.test',
   otherChampion: 'amina.salim@demo.steamlabs.test',
+  grace: 'grace.wambui@demo.steamlabs.test', // NAC-002
 };
 // NAC-001 and NAC-002 are Faith's clubs in Nairobi; WNY-001 is Amina's in Kisumu.
 const NAC_001 = uid(201);
@@ -29,6 +30,7 @@ const ZAWADI = uid(1001); // NAC-001
 const BARAKA = uid(1002); // NAC-001
 const IMANI = uid(1003); // NAC-001, photo consent refused
 const JABARI = uid(1006); // NAC-001, left the club
+const TUMAINI = uid(1004); // NAC-001
 const AMANI = uid(1007); // NAC-002
 const CURRENT_TERM = uid(2403);
 const SHOWCASE = uid(1801); // Nairobi, NAC-001 and NAC-002 invited
@@ -139,7 +141,7 @@ describe('Equipment (US-25 to US-27)', () => {
     expect(item.club.code).toBe('NAC-002');
     expect(item.loans.filter((l) => l.open)).toHaveLength(1);
     // Champions of the club now see it.
-    expect(ids(await api('champion').get('/equipment?clubId=' + NAC_002))).toEqual([TABLET]);
+    expect(ids(await api('grace').get('/equipment?clubId=' + NAC_002))).toEqual([TABLET]);
 
     expect(
       (
@@ -465,12 +467,10 @@ describe('Offline (plan section 7)', () => {
     expect(res.status).toBe(200);
     const { equipmentItems, resources, learnerProjects, assessments, assessmentScores } =
       res.body.data.changes;
-    expect(equipmentItems.every((i) => [NAC_001, NAC_002].includes(i.clubId))).toBe(true);
+    expect(equipmentItems.every((i) => i.clubId === NAC_001)).toBe(true);
     expect(resources.every((r) => r.status === 'published' && !('fileId' in r))).toBe(true);
     expect(resources.map((r) => r.id)).not.toContain(DRAFT_SLIDES);
-    expect(
-      learnerProjects.every((p) => [NAC_001, NAC_002].includes(p.clubId) && !('fileId' in p)),
-    ).toBe(true);
+    expect(learnerProjects.every((p) => p.clubId === NAC_001 && !('fileId' in p))).toBe(true);
     expect(assessments.length).toBeGreaterThanOrEqual(2);
     expect(assessmentScores.every((s) => s.clubId === NAC_001)).toBe(true);
     const { inScope } = res.body.data;
@@ -483,15 +483,15 @@ describe('Offline (plan section 7)', () => {
     const recordedAt = new Date(Date.now() - 3_600_000).toISOString();
     const project = {
       id: newId(1),
-      clubId: NAC_002,
-      learnerIds: [AMANI],
+      clubId: NAC_001,
+      learnerIds: [TUMAINI],
       title: 'Paper robot',
       track: 'unplugged',
       date: day(0),
     };
     const assessment = {
       id: newId(2),
-      clubId: NAC_002,
+      clubId: NAC_001,
       title: 'Sorting quiz',
       track: 'unplugged',
       date: day(0),
@@ -517,7 +517,7 @@ describe('Offline (plan section 7)', () => {
         opId: opId(14),
         type: 'assessment.scores',
         recordId: newId(2),
-        data: { scores: [{ learnerId: AMANI, score: 4 }] },
+        data: { scores: [{ learnerId: TUMAINI, score: 4 }] },
         recordedAt,
       },
     ];
@@ -529,12 +529,12 @@ describe('Offline (plan section 7)', () => {
       'Paper robot arm',
     );
     expect(
-      (await api('champion').get(`/progress/projects?clubId=${NAC_002}`)).body.data.filter(
+      (await api('champion').get(`/progress/projects?clubId=${NAC_001}`)).body.data.filter(
         (p) => p.id === newId(1),
       ),
     ).toHaveLength(1);
     const saved = (await api('champion').get(`/progress/assessments/${newId(2)}`)).body.data;
-    expect(saved.scores.find((s) => s.learnerId === AMANI).score).toBe(4);
+    expect(saved.scores.find((s) => s.learnerId === TUMAINI).score).toBe(4);
     const item = (await api('admin').get(`/equipment/${uid(2602)}`)).body.data;
     expect(item.condition).toBe('needs_repair');
     expect(item.reports[0].date).toBe(recordedAt.slice(0, 10));

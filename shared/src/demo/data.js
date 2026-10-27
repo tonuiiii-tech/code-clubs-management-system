@@ -201,6 +201,19 @@ export function createSeedData() {
       36.4333,
       'Susan Nyokabi',
     ),
+    // One Code Club per school (D5-11): Kisumu AI Explorers meets here, not at Nyalenda Hope.
+    school(
+      11,
+      'Manyatta Primary School',
+      'primary_school',
+      'western_nyanza',
+      'Kisumu',
+      'Kisumu East',
+      'Manyatta B',
+      -0.0917,
+      34.768,
+      'Paul Ochieng',
+    ),
   ];
 
   const venueFor = (s) => (s.type === 'other' ? 'community_centre' : s.type);
@@ -221,7 +234,7 @@ export function createSeedData() {
     ...stamp,
     ...extra,
   });
-  const [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] = schools;
+  const [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11] = schools;
 
   const clubs = [
     club(1, 'NAC-001', 'Mwangaza Scratch Stars', s1, 'tuesday', '15:30', '17:00', 'scratch'),
@@ -233,7 +246,7 @@ export function createSeedData() {
     club(5, 'WNY-002', 'Lurambi Game Makers', s5, 'saturday', '09:00', '11:00', 'game_design', {
       status: 'paused',
     }),
-    club(6, 'WNY-003', 'Kisumu AI Explorers', s4, 'friday', '15:00', '16:30', 'ai_basics'),
+    club(6, 'WNY-003', 'Kisumu AI Explorers', s11, 'friday', '15:00', '16:30', 'ai_basics'),
     club(7, 'CST-001', 'Majengo Micro:bit Makers', s6, 'thursday', '15:30', '17:00', 'robotics'),
     club(8, 'CST-002', 'Bahari Coders', s7, 'saturday', '10:00', '12:00', 'scratch', {
       frequency: 'fortnightly',
@@ -255,19 +268,16 @@ export function createSeedData() {
     startDate: '2026-01-12',
     endDate: null,
   });
+  // One club per champion (D5-9). Peter Kariuki is waiting for a club; Lanet, Bahari Coders,
+  // Kapsoya and Naivasha are waiting for a champion.
   const assignments = [
     assign(1, 11, 'lead'),
-    assign(2, 11, 'lead'),
-    assign(2, 15, 'assistant'),
+    assign(2, 15, 'lead'),
     assign(3, 12, 'lead'),
     assign(4, 13, 'lead'),
     assign(5, 17, 'lead'),
     assign(6, 14, 'lead'),
     assign(7, 16, 'lead'),
-    assign(8, 13, 'assistant'),
-    assign(10, 18, 'lead'),
-    assign(11, 17, 'assistant'),
-    assign(12, 14, 'assistant'),
   ];
 
   const learnerData = createLearnerData(clubs);

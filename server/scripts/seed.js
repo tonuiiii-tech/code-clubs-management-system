@@ -85,6 +85,13 @@ export async function seed({ password = env.SEED_DEFAULT_PASSWORD || DEMO_PASSWO
   await upsertAll(School, schools);
   await upsertAll(Club, clubs);
   await ClubChampion.deleteMany({ clubId: { $in: clubs.map((c) => c.id) } });
+  // A champion runs one club (D5-9): end demo champions' assignments to other clubs, such as
+  // ones the browser tests made, so each keeps only their demo club.
+  const championIds = users.filter((u) => u.role === 'champion').map((u) => u.id);
+  await ClubChampion.updateMany(
+    { userId: { $in: championIds }, clubId: { $nin: clubs.map((c) => c.id) }, endDate: null },
+    { $set: { endDate: new Date().toISOString().slice(0, 10) } },
+  );
   await ClubChampion.insertMany(assignments.map((a) => ({ ...a })));
 
   // Sprint 2: fictional learners only (R2-1).

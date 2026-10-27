@@ -5,8 +5,16 @@ import { scopeFilter } from '../scope.js';
 import { recordAudit } from '../audit/audit.service.js';
 import * as repo from './users.repository.js';
 import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
+import { canManageRole } from '@code-clubs/shared/permissions';
 
 export const BCRYPT_COST = 12;
+
+/** A Programme Manager manages only coordinator and champion accounts (D5-12). */
+function assertCanManage(actor, ...roles) {
+  if (!roles.every((role) => canManageRole(actor, role))) {
+    throw forbidden(ERROR_MESSAGES.roleNotManageable);
+  }
+}
 
 /** Fields that are never sent to the client. */
 export function toPublicUser(user) {
@@ -46,6 +54,7 @@ export async function updateOwnProfile(actor, changes, { requestId }) {
 }
 
 export async function createUser(actor, input, { temporaryPassword, requestId }) {
+  assertCanManage(actor, input.role);
   if (await repo.findUserByEmail(input.email)) throw conflict(ERROR_MESSAGES.duplicateEmail);
   const now = new Date();
   const user = {
@@ -77,6 +86,7 @@ export async function updateUser(actor, id, changes, { requestId }) {
   if (id === actor.id && changes.role !== undefined) throw forbidden(ERROR_MESSAGES.ownRole);
   const before = await repo.findUserById(id);
   if (!before) throw notFound();
+  assertCanManage(actor, before.role, changes.role ?? before.role);
   const updated = await repo.updateUserById(id, {
     ...changes,
     updatedAt: new Date(),
@@ -99,6 +109,7 @@ export async function setUserStatus(actor, id, status, { requestId }) {
   if (id === actor.id) throw forbidden(ERROR_MESSAGES.ownStatus);
   const before = await repo.findUserById(id);
   if (!before) throw notFound();
+  assertCanManage(actor, before.role);
   const changes = {
     status,
     ...(status === 'inactive' && { tokenVersion: before.tokenVersion + 1 }),

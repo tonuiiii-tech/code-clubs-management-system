@@ -1,4 +1,4 @@
-import { School } from '../../db/models.js';
+import { Club, School } from '../../db/models.js';
 import { insertUnique, paginate, textSearch, toRecord, updateUnique } from '../../db/records.js';
 import { schoolScopeQuery } from '../../db/scopeQueries.js';
 import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
@@ -16,6 +16,9 @@ export async function listSchools(scopeFilter, query) {
         query[key] ? { [key]: query[key] } : {},
       ),
       textSearch(query.q, ['name', 'subCounty', 'ward']),
+      query.withoutClub
+        ? { _id: { $nin: await Club.distinct('schoolId', { status: { $ne: 'closed' } }) } }
+        : {},
     ],
   };
   return paginate(School, filter, query, { name: 1 });
