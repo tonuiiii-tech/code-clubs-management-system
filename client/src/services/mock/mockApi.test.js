@@ -205,6 +205,32 @@ describe('mock API: same contract and rules as the server', () => {
     expect(lockout.status).toBe(403);
   });
 
+  it('lets a coordinator create Club Champion accounts only (D5-13)', async () => {
+    const token = await signIn(COORDINATOR_NAIROBI);
+    const champion = await call(token, 'POST', '/users', {
+      body: {
+        fullName: 'Wanjala Barasa',
+        email: 'wanjala.barasa@demo.steamlabs.test',
+        role: 'champion',
+        championProfile: { type: 'volunteer' },
+      },
+    });
+    expect(champion.status).toBe(201);
+    const peer = await call(token, 'POST', '/users', {
+      body: {
+        fullName: 'Nafula Simiyu',
+        email: 'nafula.simiyu@demo.steamlabs.test',
+        role: 'coordinator',
+        regions: ['nairobi_central'],
+      },
+    });
+    expect(peer.status).toBe(403);
+    const off = await call(token, 'PATCH', `/users/${champion.body.data.id}/status`, {
+      body: { status: 'inactive' },
+    });
+    expect(off.status).toBe(403);
+  });
+
   it('stops admins from changing their own role or deactivating themselves', async () => {
     const token = await signIn(ADMIN);
     const role = await call(token, 'PATCH', `/users/${uid(1)}`, { body: { role: 'champion' } });

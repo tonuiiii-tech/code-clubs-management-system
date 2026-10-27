@@ -66,4 +66,8 @@ describe('navigation follows the permission policy', () => {
   it('keeps the Schools section for a Code Clubs Coordinator', () => {
     expect(renderAs('coordinator')).toContain('Schools');
   });
+
+  it('gives a Code Clubs Coordinator the Users section to add Club Champions (D5-13)', () => {
+    expect(renderAs('coordinator')).toContain('Users');
+  });
 });

@@ -25,7 +25,7 @@ export const NAV = [
   // Champions work inside their own clubs, so they get no Schools section; they still reach
   // their club's school from the club page (Enock, 2026-10-26).
   { to: '/schools', key: 'nav.schools', permission: 'school:write' },
-  { to: '/users', key: 'nav.users', permission: 'user:manage' },
+  { to: '/users', key: 'nav.users', permission: 'user:create' },
   { to: '/settings', key: 'nav.settings', permission: ['term:manage', 'report:schedule'] },
   { to: '/sync', key: 'nav.sync', permission: ['sync:use', 'syncConflict:read'] },
   { to: '/profile', key: 'nav.profile' },

@@ -574,8 +574,17 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Date:** 2026-10-27
 - **Context:** Enock: "the club champion should only be able to add learners while the code clubs coordinator should be able to create clubs and assign champions then the program manager is the one who can create accounts for code club coordinators". Only the System Administrator could create accounts (D1-4). Coordinators already create clubs and assign champions in their regions, and champions already cannot create clubs, schools or accounts.
 - **Decision:** `user:manage` now includes the Programme Manager, limited by `MANAGEABLE_ROLES` in `shared/src/permissions.js`: a Programme Manager creates, edits, deactivates and reactivates Code Clubs Coordinator and Club Champion accounts; only a System Administrator manages Programme Manager and System Administrator accounts. Anything else is refused (403, "You cannot manage accounts with this role"), including promoting a coordinator to Programme Manager. The Users page shows a Programme Manager every account but offers actions only on coordinators and champions, and the role list in the form offers only those two roles.
-- **Alternatives considered:** Coordinators creating champion accounts in their region (not asked for; can be added to `MANAGEABLE_ROLES` with a region check).
+- **Alternatives considered:** Coordinators creating champion accounts (adopted later the same day, D5-13).
 - **Consequences:** Enock confirmed (2026-10-27) that champions keep recording sessions, attendance, consent, progress and fault reports for their own club; they get no management powers (no clubs, schools, accounts or champion assignments).
+
+## D5-13: A coordinator creates Club Champion accounts only
+
+- **Status:** Accepted (Enock, 2026-10-27)
+- **Date:** 2026-10-27
+- **Context:** Enock: "a coordinator can only create club champion accounts". D5-12 left account creation to the System Administrator and the Programme Manager.
+- **Decision:** A new permission, `user:create`, adds the Code Clubs Coordinator, and `MANAGEABLE_ROLES` limits a coordinator to the Club Champion role. Any other role is refused (403, "You cannot manage accounts with this role"). Editing, deactivating and reactivating accounts (`user:manage`) stays with the Programme Manager and System Administrator. Coordinators get the Users page; its form preselects Club Champion, and it offers no edit or deactivate actions. A new champion has no club until the coordinator assigns one (D5-9).
+- **Alternatives considered:** Letting coordinators also edit or deactivate the champions in their regions (not asked for; it can follow by adding the coordinator to `user:manage` with a scope check).
+- **Consequences:** An unassigned champion is visible to every coordinator (D1-4 scope rule), so a coordinator can assign a champion another coordinator created.
 
 ## Decision template
 

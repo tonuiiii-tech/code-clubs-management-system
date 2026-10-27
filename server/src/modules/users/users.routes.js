@@ -32,7 +32,7 @@ usersRouter.patch(
 usersRouter.get('/:id', authorize('user:read'), validate({ params: idParams }), controller.get);
 usersRouter.post(
   '/',
-  authorize('user:manage'),
+  authorize('user:create'),
   validate({ body: createUserSchema }),
   controller.create,
 );
