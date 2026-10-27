@@ -9,6 +9,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog.jsx';
 import { SyncStatus } from '../components/SyncStatus.jsx';
 import { AnnouncementsBell } from '../components/AnnouncementsBell.jsx';
 import { useSyncState } from '../offline/index.js';
+import codeClubLogo from '../assets/code-club-logo.png';
 
 /** Menu items are filtered by the shared policy; the server still checks every request (D1-3). */
 export const NAV = [
@@ -46,7 +47,10 @@ export function AppLayout() {
       <DemoBanner />
       <div className="app-shell">
         <nav className="app-nav" aria-label={t('nav.main')}>
-          <strong className="app-nav__brand">{t('app.name')}</strong>
+          <div className="app-nav__brand">
+            <img src={codeClubLogo} alt="Code Club" width={120} />
+            <strong>{t('app.name')}</strong>
+          </div>
           {NAV.filter((item) => allowed(item.permission)).map((item) => (
             <NavLink key={item.to} to={item.to} end={item.end}>
               {t(item.key)}

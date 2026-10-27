@@ -540,6 +540,15 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Alternatives considered:** Tombstones for every record that leaves scope.
 - **Consequences:** Closes the D4-8 gap (tested: an uninvited event is no longer in `inScope`). The device copy of an item has no loan history.
 
+## D5-10: The Code Club logo in the app
+
+- **Status:** Accepted (Enock, 2026-10-27)
+- **Date:** 2026-10-27
+- **Context:** Enock sent the official green horizontal Code Club logo. The STEAMLabs logo and partner credit live in the paused redesign (PR #4), so the current app showed no logo.
+- **Decision:** Show the Code Club logo, cropped but not recoloured, above the sign-in card and at the top of the menu, where it sits on a white tile so the green logo stays visible on the green menu. It is hidden in the phone bottom bar. It moves into the redesign when that resumes.
+- **Alternatives considered:** Waiting for the redesign; waiting for a white or SVG version from HQ.
+- **Consequences:** Code Club is a Raspberry Pi Foundation brand; the D3-12 point on partner wording and permission still applies. An SVG would stay sharper than the PNG.
+
 ## Decision template
 
 Copy this template for future entries:
