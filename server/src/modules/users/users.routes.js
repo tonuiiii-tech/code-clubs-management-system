@@ -42,6 +42,12 @@ usersRouter.patch(
   validate({ params: idParams, body: updateUserSchema }),
   controller.update,
 );
+usersRouter.post(
+  '/:id/invite',
+  authorize('user:create'),
+  validate({ params: idParams }),
+  controller.resendInvite,
+);
 usersRouter.patch(
   '/:id/status',
   authorize('user:manage'),

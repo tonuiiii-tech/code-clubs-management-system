@@ -805,3 +805,9 @@ body {
   text-decoration: underline;
   color: var(--text-muted, inherit);
 }
+
+/* Invitation links are long; let them wrap inside the dialog (D5-15). */
+.invite-link {
+  overflow-wrap: anywhere;
+  font-size: 0.875rem;
+}

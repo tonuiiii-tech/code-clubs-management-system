@@ -76,6 +76,10 @@ const userSchema = new Schema(
     failedLogins: { type: Number, default: 0 },
     lockedUntil: Date,
     lastLoginAt: Date,
+    // Invitation to set a first password (D5-15): only a hash of the link's token is stored.
+    invitePending: Boolean,
+    inviteTokenHash: String,
+    inviteExpiresAt: Date,
     ...audited,
   },
   options,
@@ -83,6 +87,7 @@ const userSchema = new Schema(
 userSchema.index({ email: 1 }, { unique: true });
 userSchema.index({ role: 1, status: 1 });
 userSchema.index({ regions: 1 });
+userSchema.index({ inviteTokenHash: 1 }, { sparse: true });
 
 const refreshTokenSchema = new Schema(
   {

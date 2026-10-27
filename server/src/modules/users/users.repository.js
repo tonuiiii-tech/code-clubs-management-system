@@ -9,6 +9,10 @@ export async function findUserById(id) {
   return toRecord(await User.findById(id).lean());
 }
 
+export async function findUserByInviteTokenHash(tokenHash) {
+  return toRecord(await User.findOne({ inviteTokenHash: tokenHash }).lean());
+}
+
 export async function findUserByEmail(email) {
   return toRecord(await User.findOne({ email: email.toLowerCase() }).lean());
 }

@@ -12,6 +12,7 @@ const findClubInScope = jest.fn();
 jest.unstable_mockModule('../src/modules/users/users.repository.js', () => ({
   findUserById: async (id) => users.get(id) ?? null,
   findUserByEmail: async () => null,
+  findUserByInviteTokenHash: async () => null,
   listUsers: async () => ({ data: [], page: 1, pageSize: 20, total: 0 }),
   insertUser: async () => {},
   updateUserById: async () => {},

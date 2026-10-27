@@ -3,6 +3,7 @@ import { AppLayout } from '../layouts/AppLayout.jsx';
 import { AuthLayout } from '../layouts/AuthLayout.jsx';
 import { RequirePermission } from '../components/RequirePermission.jsx';
 import { LoginPage } from '../pages/Login/LoginPage.jsx';
+import { AcceptInvitePage } from '../pages/Invite/AcceptInvitePage.jsx';
 import { DashboardPage } from '../pages/Dashboard/DashboardPage.jsx';
 import { UsersPage } from '../pages/Users/UsersPage.jsx';
 import { UserFormPage } from '../pages/Users/UserFormPage.jsx';
@@ -88,6 +89,7 @@ export function AppRoutes() {
     <Routes>
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/invite/:token" element={<AcceptInvitePage />} />
       </Route>
       <Route
         element={

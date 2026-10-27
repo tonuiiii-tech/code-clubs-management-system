@@ -19,6 +19,8 @@ export const ERROR_MESSAGES = Object.freeze({
   invalidLogin: 'Email or password is incorrect',
   tooManyAttempts: 'Too many sign-in attempts. Try again in 15 minutes.',
   currentPasswordIncorrect: 'Current password is incorrect',
+  inviteInvalid: 'This invitation link is not valid or has expired. Ask for a new one.',
+  notInvited: 'This person has already set a password',
   // Users
   userNotFound: 'User not found',
   duplicateEmail: 'A user with this email already exists',

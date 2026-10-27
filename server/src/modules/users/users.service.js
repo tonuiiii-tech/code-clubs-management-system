@@ -1,13 +1,19 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import bcrypt from 'bcrypt';
 import { conflict, forbidden, notFound } from '../../utils/httpError.js';
 import { scopeFilter } from '../scope.js';
+import { env } from '../../config/env.js';
 import { recordAudit } from '../audit/audit.service.js';
+import { emailProvider, stubEmailProvider } from '../notifications/providers.js';
 import * as repo from './users.repository.js';
 import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 import { canManageRole } from '@code-clubs/shared/permissions';
 
 export const BCRYPT_COST = 12;
+export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Only a hash of an invitation token is stored, like refresh tokens. */
+export const hashInviteToken = (token) => createHash('sha256').update(token).digest('hex');
 
 /** Only the roles in MANAGEABLE_ROLES: a coordinator creates champions only (D5-12, D5-13). */
 function assertCanManage(actor, roles, permission = 'user:manage') {
@@ -19,7 +25,14 @@ function assertCanManage(actor, roles, permission = 'user:manage') {
 /** Fields that are never sent to the client. */
 export function toPublicUser(user) {
   if (!user) return user;
-  const { passwordHash: _p, tokenVersion: _t, failedLogins: _f, lockedUntil: _l, ...safe } = user;
+  const {
+    passwordHash: _p,
+    tokenVersion: _t,
+    failedLogins: _f,
+    lockedUntil: _l,
+    inviteTokenHash: _i,
+    ...safe
+  } = user;
   return safe;
 }
 
@@ -129,4 +142,58 @@ export async function setUserStatus(actor, id, status, { requestId }) {
     requestId,
   });
   return toPublicUser(updated);
+}
+
+const INVITE_EMAIL = {
+  en: (name, link) => ({
+    subject: 'Your STEAMLabs Code Clubs account',
+    body: `Hello ${name},\n\nYou have been added to STEAMLabs Code Clubs. Open this link to choose your password and sign in:\n\n${link}\n\nThe link works once and expires in 7 days.`,
+  }),
+  sw: (name, link) => ({
+    subject: 'Akaunti yako ya STEAMLabs Code Clubs',
+    body: `Habari ${name},\n\nUmeongezwa kwenye STEAMLabs Code Clubs. Fungua kiungo hiki uchague nenosiri lako na uingie:\n\n${link}\n\nKiungo kinafanya kazi mara moja na kinaisha baada ya siku 7.`,
+  }),
+};
+
+/**
+ * Emails a one-time link to set a password (D5-15). A new invitation replaces the old link.
+ * The email stub delivers nothing, so until a provider is chosen (D4-5) the link is returned to
+ * the person who sent the invitation, to pass on themselves, as with a temporary password.
+ */
+export async function sendInvite(actor, user, { requestId }) {
+  const token = randomBytes(32).toString('base64url');
+  const inviteExpiresAt = new Date(Date.now() + INVITE_TTL_MS);
+  await repo.updateUserById(user.id, {
+    invitePending: true,
+    inviteTokenHash: hashInviteToken(token),
+    inviteExpiresAt,
+    updatedAt: new Date(),
+    updatedBy: actor.id,
+  });
+  const appUrl = env.APP_URL ?? env.CORS_ORIGIN.split(',')[0].trim();
+  const link = `${appUrl.replace(/\/$/, '')}/invite/${token}`;
+  const email = (INVITE_EMAIL[user.preferredLanguage] ?? INVITE_EMAIL.en)(user.fullName, link);
+  const provider = emailProvider();
+  await provider.send({ to: user.email, ...email });
+  await recordAudit({
+    actor,
+    action: 'user.invite',
+    entityType: 'user',
+    entityId: user.id,
+    requestId,
+  });
+  return { inviteExpiresAt, ...(provider === stubEmailProvider && { inviteLink: link }) };
+}
+
+/** Sends a new invitation to someone who has not set a password yet. */
+export async function resendInvite(actor, id, { requestId }) {
+  const user = await repo.findUserById(id);
+  if (!user) throw notFound();
+  // A coordinator resends only the invitations they sent; managers resend any they may manage.
+  const mayResend = canManageRole(actor, user.role) || user.createdBy === actor.id;
+  if (!mayResend || !canManageRole(actor, user.role, 'user:create')) {
+    throw forbidden(ERROR_MESSAGES.roleNotManageable);
+  }
+  if (!user.invitePending) throw conflict(ERROR_MESSAGES.notInvited);
+  return sendInvite(actor, user, { requestId });
 }

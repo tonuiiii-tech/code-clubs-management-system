@@ -98,7 +98,18 @@
     "statusChanged": "Account status changed",
     "temporaryPasswordTitle": "Temporary password",
     "temporaryPasswordBody": "Give this password to {{name}} in person. It is shown only once; they should change it after signing in.",
-    "you": "you"
+    "you": "you",
+    "access": "How will they get into the app?",
+    "accessInvite": "Send an invitation email",
+    "accessInviteHint": "They get a link to choose their own password. The link works once and expires in 7 days.",
+    "accessPassword": "Give a temporary password",
+    "accessPasswordHint": "You see a password once and hand it to them in person.",
+    "sendInvite": "Send invitation",
+    "invited": "Invited",
+    "resendInvite": "Resend invitation",
+    "inviteSentTitle": "Invitation sent",
+    "inviteSentBody": "We emailed {{name}} at {{email}} a link to choose a password. It expires on {{date}}.",
+    "inviteLinkBody": "Email is not connected yet, so send this link to {{name}} yourself, for example by WhatsApp. It is shown only once, works once and expires on {{date}}."
   },
   "schools": {
     "title": "Schools",
@@ -388,7 +399,9 @@
     "projectLearnersOneClub": "All project members must be active learners of the same club",
     "assessmentNotFound": "Assessment not found",
     "scoreAboveMaximum": "A score cannot be higher than the maximum score",
-    "scoresNotInClub": "Some learners are not active members of this club"
+    "scoresNotInClub": "Some learners are not active members of this club",
+    "inviteInvalid": "This invitation link is not valid or has expired. Ask for a new one.",
+    "notInvited": "This person has already set a password"
   },
   "learners": {
     "title": "Learners",
@@ -1107,5 +1120,15 @@
     "noProjects": "No projects yet.",
     "recentProjects": "Recent projects",
     "learnersWithProject": "{{count}} of {{total}} active learners have a project."
+  },
+  "invite": {
+    "title": "Set up your account",
+    "intro": "Choose a password to finish setting up your STEAMLabs Code Clubs account.",
+    "password": "New password",
+    "confirm": "Type the password again",
+    "tooShort": "At least {{count}} characters",
+    "mismatch": "The two passwords are not the same",
+    "submit": "Save password",
+    "doneIntro": "Your password is saved. Sign in with {{email}} and your new password."
   }
 }

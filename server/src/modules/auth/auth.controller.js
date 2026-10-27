@@ -39,6 +39,10 @@ export async function changePassword(req, res) {
   res.status(204).end();
 }
 
+export async function acceptInvite(req, res) {
+  res.json({ data: await service.acceptInvite(req.valid.body, { requestId: req.id }) });
+}
+
 export function me(req, res) {
   res.json({ data: toPublicUser(req.user) });
 }

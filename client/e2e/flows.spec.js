@@ -221,3 +221,33 @@ test('writes STEAMLabs in its exact case on screen (D5-14)', async ({ page }) =>
     expect(await page.locator('body').innerText()).not.toMatch(wrongCase);
   }
 });
+
+test('invites a new coordinator, who sets a password and signs in (D5-15)', async ({ page }) => {
+  test.skip(REAL, 'The link comes from the email stub; covered by the server tests on MongoDB');
+  await signInAs(page, 'System Administrator');
+  await page.goto('/users/new');
+  await page.getByLabel(field('Full name')).fill('Amina Chebet');
+  await page.getByLabel(field('Email')).fill('amina.chebet@demo.steamlabs.test');
+  await page.getByLabel(field('Role')).selectOption('coordinator');
+  await page.getByLabel('Coast').check();
+  await expect(page.getByLabel('Send an invitation email')).toBeChecked();
+  await page.getByRole('button', { name: 'Send invitation' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Invitation sent' });
+  const link = await dialog.locator('.invite-link').innerText();
+  await dialog.getByRole('button', { name: 'Close' }).click();
+  await expect(page.getByRole('row', { name: /Amina Chebet/ })).toContainText('Invited');
+
+  // The new person opens the link signed out.
+  await page.getByRole('button', { name: /^Wanjiru Kamau/ }).click();
+  await page.getByRole('menuitem', { name: 'Sign out' }).click();
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  await page.goto(new URL(link).pathname);
+  await page.getByLabel(field('New password')).fill('a-new-password-1');
+  await page.getByLabel(field('Type the password again')).fill('a-new-password-1');
+  await page.getByRole('button', { name: 'Save password' }).click();
+  await page.getByRole('link', { name: 'Sign in' }).click();
+  await page.locator('input[name="email"]').fill('amina.chebet@demo.steamlabs.test');
+  await page.locator('input[name="password"]').fill('a-new-password-1');
+  await page.locator('form button[type="submit"]').click();
+  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+});

@@ -98,7 +98,18 @@
     "statusChanged": "Hali ya akaunti imebadilishwa",
     "temporaryPasswordTitle": "Nenosiri la muda",
     "temporaryPasswordBody": "Mpe {{name}} nenosiri hili ana kwa ana. Linaonyeshwa mara moja tu; alibadilishe baada ya kuingia.",
-    "you": "wewe"
+    "you": "wewe",
+    "access": "Wataingiaje kwenye programu?",
+    "accessInvite": "Tuma barua pepe ya mwaliko",
+    "accessInviteHint": "Watapata kiungo cha kuchagua nenosiri lao. Kiungo kinafanya kazi mara moja na kinaisha baada ya siku 7.",
+    "accessPassword": "Toa nenosiri la muda",
+    "accessPasswordHint": "Utaona nenosiri mara moja na kulikabidhi kwao ana kwa ana.",
+    "sendInvite": "Tuma mwaliko",
+    "invited": "Amealikwa",
+    "resendInvite": "Tuma mwaliko tena",
+    "inviteSentTitle": "Mwaliko umetumwa",
+    "inviteSentBody": "Tumemtumia {{name}} barua pepe kwa {{email}} yenye kiungo cha kuchagua nenosiri. Kinaisha tarehe {{date}}.",
+    "inviteLinkBody": "Barua pepe bado haijaunganishwa, kwa hivyo mtumie {{name}} kiungo hiki mwenyewe, kwa mfano kwa WhatsApp. Kinaonyeshwa mara moja tu, kinafanya kazi mara moja na kinaisha tarehe {{date}}."
   },
   "schools": {
     "title": "Shule",
@@ -388,7 +399,9 @@
     "projectLearnersOneClub": "Wanachama wote wa mradi lazima wawe wanafunzi hai wa klabu moja",
     "assessmentNotFound": "Tathmini haijapatikana",
     "scoreAboveMaximum": "Alama haiwezi kuzidi alama ya juu kabisa",
-    "scoresNotInClub": "Baadhi ya wanafunzi si wanachama hai wa klabu hii"
+    "scoresNotInClub": "Baadhi ya wanafunzi si wanachama hai wa klabu hii",
+    "inviteInvalid": "Kiungo hiki cha mwaliko si sahihi au kimeisha muda. Omba kipya.",
+    "notInvited": "Mtu huyu tayari ameweka nenosiri"
   },
   "learners": {
     "title": "Wanafunzi",
@@ -1107,5 +1120,15 @@
     "noProjects": "Bado hakuna miradi.",
     "recentProjects": "Miradi ya hivi karibuni",
     "learnersWithProject": "Wanafunzi hai {{count}} kati ya {{total}} wana mradi."
+  },
+  "invite": {
+    "title": "Weka akaunti yako",
+    "intro": "Chagua nenosiri ili kumaliza kuweka akaunti yako ya STEAMLabs Code Clubs.",
+    "password": "Nenosiri jipya",
+    "confirm": "Andika nenosiri tena",
+    "tooShort": "Angalau herufi {{count}}",
+    "mismatch": "Manenosiri mawili hayafanani",
+    "submit": "Hifadhi nenosiri",
+    "doneIntro": "Nenosiri lako limehifadhiwa. Ingia kwa {{email}} na nenosiri lako jipya."
   }
 }

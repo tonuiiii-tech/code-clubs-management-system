@@ -5,6 +5,7 @@ import { clearDatabase, useTestDatabase } from '../support/database.js';
 import { seed } from '../../scripts/seed.js';
 import { createApp } from '../../src/app.js';
 import * as authService from '../../src/modules/auth/auth.service.js';
+import { updateUserById } from '../../src/modules/users/users.repository.js';
 
 /**
  * The real API on a real (in-memory) MongoDB with the demo data. Mirrors the rules the
@@ -303,6 +304,92 @@ describe('Accounts a coordinator creates (D5-13)', () => {
       .set(auth(coordinator.token))
       .send({ status: 'inactive' });
     expect(off.status).toBe(403);
+  });
+});
+
+describe('Invitations (D5-15)', () => {
+  const tokenOf = (link) => link.split('/invite/')[1];
+
+  it('invites a person who then sets their own password, once', async () => {
+    const admin = await signIn('wanjiru.kamau@demo.steamlabs.test');
+    const res = await request(app)
+      .post('/api/v1/users')
+      .set(auth(admin.token))
+      .send({
+        fullName: 'Amina Chebet',
+        email: 'amina.chebet@demo.steamlabs.test',
+        role: 'coordinator',
+        regions: ['coast'],
+        invite: true,
+      });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ invited: true, data: { invitePending: true } });
+    expect(res.body.temporaryPassword).toBeUndefined();
+    // The email stub sends nothing, so the link comes back to the sender.
+    expect(res.body.inviteLink).toMatch(/\/invite\/[\w-]{40,}$/);
+    expect(JSON.stringify(res.body)).not.toMatch(/inviteTokenHash/);
+
+    const accepted = await request(app)
+      .post('/api/v1/auth/accept-invite')
+      .send({ token: tokenOf(res.body.inviteLink), password: 'a-new-password-1' });
+    expect(accepted.status).toBe(200);
+    const login = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: 'amina.chebet@demo.steamlabs.test', password: 'a-new-password-1' });
+    expect(login.status).toBe(200);
+
+    const again = await request(app)
+      .post('/api/v1/auth/accept-invite')
+      .send({ token: tokenOf(res.body.inviteLink), password: 'another-password-2' });
+    expect(again.status).toBe(400);
+    expect(again.body.error.message).toBe(ERROR_MESSAGES.inviteInvalid);
+    const resend = await request(app)
+      .post(`/api/v1/users/${res.body.data.id}/invite`)
+      .set(auth(admin.token));
+    expect(resend.status).toBe(409);
+  });
+
+  it('lets only the coordinator who invited a champion resend it, and replaces the old link', async () => {
+    const coordinator = await signIn('mwende.mutua@demo.steamlabs.test');
+    const res = await request(app)
+      .post('/api/v1/users')
+      .set(auth(coordinator.token))
+      .send({
+        fullName: 'Juma Mwangi',
+        email: 'juma.mwangi@demo.steamlabs.test',
+        role: 'champion',
+        championProfile: { type: 'teacher' },
+        invite: true,
+      });
+    expect(res.status).toBe(201);
+    const other = await signIn('achieng.odhiambo@demo.steamlabs.test');
+    const refused = await request(app)
+      .post(`/api/v1/users/${res.body.data.id}/invite`)
+      .set(auth(other.token));
+    expect(refused.status).toBe(403);
+    const resent = await request(app)
+      .post(`/api/v1/users/${res.body.data.id}/invite`)
+      .set(auth(coordinator.token));
+    expect(resent.status).toBe(200);
+    const old = await request(app)
+      .post('/api/v1/auth/accept-invite')
+      .send({ token: tokenOf(res.body.inviteLink), password: 'a-new-password-1' });
+    expect(old.status).toBe(400);
+  });
+
+  it('refuses an expired invitation', async () => {
+    const admin = await signIn('wanjiru.kamau@demo.steamlabs.test');
+    const res = await request(app).post('/api/v1/users').set(auth(admin.token)).send({
+      fullName: 'Halima Abdi',
+      email: 'halima.abdi@demo.steamlabs.test',
+      role: 'programme_manager',
+      invite: true,
+    });
+    await updateUserById(res.body.data.id, { inviteExpiresAt: new Date(Date.now() - 1000) });
+    const late = await request(app)
+      .post('/api/v1/auth/accept-invite')
+      .send({ token: tokenOf(res.body.inviteLink), password: 'a-new-password-1' });
+    expect(late.status).toBe(400);
   });
 });
 
