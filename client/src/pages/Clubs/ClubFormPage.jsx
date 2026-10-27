@@ -105,6 +105,7 @@ function ClubForm({ club, schools }) {
   return (
     <>
       <PageHeader
+        eyebrow={t('nav.clubs')}
         back={
           <BackLink asChild>
             <Link to={editing ? `/clubs/${club.id}` : '/clubs'}>{t('common.back')}</Link>

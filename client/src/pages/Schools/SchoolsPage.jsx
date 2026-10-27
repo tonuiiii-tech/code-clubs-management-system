@@ -38,6 +38,7 @@ export function SchoolsPage() {
   return (
     <>
       <PageHeader
+        eyebrow={t('app.name')}
         title={t('schools.title')}
         description={t('schools.description')}
         actions={

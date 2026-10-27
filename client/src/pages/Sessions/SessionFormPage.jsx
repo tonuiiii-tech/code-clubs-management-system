@@ -83,6 +83,7 @@ function SessionForm({ session, clubs }) {
   return (
     <>
       <PageHeader
+        eyebrow={t('nav.sessions')}
         back={
           <BackLink asChild>
             <Link to={editing ? `/sessions/${session.id}` : '/sessions'}>{t('common.back')}</Link>

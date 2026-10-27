@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "STEAMLabs Code Clubs"
+    "name": "STEAMLabs Code Clubs",
+    "partner": "Kwa ushirikiano na Raspberry Pi Foundation"
   },
   "nav": {
     "dashboard": "Dashibodi",
@@ -44,7 +45,11 @@
     "email": "Barua pepe",
     "password": "Nenosiri",
     "submit": "Ingia",
-    "failed": "Hatukuweza kukuingiza"
+    "failed": "Hatukuweza kukuingiza",
+    "eyebrow": "STEAMLabs Africa",
+    "heroTitle": "Vilabu vya Coding, kwa uangalifu.",
+    "heroText": "Vilabu, wanafunzi, vipindi na mahudhurio mahali pamoja, mtandaoni au bila mtandao.",
+    "motto": "Buni. Jifunze. Badilisha."
   },
   "dashboard": {
     "title": "Dashibodi",
@@ -62,7 +67,8 @@
     "attendanceRate": "Mahudhurio mwezi huu",
     "missingConsent": "Wanafunzi bila idhini ya kushiriki",
     "noRate": "Bado hakuna mahudhurio",
-    "savedAt": "Uko nje ya mtandao. Takwimu hizi ni za {{date}}."
+    "savedAt": "Uko nje ya mtandao. Takwimu hizi ni za {{date}}.",
+    "welcome": "Karibu tena, {{name}}"
   },
   "users": {
     "title": "Watumiaji",

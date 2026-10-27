@@ -30,7 +30,11 @@ export function ProfilePage() {
   const { user } = useAuth();
   return (
     <>
-      <PageHeader title={t('profile.title')} description={t('profile.description')} />
+      <PageHeader
+        eyebrow={t('app.name')}
+        title={t('profile.title')}
+        description={t('profile.description')}
+      />
       <div className="page-grid">
         <Card>
           <CardContent>

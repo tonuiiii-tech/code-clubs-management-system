@@ -37,6 +37,7 @@ export function LearnersPage() {
   return (
     <>
       <PageHeader
+        eyebrow={t('app.name')}
         title={t('learners.title')}
         description={t('learners.description')}
         meta={<Badge variant="primary">{t('learners.fictionalOnly')}</Badge>}

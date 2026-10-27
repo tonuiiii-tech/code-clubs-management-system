@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "STEAMLabs Code Clubs"
+    "name": "STEAMLabs Code Clubs",
+    "partner": "In partnership with the Raspberry Pi Foundation"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -44,7 +45,11 @@
     "email": "Email",
     "password": "Password",
     "submit": "Sign in",
-    "failed": "We could not sign you in"
+    "failed": "We could not sign you in",
+    "eyebrow": "STEAMLabs Africa",
+    "heroTitle": "Code Clubs, run with care.",
+    "heroText": "Clubs, learners, sessions and attendance in one place, online or offline.",
+    "motto": "Innovate. Learn. Transform."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -62,7 +67,8 @@
     "attendanceRate": "Attendance this month",
     "missingConsent": "Learners without participation consent",
     "noRate": "No attendance yet",
-    "savedAt": "You are offline. These numbers are from {{date}}."
+    "savedAt": "You are offline. These numbers are from {{date}}.",
+    "welcome": "Welcome back, {{name}}"
   },
   "users": {
     "title": "Users",

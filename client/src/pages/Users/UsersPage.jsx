@@ -55,6 +55,7 @@ export function UsersPage() {
   return (
     <>
       <PageHeader
+        eyebrow={t('app.name')}
         title={t('users.title')}
         description={t('users.description')}
         actions={

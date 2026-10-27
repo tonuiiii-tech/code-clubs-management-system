@@ -1,15 +1,34 @@
 import { Outlet } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Eyebrow } from 'steamlabsui';
+import { Logo } from 'steamlabsui/logo';
 import { DemoBanner } from '../components/DemoBanner.jsx';
 import codeClubLogo from '../assets/code-club-logo.png';
 
+/** Sign-in pages: a brand panel in the style of steamlabsafrica.com beside the form. */
 export function AuthLayout() {
+  const { t } = useTranslation();
   return (
     <>
       <DemoBanner />
       <div className="auth-page">
-        <div className="auth-card">
-          <img className="auth-logo" src={codeClubLogo} alt="Code Club" width={180} />
-          <Outlet />
+        <section className="auth-hero" aria-label={t('app.name')}>
+          <Logo variant="white" width={150} />
+          <div className="auth-hero__text">
+            <Eyebrow on="ink">{t('login.eyebrow')}</Eyebrow>
+            <p className="auth-hero__title">{t('login.heroTitle')}</p>
+            <p className="auth-hero__lead">{t('login.heroText')}</p>
+          </div>
+          <div className="auth-hero__foot">
+            <p className="auth-hero__motto">{t('login.motto')}</p>
+            <p className="partner-credit">{t('app.partner')}</p>
+          </div>
+        </section>
+        <div className="auth-form">
+          <div className="auth-card">
+            <img className="auth-logo" src={codeClubLogo} alt="Code Club" width={180} />
+            <Outlet />
+          </div>
         </div>
       </div>
     </>

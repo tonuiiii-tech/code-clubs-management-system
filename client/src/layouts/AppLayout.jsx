@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Avatar, Menu, SkipLink } from 'steamlabsui';
+import { Logo } from 'steamlabsui/logo';
 import { useAuth } from '../context/AuthContext.jsx';
 import { LanguageSwitcher } from '../components/LanguageSwitcher.jsx';
 import { DemoBanner } from '../components/DemoBanner.jsx';
@@ -50,7 +51,8 @@ export function AppLayout() {
       <div className="app-shell">
         <nav className="app-nav" aria-label={t('nav.main')}>
           <div className="app-nav__brand">
-            <img src={codeClubLogo} alt="Code Club" width={120} />
+            <Logo variant="white" width={120} />
+            <img className="app-nav__codeclub" src={codeClubLogo} alt="Code Club" width={120} />
             <strong>{t('app.name')}</strong>
           </div>
           {NAV.filter((item) => allowed(item.permission)).map((item) => (
@@ -58,6 +60,7 @@ export function AppLayout() {
               {t(item.key)}
             </NavLink>
           ))}
+          <p className="partner-credit app-nav__partner">{t('app.partner')}</p>
         </nav>
         <main className="app-main" id="main" tabIndex={-1}>
           <div className="app-topbar">

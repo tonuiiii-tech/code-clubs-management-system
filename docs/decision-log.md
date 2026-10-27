@@ -397,6 +397,24 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Alternatives considered:** Pointing the Vercel build at a hosted API (no API is hosted yet); running Express as Vercel functions (file uploads, rate limits and the sync module expect one long-running server).
 - **Consequences:** The Vercel site holds no real data and needs no secrets. Hosting the API (for example Render or Railway with Atlas) is a later decision; then a second Vercel build with `VITE_API_URL` can serve the real app.
 
+## D3-11: The app borrows the look of steamlabsafrica.com
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** Enock asked for the design principles of steamlabsafrica.com and the STEAMLabs logo in the app. The website uses the same palette and font as the steamlabsui kit (Clover green, Fuel orange, Poppins), with a bolder style.
+- **Decision:** Keep the kit's tokens and add a thin layer in `client/src/ui/app.css`: pill-shaped buttons and menu items, page titles in Poppins 900, an eyebrow above every page title (in its written case since D5-14), cards with 20 px corners and a soft shadow, dashboard tiles with big numbers and the kit's cream offset shadow, and a sign-in page with a solid Clover green brand panel (no gradients, at Enock's request). The official logo comes from the kit (`steamlabsui/logo`): white on the green menu and on the brand panel. Poppins 800 and 900 are self-hosted like the other weights, so the look works offline.
+- **Alternatives considered:** Copying the website's marketing sections (hero photos, partner ticker) into every page. Those suit a website, not daily data entry on tablets.
+- **Consequences:** Only the sign-in page has a large brand panel. On phones the panel shrinks to the logo and headline. Any later kit update to the same classes may need this layer adjusted.
+
+## D3-12: Raspberry Pi Foundation credit, as text until the logo is cleared
+
+- **Status:** Accepted (wording chosen by Enock on 2026-10-25; logo pending)
+- **Date:** 2026-10-25
+- **Context:** Enock asked for a Raspberry Pi picture and a "sponsored by Raspberry Pi" line. Code Club is a Raspberry Pi Foundation programme. The Raspberry Pi logo is a trademark that partners may use only with the Foundation's files and permission.
+- **Decision:** A one-line credit, "In partnership with the Raspberry Pi Foundation", appears at the bottom of the sign-in panel and of the menu, in English and Kiswahili, with a raspberry-coloured rule from the kit (`--rpi-raspberry`). The logo is added only once STEAMLabs sends the official file and confirms the permission; it is never copied from the web or redrawn.
+- **Alternatives considered:** "Sponsored by", if the Foundation funds the work; "Using learning resources from", if there is no formal agreement.
+- **Consequences:** The wording is one translation key (`app.partner`) and can change without code changes.
+
 ## D4-1: Charts are small SVG components on kit colours, with a table alongside
 
 - **Status:** Accepted
@@ -585,6 +603,15 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Decision:** A new permission, `user:create`, adds the Code Clubs Coordinator, and `MANAGEABLE_ROLES` limits a coordinator to the Club Champion role. Any other role is refused (403, "You cannot manage accounts with this role"). Editing, deactivating and reactivating accounts (`user:manage`) stays with the Programme Manager and System Administrator. Coordinators get the Users page; its form preselects Club Champion, and it offers no edit or deactivate actions. A new champion has no club until the coordinator assigns one (D5-9).
 - **Alternatives considered:** Letting coordinators also edit or deactivate the champions in their regions (not asked for; it can follow by adding the coordinator to `user:manage` with a scope check).
 - **Consequences:** An unassigned champion is visible to every coordinator (D1-4 scope rule), so a coordinator can assign a champion another coordinator created.
+
+## D5-14: "STEAMLabs" keeps its case on screen; both logos in the menu
+
+- **Status:** Accepted (Enock, 2026-10-27)
+- **Date:** 2026-10-27
+- **Context:** Enock: the brand "is written as STEAMLabs, this exact case". The redesign (D3-11) used the kit's uppercase eyebrows and an uppercase menu brand, so screens showed "STEAMLABS". D5-10 added the Code Club logo while the redesign was paused.
+- **Decision:** Eyebrows and the menu brand keep the case they are written in (no `text-transform: uppercase`). A test fails if a page renders "STEAMLABS" or "Steamlabs". The menu shows the white STEAMLabs logo, then the Code Club logo on a white tile; the sign-in page shows the STEAMLabs panel and the Code Club logo above the form.
+- **Alternatives considered:** Keeping uppercase eyebrows and taking the brand out of every eyebrow (easy to break again).
+- **Consequences:** Eyebrows are quieter than on steamlabsafrica.com. The Raspberry Pi Foundation logo is added once HQ sends the official file (D3-12).
 
 ## Decision template
 

@@ -208,3 +208,16 @@ test('a champion registers a learner, records consent, reports a session and tak
   await check.getByRole('button', { name: 'Add photo' }).click();
   await expect(page.getByRole('img', { name: 'Session photo 1' })).toBeVisible();
 });
+
+test('writes STEAMLabs in its exact case on screen (D5-14)', async ({ page }) => {
+  // innerText applies CSS text-transform, so this catches capitals forced by styles too.
+  const wrongCase = /STEAMLABS|Steamlabs|SteamLabs/;
+  await page.goto('/login');
+  expect(await page.locator('body').innerText()).not.toMatch(wrongCase);
+  await signInAs(page, 'System Administrator', { goto: false });
+  for (const path of ['/', '/clubs', '/users']) {
+    await page.goto(path);
+    await expect(page.locator('main h1')).toBeVisible();
+    expect(await page.locator('body').innerText()).not.toMatch(wrongCase);
+  }
+});

@@ -24,13 +24,19 @@ const upcoming = () => listEvents({ from: new Date().toISOString().slice(0, 10),
 /** Counts inside the user's own scope (US-06, US-12), then trends and alerts (US-19, US-20). */
 export function DashboardPage() {
   const { t } = useTranslation();
-  const { can } = useAuth();
+  const { user, can } = useAuth();
   const { loading, error, data, reload } = useApi(getDashboardSummary);
   const summary = data?.data;
 
   return (
     <>
-      <PageHeader title={t('dashboard.title')} description={t('dashboard.description')} />
+      <PageHeader
+        eyebrow={
+          user ? t('dashboard.welcome', { name: user.fullName.split(' ')[0] }) : t('app.name')
+        }
+        title={t('dashboard.title')}
+        description={t('dashboard.description')}
+      />
       <DataState loading={loading} error={error} onRetry={reload}>
         {summary && (
           <div className="page-grid">
