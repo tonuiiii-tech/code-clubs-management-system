@@ -64,6 +64,13 @@ body {
   width: min(420px, 100%);
 }
 
+/* The official Code Club logo, as sent by Enock (2026-10-27); no recolouring. */
+.auth-logo {
+  display: block;
+  height: auto;
+  margin: 0 auto 1.5rem;
+}
+
 .stack {
   display: grid;
   gap: 1rem;
@@ -71,6 +78,17 @@ body {
 
 .app-nav__brand {
   padding: 0 0.75rem 1rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+/* Green on the green menu would disappear, so the logo sits on a white tile. */
+.app-nav__brand img {
+  height: auto;
+  box-sizing: content-box;
+  background: #fff;
+  border-radius: var(--radius-md, 0.375rem);
+  padding: 0.5rem 0.625rem;
 }
 
 .app-user {
