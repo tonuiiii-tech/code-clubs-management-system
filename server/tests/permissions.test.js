@@ -1,4 +1,4 @@
-import { PERMISSIONS, POLICY, can, scopeFor } from '@code-clubs/shared/permissions';
+import { PERMISSIONS, POLICY, can, canManageRole, scopeFor } from '@code-clubs/shared/permissions';
 import { ROLES, ROLE_VALUES } from '@code-clubs/shared/enums';
 
 const user = (role, extra = {}) => ({ id: 'u1', role, status: 'active', ...extra });
@@ -22,11 +22,17 @@ describe('Permission policy', () => {
     }
   });
 
-  it('lets only the System Administrator manage accounts and roles', () => {
-    expect(can(user(ROLES.SYSTEM_ADMIN), 'user:manage')).toBe(true);
-    expect(can(user(ROLES.PROGRAMME_MANAGER), 'user:manage')).toBe(false);
+  it('lets the System Administrator manage every account, the Programme Manager only coordinators and champions (D5-12)', () => {
+    const admin = user(ROLES.SYSTEM_ADMIN);
+    const pm = user(ROLES.PROGRAMME_MANAGER);
+    expect(Object.values(ROLES).every((r) => canManageRole(admin, r))).toBe(true);
+    expect(canManageRole(pm, ROLES.COORDINATOR)).toBe(true);
+    expect(canManageRole(pm, ROLES.CHAMPION)).toBe(true);
+    expect(canManageRole(pm, ROLES.PROGRAMME_MANAGER)).toBe(false);
+    expect(canManageRole(pm, ROLES.SYSTEM_ADMIN)).toBe(false);
     expect(can(user(ROLES.COORDINATOR), 'user:manage')).toBe(false);
     expect(can(user(ROLES.CHAMPION), 'user:manage')).toBe(false);
+    expect(canManageRole(user(ROLES.COORDINATOR), ROLES.CHAMPION)).toBe(false);
   });
 
   it('limits coordinators and champions to their assignments', () => {

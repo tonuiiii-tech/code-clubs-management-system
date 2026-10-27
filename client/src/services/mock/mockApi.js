@@ -16,7 +16,7 @@ import {
   UPLOAD_MAX_BYTES,
   UPLOAD_TYPES,
 } from '@code-clubs/shared/enums';
-import { SCOPES, scopeFor } from '@code-clubs/shared/permissions';
+import { SCOPES, canManageRole, scopeFor } from '@code-clubs/shared/permissions';
 import {
   assignChampionSchema,
   attendanceSchema,
@@ -174,6 +174,13 @@ const currentAssignments = (clubId) =>
   db.assignments.filter((a) => a.clubId === clubId && !a.endDate);
 
 /** True when the school already has a club that is not closed, other than this one (D5-11). */
+/** A Programme Manager manages only coordinator and champion accounts (D5-12). */
+function assertCanManage(actor, ...roles) {
+  if (!roles.every((role) => canManageRole(actor, role))) {
+    throw forbidden(ERROR_MESSAGES.roleNotManageable);
+  }
+}
+
 function schoolHasOtherClub(schoolId, exceptClubId = null) {
   return db.clubs.some(
     (c) => c.schoolId === schoolId && c.status !== 'closed' && c.id !== exceptClubId,
@@ -1164,6 +1171,7 @@ const routes = [
     ({ actor, body }) => {
       authorize(actor, 'user:manage');
       const input = validate(createUserSchema, body, 'body');
+      assertCanManage(actor, input.role);
       if (db.users.some((u) => u.email === input.email)) {
         throw conflict(ERROR_MESSAGES.duplicateEmail);
       }
@@ -1194,6 +1202,7 @@ const routes = [
       if (id === actor.id) throw forbidden(ERROR_MESSAGES.ownStatus);
       const user = db.users.find((u) => u.id === id);
       if (!user) throw notFound();
+      assertCanManage(actor, user.role);
       Object.assign(user, {
         status,
         ...(status === 'inactive' && { tokenVersion: user.tokenVersion + 1 }),
@@ -1215,6 +1224,7 @@ const routes = [
       }
       const user = db.users.find((u) => u.id === id);
       if (!user) throw notFound();
+      assertCanManage(actor, user.role, changes.role ?? user.role);
       Object.assign(user, changes, { updatedAt: now(), updatedBy: actor.id });
       return [200, { data: toPublicUser(user) }];
     },

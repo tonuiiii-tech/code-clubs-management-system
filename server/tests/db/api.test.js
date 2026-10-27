@@ -226,6 +226,56 @@ describe('API on MongoDB', () => {
   });
 });
 
+describe('Accounts a Programme Manager manages (D5-12)', () => {
+  let pm;
+  beforeAll(async () => {
+    pm = await signIn('otieno.ouma@demo.steamlabs.test');
+  });
+
+  it('creates and deactivates a coordinator account', async () => {
+    const res = await request(app)
+      .post('/api/v1/users')
+      .set(auth(pm.token))
+      .send({
+        fullName: 'Baraka Kiprono',
+        email: 'baraka.kiprono@demo.steamlabs.test',
+        role: 'coordinator',
+        regions: ['rift_valley'],
+      });
+    expect(res.status).toBe(201);
+    const off = await request(app)
+      .patch(`/api/v1/users/${res.body.data.id}/status`)
+      .set(auth(pm.token))
+      .send({ status: 'inactive' });
+    expect(off.status).toBe(200);
+  });
+
+  it('cannot create, promote to or change administrator and manager accounts', async () => {
+    const admin = await request(app)
+      .post('/api/v1/users')
+      .set(auth(pm.token))
+      .send({
+        fullName: 'Imani Wekesa',
+        email: 'imani.wekesa@demo.steamlabs.test',
+        role: 'system_admin',
+      });
+    expect(admin.status).toBe(403);
+    expect(admin.body.error.message).toBe(ERROR_MESSAGES.roleNotManageable);
+    // Mwende Mutua (coordinator) cannot be made a Programme Manager by a Programme Manager.
+    const promote = await request(app)
+      .patch(`/api/v1/users/${uid(3)}`)
+      .set(auth(pm.token))
+      .send({ role: 'programme_manager' });
+    expect(promote.status).toBe(403);
+    // Wanjiru Kamau (System Administrator) cannot be deactivated by one.
+    const lockout = await request(app)
+      .patch(`/api/v1/users/${uid(1)}/status`)
+      .set(auth(pm.token))
+      .send({ status: 'inactive' });
+    expect(lockout.status).toBe(403);
+  });
+});
+
 describe('Sessions on MongoDB', () => {
   it('rotates refresh tokens and revokes the family when an old one is reused', async () => {
     const { cookie } = await signIn(EMAIL.pm);

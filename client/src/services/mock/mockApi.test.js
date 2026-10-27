@@ -175,6 +175,36 @@ describe('mock API: same contract and rules as the server', () => {
     expect(champion.body.data).toMatchObject({ activeClubs: 1, schools: 1 });
   });
 
+  it('lets a Programme Manager manage only coordinator and champion accounts (D5-12)', async () => {
+    const token = await signIn('otieno.ouma@demo.steamlabs.test');
+    const coordinator = await call(token, 'POST', '/users', {
+      body: {
+        fullName: 'Baraka Kiprono',
+        email: 'baraka.kiprono@demo.steamlabs.test',
+        role: 'coordinator',
+        regions: ['rift_valley'],
+      },
+    });
+    expect(coordinator.status).toBe(201);
+    const admin = await call(token, 'POST', '/users', {
+      body: {
+        fullName: 'Imani Wekesa',
+        email: 'imani.wekesa@demo.steamlabs.test',
+        role: 'system_admin',
+      },
+    });
+    expect(admin.status).toBe(403);
+    expect(admin.body.error.message).toBe(ERROR_MESSAGES.roleNotManageable);
+    const promote = await call(token, 'PATCH', `/users/${uid(3)}`, {
+      body: { role: 'programme_manager' },
+    });
+    expect(promote.status).toBe(403);
+    const lockout = await call(token, 'PATCH', `/users/${uid(1)}/status`, {
+      body: { status: 'inactive' },
+    });
+    expect(lockout.status).toBe(403);
+  });
+
   it('stops admins from changing their own role or deactivating themselves', async () => {
     const token = await signIn(ADMIN);
     const role = await call(token, 'PATCH', `/users/${uid(1)}`, { body: { role: 'champion' } });

@@ -24,6 +24,7 @@ export const ERROR_MESSAGES = Object.freeze({
   duplicateEmail: 'A user with this email already exists',
   ownRole: 'You cannot change your own role',
   ownStatus: 'You cannot change your own account status',
+  roleNotManageable: 'You cannot manage accounts with this role',
   // Schools
   schoolNotFound: 'School not found',
   duplicateSchool: 'A school with this name already exists in this sub-county',

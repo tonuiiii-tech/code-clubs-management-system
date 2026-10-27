@@ -559,6 +559,15 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Alternatives considered:** A unique database index on `clubs.schoolId` for open clubs (it would fail to build on databases that already hold two clubs at one school; the seed fixes the demo ones, so it can follow).
 - **Consequences:** With D5-9, a champion has one club and so one school. Two people adding a club at the same school at the same moment could still both succeed (R5-7 covers the same kind of race).
 
+## D5-12: The Programme Manager creates coordinator and champion accounts
+
+- **Status:** Accepted (Enock, 2026-10-27)
+- **Date:** 2026-10-27
+- **Context:** Enock: "the club champion should only be able to add learners while the code clubs coordinator should be able to create clubs and assign champions then the program manager is the one who can create accounts for code club coordinators". Only the System Administrator could create accounts (D1-4). Coordinators already create clubs and assign champions in their regions, and champions already cannot create clubs, schools or accounts.
+- **Decision:** `user:manage` now includes the Programme Manager, limited by `MANAGEABLE_ROLES` in `shared/src/permissions.js`: a Programme Manager creates, edits, deactivates and reactivates Code Clubs Coordinator and Club Champion accounts; only a System Administrator manages Programme Manager and System Administrator accounts. Anything else is refused (403, "You cannot manage accounts with this role"), including promoting a coordinator to Programme Manager. The Users page shows a Programme Manager every account but offers actions only on coordinators and champions, and the role list in the form offers only those two roles.
+- **Alternatives considered:** Coordinators creating champion accounts in their region (not asked for; can be added to `MANAGEABLE_ROLES` with a region check).
+- **Consequences:** What champions may record for their own club (attendance, consent, progress, fault reports) is unchanged until Enock decides otherwise.
+
 ## Decision template
 
 Copy this template for future entries:

@@ -307,6 +307,7 @@
     "duplicateEmail": "Tayari kuna mtumiaji mwenye barua pepe hii",
     "ownRole": "Huwezi kubadilisha jukumu lako mwenyewe",
     "ownStatus": "Huwezi kubadilisha hali ya akaunti yako mwenyewe",
+    "roleNotManageable": "Huwezi kusimamia akaunti zenye jukumu hili",
     "schoolNotFound": "Shule haikupatikana",
     "duplicateSchool": "Tayari kuna shule yenye jina hili katika kaunti ndogo hii",
     "schoolOwnRegion": "Unaweza kuongeza shule katika kanda yako tu",
