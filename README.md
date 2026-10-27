@@ -1,8 +1,8 @@
 # STEAMLabs Code Clubs
 
-A management system for STEAMLabs Africa's code clubs in Kenya: schools, clubs, club champions, learners, consent, session reports and attendance, and later events and reports. It is one installable web app (PWA) for laptops, tablets and phones, in English and Kiswahili. Club Champions and Coordinators can keep working with no internet; changes sync when the device is back online.
+A management system for STEAMLabs Africa's code clubs in Kenya: schools, clubs, club champions, learners, consent, session reports and attendance, events, reports, equipment, a resource library and learner progress. It is one installable web app (PWA) for laptops, tablets and phones, in English and Kiswahili. Club Champions and Coordinators can keep working with no internet; changes sync when the device is back online.
 
-**Status:** Sprint 3 (working offline and sync) built and in review. Sprints 1 and 2 are merged. Data is stored in MongoDB (decision D1-8). Demo mode lets you click through the app without a database. Use fictional learners only until STEAMLabs confirms its data protection registration (R2-1).
+**Status:** Sprint 5 (equipment, resource library and learner progress) built and in review. Sprints 1 to 4 are merged. Data is stored in MongoDB (decision D1-8). Demo mode lets you click through the app without a database. Use fictional learners only until STEAMLabs confirms its data protection registration (R2-1).
 
 ## Documentation
 
@@ -14,6 +14,9 @@ A management system for STEAMLabs Africa's code clubs in Kenya: schools, clubs, 
 - [Sprint 1 data layer](docs/sprints/sprint-1-data-layer.md): MongoDB collections, indexes and scope queries
 - [Sprint 2 plan](docs/sprints/sprint-2.md) and [summary](docs/sprints/sprint-2-summary.md): learners, consent, sessions and attendance
 - [Sprint 3 plan](docs/sprints/sprint-3.md) and [summary](docs/sprints/sprint-3-summary.md): working offline and sync
+- [Sprint 4 plan](docs/sprints/sprint-4.md) and [summary](docs/sprints/sprint-4-summary.md): HQ dashboard, alerts, termly reports, events and announcements
+- [Sprint 5 plan](docs/sprints/sprint-5.md) and [summary](docs/sprints/sprint-5-summary.md): equipment, resource library, projects and assessments
+- [Kiswahili review list](docs/kiswahili-review.md): every Kiswahili text beside the English, for a native speaker to check
 - [Sync protocol](docs/sync-protocol.md): how devices and the server exchange changes
 
 ## Project layout
@@ -104,6 +107,8 @@ Open <http://localhost:5173> and use the **Sign in as…** buttons to try each r
 | `npm run test:e2e -w client`                 | Playwright browser tests on the demo build (run `npx playwright install chromium` once first)                                              |
 | `E2E_TARGET=real npm run test:e2e -w client` | The same browser tests against the real API and the MongoDB in `MONGODB_URI` (seed it first; Git Bash syntax). CI runs this on every push. |
 | `npm run seed`                               | Load the fictional demo data into MongoDB (refuses to run in production)                                                                   |
+| `npm run load-test -w server`                | Fill a database whose name ends in `_loadtest` with 300 clubs and 9,000 fictional learners and time the heaviest requests                  |
+| `npm run i18n:review -w client`              | Rebuild the Kiswahili review list in `docs/kiswahili-review.md`                                                                            |
 
 CI runs lint, format check, tests and build on every push and pull request (`.github/workflows/ci.yml`).
 

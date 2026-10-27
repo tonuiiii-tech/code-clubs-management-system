@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { uid } from '@code-clubs/shared/demo';
+import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 import { clearDatabase, useTestDatabase } from '../support/database.js';
 import { seed } from '../../scripts/seed.js';
 import { createApp } from '../../src/app.js';
@@ -53,7 +54,7 @@ describe('API on MongoDB', () => {
 
   it('lets a champion see only their clubs, and 404s other clubs', async () => {
     const list = await request(app).get('/api/v1/clubs').set(auth(champion.token));
-    expect(list.body.data.map((c) => c.code)).toEqual(['NAC-001', 'NAC-002']);
+    expect(list.body.data.map((c) => c.code)).toEqual(['NAC-001']);
     const other = await request(app)
       .get(`/api/v1/clubs/${uid(204)}`)
       .set(auth(champion.token));
@@ -103,7 +104,7 @@ describe('API on MongoDB', () => {
       .send({ ...body, name: 'gatina primary school' });
     expect(dup.status).toBe(409);
 
-    const club = await request(app).post('/api/v1/clubs').set(auth(coordinator.token)).send({
+    const newClub = {
       name: 'Gatina Code Club',
       schoolId: school.body.data.id,
       venueType: 'primary_school',
@@ -111,7 +112,11 @@ describe('API on MongoDB', () => {
       startTime: '16:00',
       endTime: '17:00',
       mainTrack: 'scratch',
-    });
+    };
+    const club = await request(app)
+      .post('/api/v1/clubs')
+      .set(auth(coordinator.token))
+      .send(newClub);
     expect(club.status).toBe(201);
     expect(club.body.data).toMatchObject({ code: 'NAC-004', region: 'nairobi_central' });
 
@@ -120,10 +125,47 @@ describe('API on MongoDB', () => {
       .set(auth(coordinator.token))
       .send({ endTime: '15:00' });
     expect(badTime.status).toBe(400);
+
+    // One Code Club per school (D5-11): a second one is refused, unless the first has closed.
+    const second = { ...newClub, name: 'Gatina Robotics', schoolId: school.body.data.id };
+    const refused = await request(app)
+      .post('/api/v1/clubs')
+      .set(auth(coordinator.token))
+      .send(second);
+    expect(refused.status).toBe(409);
+    expect(refused.body.error.message).toBe(ERROR_MESSAGES.schoolHasClub);
+    const free = await request(app).get('/api/v1/schools?withoutClub=true').set(auth(admin.token));
+    expect(free.body.data.map((s) => s.id)).not.toContain(school.body.data.id);
+    await request(app)
+      .patch(`/api/v1/clubs/${club.body.data.id}`)
+      .set(auth(coordinator.token))
+      .send({ status: 'closed' });
+    const replacement = await request(app)
+      .post('/api/v1/clubs')
+      .set(auth(coordinator.token))
+      .send(second);
+    expect(replacement.status).toBe(201);
+    // Reopening the closed club would make two.
+    const reopen = await request(app)
+      .patch(`/api/v1/clubs/${club.body.data.id}`)
+      .set(auth(coordinator.token))
+      .send({ status: 'active' });
+    expect(reopen.status).toBe(409);
   });
 
   it('assigns and ends a champion assignment, and records it in the audit log', async () => {
     const club = uid(209);
+    // Joseph Mutiso runs CST-001: a champion has one club, so he must leave it first (D5-9).
+    const busy = await request(app)
+      .put(`/api/v1/clubs/${club}/champions/${uid(16)}`)
+      .set(auth(admin.token))
+      .send({ role: 'lead' });
+    expect(busy.status).toBe(409);
+    expect(busy.body.error.message).toBe(ERROR_MESSAGES.championHasClub);
+    await request(app)
+      .delete(`/api/v1/clubs/${uid(207)}/champions/${uid(16)}`)
+      .set(auth(admin.token));
+
     const put = await request(app)
       .put(`/api/v1/clubs/${club}/champions/${uid(16)}`)
       .set(auth(admin.token))
@@ -145,11 +187,24 @@ describe('API on MongoDB', () => {
     expect(log.body.data.map((e) => e.action)).toEqual(
       expect.arrayContaining(['club.assignChampion', 'club.unassignChampion']),
     );
+    // Back to CST-001 for the tests that follow.
+    await request(app)
+      .put(`/api/v1/clubs/${uid(207)}/champions/${uid(16)}`)
+      .set(auth(admin.token))
+      .send({ role: 'lead' });
+  });
+
+  it('lists the champions who have no club yet, the only ones who can be assigned (D5-9)', async () => {
+    const res = await request(app)
+      .get('/api/v1/users?role=champion&status=active&withoutClub=true')
+      .set(auth(admin.token));
+    expect(res.status).toBe(200);
+    expect(res.body.data.map((u) => u.fullName)).toEqual(['Peter Kariuki']);
   });
 
   it('returns dashboard counts within scope', async () => {
     const res = await request(app).get('/api/v1/dashboard/summary').set(auth(champion.token));
-    expect(res.body.data).toMatchObject({ activeClubs: 2, schools: 2 });
+    expect(res.body.data).toMatchObject({ activeClubs: 1, schools: 1 });
   });
 
   it('creates a user with a temporary password that works once', async () => {
@@ -168,6 +223,86 @@ describe('API on MongoDB', () => {
       password: res.body.temporaryPassword,
     });
     expect(login.status).toBe(200);
+  });
+});
+
+describe('Accounts a Programme Manager manages (D5-12)', () => {
+  let pm;
+  beforeAll(async () => {
+    pm = await signIn('otieno.ouma@demo.steamlabs.test');
+  });
+
+  it('creates and deactivates a coordinator account', async () => {
+    const res = await request(app)
+      .post('/api/v1/users')
+      .set(auth(pm.token))
+      .send({
+        fullName: 'Baraka Kiprono',
+        email: 'baraka.kiprono@demo.steamlabs.test',
+        role: 'coordinator',
+        regions: ['rift_valley'],
+      });
+    expect(res.status).toBe(201);
+    const off = await request(app)
+      .patch(`/api/v1/users/${res.body.data.id}/status`)
+      .set(auth(pm.token))
+      .send({ status: 'inactive' });
+    expect(off.status).toBe(200);
+  });
+
+  it('cannot create, promote to or change administrator and manager accounts', async () => {
+    const admin = await request(app).post('/api/v1/users').set(auth(pm.token)).send({
+      fullName: 'Imani Wekesa',
+      email: 'imani.wekesa@demo.steamlabs.test',
+      role: 'system_admin',
+    });
+    expect(admin.status).toBe(403);
+    expect(admin.body.error.message).toBe(ERROR_MESSAGES.roleNotManageable);
+    // Mwende Mutua (coordinator) cannot be made a Programme Manager by a Programme Manager.
+    const promote = await request(app)
+      .patch(`/api/v1/users/${uid(3)}`)
+      .set(auth(pm.token))
+      .send({ role: 'programme_manager' });
+    expect(promote.status).toBe(403);
+    // Wanjiru Kamau (System Administrator) cannot be deactivated by one.
+    const lockout = await request(app)
+      .patch(`/api/v1/users/${uid(1)}/status`)
+      .set(auth(pm.token))
+      .send({ status: 'inactive' });
+    expect(lockout.status).toBe(403);
+  });
+});
+
+describe('Accounts a coordinator creates (D5-13)', () => {
+  it('creates a Club Champion account, and nothing else', async () => {
+    const coordinator = await signIn('achieng.odhiambo@demo.steamlabs.test');
+    const champion = await request(app)
+      .post('/api/v1/users')
+      .set(auth(coordinator.token))
+      .send({
+        fullName: 'Wanjala Barasa',
+        email: 'wanjala.barasa@demo.steamlabs.test',
+        role: 'champion',
+        championProfile: { type: 'volunteer' },
+      });
+    expect(champion.status).toBe(201);
+    const peer = await request(app)
+      .post('/api/v1/users')
+      .set(auth(coordinator.token))
+      .send({
+        fullName: 'Nafula Simiyu',
+        email: 'nafula.simiyu@demo.steamlabs.test',
+        role: 'coordinator',
+        regions: ['western_nyanza'],
+      });
+    expect(peer.status).toBe(403);
+    expect(peer.body.error.message).toBe(ERROR_MESSAGES.roleNotManageable);
+    // Editing and deactivating stay with the Programme Manager.
+    const off = await request(app)
+      .patch(`/api/v1/users/${champion.body.data.id}/status`)
+      .set(auth(coordinator.token))
+      .send({ status: 'inactive' });
+    expect(off.status).toBe(403);
   });
 });
 

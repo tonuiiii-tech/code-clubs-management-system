@@ -7,26 +7,68 @@
  */
 import bcrypt from 'bcrypt';
 import { REGION_CODE_PREFIX } from '@code-clubs/shared/enums';
-import { createSeedData, DEMO_PASSWORD } from '@code-clubs/shared/demo';
+import {
+  createSeedData,
+  DEMO_PASSWORD,
+  DEMO_RESOURCE_FILES,
+  demoPdf,
+} from '@code-clubs/shared/demo';
 import { env } from '../src/config/env.js';
+import { BUCKETS, deleteFile, saveFile } from '../src/db/files.js';
 import { connectDatabase, disconnectDatabase } from '../src/db/index.js';
 import {
+  Announcement,
+  AnnouncementRead,
+  Assessment,
+  AssessmentScore,
   Attendance,
   Club,
   ClubChampion,
   Consent,
   Counter,
+  EquipmentItem,
+  EquipmentLoan,
+  EquipmentRepair,
+  EquipmentReport,
+  Event,
+  EventConsent,
+  EventParticipant,
+  EventProject,
   Learner,
   LearnerContact,
+  LearnerProject,
+  Resource,
   School,
   Session,
+  Term,
   User,
 } from '../src/db/models.js';
 import { toDocument } from '../src/db/records.js';
 import { BCRYPT_COST } from '../src/modules/users/users.service.js';
 
 export async function seed({ password = env.SEED_DEFAULT_PASSWORD || DEMO_PASSWORD } = {}) {
-  const { users, schools, clubs, assignments, ...sprint2 } = createSeedData();
+  const {
+    users,
+    schools,
+    clubs,
+    assignments,
+    terms,
+    events,
+    eventParticipants,
+    eventConsents,
+    eventProjects,
+    announcements,
+    announcementReads,
+    equipmentItems,
+    equipmentLoans,
+    equipmentRepairs,
+    equipmentReports,
+    resources,
+    learnerProjects,
+    assessments,
+    assessmentScores,
+    ...sprint2
+  } = createSeedData();
   const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
   const upsertAll = (model, records) =>
     model.bulkWrite(
@@ -43,6 +85,13 @@ export async function seed({ password = env.SEED_DEFAULT_PASSWORD || DEMO_PASSWO
   await upsertAll(School, schools);
   await upsertAll(Club, clubs);
   await ClubChampion.deleteMany({ clubId: { $in: clubs.map((c) => c.id) } });
+  // A champion runs one club (D5-9): end demo champions' assignments to other clubs, such as
+  // ones the browser tests made, so each keeps only their demo club.
+  const championIds = users.filter((u) => u.role === 'champion').map((u) => u.id);
+  await ClubChampion.updateMany(
+    { userId: { $in: championIds }, clubId: { $nin: clubs.map((c) => c.id) }, endDate: null },
+    { $set: { endDate: new Date().toISOString().slice(0, 10) } },
+  );
   await ClubChampion.insertMany(assignments.map((a) => ({ ...a })));
 
   // Sprint 2: fictional learners only (R2-1).
@@ -66,6 +115,42 @@ export async function seed({ password = env.SEED_DEFAULT_PASSWORD || DEMO_PASSWO
       );
     }
   }
+
+  // Sprint 4: dates follow today's date, so replace the demo records (fictional learners only).
+  const replaceAll = async (model, records) => {
+    await model.deleteMany({ _id: { $in: records.map((r) => r.id) } });
+    await upsertAll(model, records);
+  };
+  await Term.deleteMany({ year: { $in: [...new Set(terms.map((t) => t.year))] } });
+  await upsertAll(Term, terms);
+  await replaceAll(Event, events);
+  await replaceAll(EventParticipant, eventParticipants);
+  await replaceAll(EventConsent, eventConsents);
+  await replaceAll(EventProject, eventProjects);
+  await replaceAll(Announcement, announcements);
+  await replaceAll(AnnouncementRead, announcementReads);
+
+  // Sprint 5: equipment, resources, projects and assessments (dates follow today's date too).
+  await replaceAll(EquipmentItem, equipmentItems);
+  await EquipmentLoan.deleteMany({ itemId: { $in: equipmentItems.map((i) => i.id) } });
+  await upsertAll(EquipmentLoan, equipmentLoans);
+  await replaceAll(EquipmentRepair, equipmentRepairs);
+  await replaceAll(EquipmentReport, equipmentReports);
+  await replaceAll(Resource, resources);
+  for (const { fileId, lines } of Object.values(DEMO_RESOURCE_FILES)) {
+    await deleteFile(BUCKETS.resourceFiles, fileId);
+    await saveFile(BUCKETS.resourceFiles, Buffer.from(demoPdf(lines)), {
+      id: fileId,
+      contentType: 'application/pdf',
+      metadata: { demo: true },
+    });
+  }
+  await replaceAll(LearnerProject, learnerProjects);
+  await replaceAll(Assessment, assessments);
+  await AssessmentScore.deleteMany({ assessmentId: { $in: assessments.map((a) => a.id) } });
+  await upsertAll(AssessmentScore, assessmentScores);
+  const highestTag = Math.max(...equipmentItems.map((i) => Number(i.assetTag.slice(3))));
+  await Counter.updateOne({ _id: 'equipment' }, { $max: { seq: highestTag } }, { upsert: true });
 
   // Keep club codes moving forward from the seeded ones (NAC-003 → next is NAC-004).
   for (const prefix of Object.values(REGION_CODE_PREFIX)) {

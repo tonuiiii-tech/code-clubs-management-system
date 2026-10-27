@@ -52,4 +52,9 @@ export const listUsersQuerySchema = paginationSchema.extend({
   role: z.enum(ROLE_VALUES).optional(),
   status: z.enum(USER_STATUSES).optional(),
   q: z.string().trim().max(80).optional(),
+  // Champions with no current club, the only ones who can be assigned one (D5-9).
+  withoutClub: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((v) => v === 'true'),
 });

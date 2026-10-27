@@ -158,6 +158,7 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Context:** Clubs are hosted by schools, community centres or libraries. A club can have several champions, and a champion can run several clubs.
 - **Decision:** School is an entity that clubs reference. Each club–champion assignment is its own record with start and end dates.
 - **Consequences:** No retyping of host details; assignment history is preserved; offline edits to different assignments will not overwrite each other in Sprint 3.
+- **Update (2026-10-27):** A champion now runs one club at a time (D5-9), and a school has one club (D5-11). A club can still have several champions.
 
 ## D1-16: Data access through repositories
 
@@ -401,7 +402,7 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Status:** Accepted
 - **Date:** 2026-10-25
 - **Context:** Enock asked for the design principles of steamlabsafrica.com and the STEAMLabs logo in the app. The website uses the same palette and font as the steamlabsui kit (Clover green, Fuel orange, Poppins), with a bolder style.
-- **Decision:** Keep the kit's tokens and add a thin layer in `client/src/ui/app.css`: pill-shaped buttons and menu items, page titles in Poppins 900, an uppercase eyebrow above every page title, cards with 20 px corners and a soft shadow, dashboard tiles with big numbers and the kit's cream offset shadow, and a sign-in page with a solid Clover green brand panel (no gradients, at Enock's request). The official logo comes from the kit (`steamlabsui/logo`): white on the green menu and on the brand panel. Poppins 800 and 900 are self-hosted like the other weights, so the look works offline.
+- **Decision:** Keep the kit's tokens and add a thin layer in `client/src/ui/app.css`: pill-shaped buttons and menu items, page titles in Poppins 900, an eyebrow above every page title (in its written case since D5-14), cards with 20 px corners and a soft shadow, dashboard tiles with big numbers and the kit's cream offset shadow, and a sign-in page with a solid Clover green brand panel (no gradients, at Enock's request). The official logo comes from the kit (`steamlabsui/logo`): white on the green menu and on the brand panel. Poppins 800 and 900 are self-hosted like the other weights, so the look works offline.
 - **Alternatives considered:** Copying the website's marketing sections (hero photos, partner ticker) into every page. Those suit a website, not daily data entry on tablets.
 - **Consequences:** Only the sign-in page has a large brand panel. On phones the panel shrinks to the logo and headline. Any later kit update to the same classes may need this layer adjusted.
 
@@ -413,6 +414,204 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Decision:** A one-line credit, "In partnership with the Raspberry Pi Foundation", appears at the bottom of the sign-in panel and of the menu, in English and Kiswahili, with a raspberry-coloured rule from the kit (`--rpi-raspberry`). The logo is added only once STEAMLabs sends the official file and confirms the permission; it is never copied from the web or redrawn.
 - **Alternatives considered:** "Sponsored by", if the Foundation funds the work; "Using learning resources from", if there is no formal agreement.
 - **Consequences:** The wording is one translation key (`app.partner`) and can change without code changes.
+
+## D4-1: Charts are small SVG components on kit colours, with a table alongside
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** The HQ dashboard needs an attendance trend and sessions per region. Chart libraries add 50–150 KB to an app used on slow connections, and their default colours and gradients do not match the STEAMLabs look.
+- **Decision:** Two small components in `client/src/components/Charts.jsx` (column chart and stacked bars) drawn with SVG in flat kit colours. Each chart has a "Show as a table" section with the same numbers, for screen readers and printing.
+- **Alternatives considered:** Recharts or Chart.js.
+- **Consequences:** No new dependency. New chart types are written by hand; if many are needed, a library can be added later.
+
+## D4-2: Alerts are computed when asked for, not stored
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** HQ wants to see which clubs need help: no recent session, low attendance, missing consent, near capacity, missing event consent.
+- **Decision:** `computeAlerts` in `shared/src/insights.js` checks the rules (thresholds as in the plan, agreed by Enock) each time `GET /alerts` is called, inside the user's scope. The demo mock uses the same function, so the numbers match.
+- **Alternatives considered:** A nightly job that stores alerts.
+- **Consequences:** Alerts are never out of date. Dismissing an alert for 7 days (R4-4) needs stored state and was added in Sprint 5 (D5-8); alerts are grouped per club on the dashboard to keep the list short.
+
+## D4-3: Reports hold counts only
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** Termly reports go to funders and partners outside STEAMLabs. Learners are children (Kenya DPA 2019).
+- **Decision:** The termly report (screen and PDF) holds counts only: no names, contacts or photos. Any learner count from 1 to 4 shows as "<5" (`suppressSmall`), in the age and gender table and in the region and track tables.
+- **Alternatives considered:** Per-learner tables for HQ only.
+- **Consequences:** Tested on MongoDB: the PDF and JSON contain no learner names. Small clubs show "<5" rather than a number.
+
+## D4-4: PDFs are made on the server with pdfkit
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** The termly report must be emailed automatically, with no person in the loop.
+- **Decision:** `GET /reports/termly.pdf` builds the PDF with `pdfkit` (plain JavaScript, no browser). The demo build, which has no server, prints the report page with print styles instead.
+- **Alternatives considered:** Puppeteer (needs Chromium on the server); making the PDF in the browser (cannot run for the scheduled email).
+- **Consequences:** The PDF layout is code, not HTML. Fonts are pdfkit's built-in Helvetica.
+
+## D4-5: Email, SMS and WhatsApp go through provider stubs
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** No email, SMS or WhatsApp provider or budget is chosen yet (Q51).
+- **Decision:** `server/src/modules/notifications/providers.js` defines email and message providers. The stubs store every message in `outboundMessages` and send nothing; HQ can see them under Settings. A daily job sends the termly report the day after a term ends; a `reportRuns` record with id `termly:<termId>` is the lock that stops two servers sending it twice.
+- **Alternatives considered:** Choosing a provider now (Africa's Talking, Twilio, SendGrid).
+- **Consequences:** Real providers plug in with `setProviders` without changing callers. Tested: the report is sent once per term.
+
+## D4-6: Event consent is separate from club consent
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** Events often take learners away from school to a venue, which club consent does not cover.
+- **Decision:** One `eventConsents` record per learner per event, with status, signed date and an optional signed form, following the Sprint 2 consent rules. Learners registered without it are flagged on the event and raise an alert in the 7 days before it. Event photos follow the Sprint 2 photo-consent check (D2-7), up to 10 per event. Champions register learners; there are no parent accounts.
+- **Alternatives considered:** Reusing club consent; a parent sign-up page.
+- **Consequences:** Guardian data stays with HQ. Results (award, rank) are stored on the event's projects rather than in a separate `eventResults` collection, because every result in the plan belongs to a project.
+
+## D4-7: Announcements go to app users only
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** HQ reaches champions through many WhatsApp groups today.
+- **Decision:** Announcements go to app users chosen by role, region and club, shown in the app with a bell count; SMS and WhatsApp copies go through the stub (D4-5) to the phone on the user's account. Never to guardians. A preview shows how many people it will reach before sending (R4-3).
+- **Alternatives considered:** Sending to guardians.
+- **Consequences:** Senders see how many have read each announcement. The recipient list is never sent to devices.
+
+## D4-8: Events and announcements are read online first, with a saved copy offline
+
+- **Status:** Accepted
+- **Date:** 2026-10-25
+- **Context:** Enock chose read-only events offline. Champions should still see events and announcements without internet.
+- **Decision:** Sync pulls events, participants, event consents, announcements and read marks to the device. Event and announcement screens ask the server first and fall back to the device copy when offline (`onlineFirst`); "mark as read" goes through the Sprint 3 outbox. Creating or changing events, and registering learners, need a connection. The HQ dashboard and alerts show the last saved numbers with their date when offline.
+- **Alternatives considered:** Reading only from the device (as clubs and learners do); full offline event registration (about 2 more days).
+- **Consequences:** Known gap: if a club is removed from an event's invitations, that event stays on the club's devices until the local database is reset. Fixed in Sprint 5 (D5-8).
+
+## D5-1: An item is in an HQ store or lent to one club; kits are one item
+
+- **Status:** Accepted
+- **Date:** 2026-10-26
+- **Context:** HQ needs to know where every laptop and robotics kit is (Q25, Q26). Tagging each part of a kit (every micro:bit, every cable) is more work than HQ can keep up.
+- **Decision:** Every item belongs to the HQ store of a region and is either there or lent to one club. A kit is one item with a contents note (Enock's answer to question 2). A loan needs the item to be in the store and working or needing repair; a partial unique index on open loans means two people lending the same item at once get one loan and one refusal. Champions see their clubs' items and report damage or loss; they cannot lend or return.
+- **Alternatives considered:** Tagging every part; letting items move between clubs directly.
+- **Consequences:** Every loan, return, repair and report records who and when (R5-3). Retired items stay in the register but are left out of dashboard counts. A coordinator manages items in their regions' stores and sees items lent to their regions' clubs.
+
+## D5-2: Resources are files up to 20 MB or links; videos are links only
+
+- **Status:** Accepted
+- **Date:** 2026-10-26
+- **Context:** Champions need lesson plans, slides, worksheets and videos (Q22, Q27). Storage and data are costly; most venues have no internet.
+- **Decision:** A resource has a link, a file in GridFS (up to 20 MB), or both. Videos are links only (question 3). Allowed files: PDF, PowerPoint (PPTX), OpenDocument slides and text (ODP, ODT), Word (DOCX), Scratch (SB3), ZIP, JPG and PNG. The server checks the file's first bytes match its name (PDF, ZIP container, PNG or JPEG). A resource can only be published with a link or a file. Only HQ adds and publishes; everyone signed in reads published resources.
+- **Alternatives considered:** Uploading videos; any file type.
+- **Consequences:** Word and ODT were added to the plan's list, because many worksheets are written in Word. A Word file renamed to `.pdf` is refused.
+
+## D5-3: Saved resources are kept in the browser's storage, up to 300 MB
+
+- **Status:** Accepted
+- **Date:** 2026-10-26
+- **Context:** Champions need lesson plans in class with no internet.
+- **Decision:** Champions and coordinators (who keep data on their device, D3-1) can save a resource's file on the device. The file goes in the user's local database, in a `savedResources` table outside the synced tables, with a limit of 300 MB and the space used shown on the Resources page. After each sync a replaced file is fetched again and an unpublished or deleted one is removed. Saved files are deleted on sign-out with the rest of the local data (D3-2).
+- **Alternatives considered:** The service worker cache (harder to count and to delete per user); saving every resource automatically.
+- **Consequences:** Tested: a saved file opens offline and is gone after signing out.
+
+## D5-4: Raspberry Pi Foundation material is linked, not copied
+
+- **Status:** Accepted
+- **Date:** 2026-10-26
+- **Context:** STEAMLabs uses the Raspberry Pi Foundation curriculum (Q22). Its projects have their own licence.
+- **Decision:** Their projects are added as links. The resource form reminds HQ of this, and HQ confirms the licence of anything it uploads (R5-2).
+- **Alternatives considered:** Uploading PDF copies of their projects.
+- **Consequences:** Their links need internet. A worksheet STEAMLabs writes itself can be uploaded and saved for offline use.
+
+## D5-5: Projects and scores are recorded offline; scores merge learner by learner
+
+- **Status:** Accepted
+- **Date:** 2026-10-26
+- **Context:** Most venues have no internet (Q36). Enock chose offline recording (question 4).
+- **Decision:** Four new outbox operations: `equipment.report`, `project.save`, `assessment.save` and `assessment.scores`, plus a project file upload that waits like session photos (D3-8). `project.save` and `assessment.save` carry the whole record with the id made on the device, so the server creates it the first time and updates it after. Only changed scores are sent, and the server merges them learner by learner like attendance (D3-9), so two people can enter scores for one assessment. A project photo with learners who have no photo consent needs the same confirmation as session photos (D2-7).
+- **Alternatives considered:** Online only (saves about 2 days).
+- **Consequences:** These operations are not checked for conflicts: the later save wins, without an entry in the conflict log. Tested: changes sent twice are applied once.
+
+## D5-6: Scores and projects are learner data
+
+- **Status:** Accepted
+- **Date:** 2026-10-26
+- **Context:** Scores are about children and could be used to rank them publicly (R5-4).
+- **Decision:** Projects and scores have the same scope as the learner record: champions their own clubs, coordinators their regions, HQ everything. The termly report shows only counts of projects and assessments and the average score per track, and hides an average made of fewer than 5 scores, like other small groups (D4-3).
+- **Alternatives considered:** Scores visible to all champions; per-learner scores in the report.
+- **Consequences:** Tested on MongoDB: the report JSON holds no learner names, project titles or individual scores.
+
+## D5-7: Some API paths differ from the plan
+
+- **Status:** Accepted
+- **Date:** 2026-10-26
+- **Context:** The plan listed `/projects`, `/assessments`, `/learners/:id/progress`, `/clubs/:id/progress`, `PATCH /equipment/:id/loans/:loanId` and `POST /alerts/:key/dismiss`.
+- **Decision:** Projects, assessments and the progress pages are under one router, `/api/v1/progress` (`/progress/projects`, `/progress/assessments`, `/progress/learners/:id`, `/progress/clubs/:id`). A return is `POST /equipment/:id/return`, since an item has at most one open loan. Hiding an alert is `POST /alerts/dismissals` with `{ key }`, because keys contain colons.
+- **Alternatives considered:** The paths as planned.
+- **Consequences:** Each module owns one path prefix, as in Sprints 1 to 4.
+
+## D5-8: Equipment and resources are read online first; records that leave scope leave the device
+
+- **Status:** Accepted
+- **Date:** 2026-10-26
+- **Context:** Equipment history (loans, repairs, reports) is only needed online. D4-8 left a gap: an event stayed on a device after its club was uninvited.
+- **Decision:** Equipment and the resource list are read from the server first and from the device copy when offline, like events (D4-8). A champion's damage report goes straight to the server when online and through the outbox when not. The first page of every pull now carries `inScope`, the ids of events, items, resources and projects the user may keep; the device deletes the others. Alerts can be hidden for 7 days by each person (R4-4), stored in `alertDismissals`.
+- **Alternatives considered:** Tombstones for every record that leaves scope.
+- **Consequences:** Closes the D4-8 gap (tested: an uninvited event is no longer in `inScope`). The device copy of an item has no loan history.
+
+## D5-9: A Club Champion runs one club, and so one school
+
+- **Status:** Accepted (Enock, 2026-10-27)
+- **Date:** 2026-10-27
+- **Context:** The questionnaire (Q12) said one facilitator can run several clubs, so D1-15 allowed it and the demo gave some champions two clubs. Enock decided a champion handles only their own club and its school.
+- **Decision:** A champion has at most one current club assignment. Assigning a champion who already runs another club is refused (409, "end that assignment first"), on the server and in demo mode; it is not moved silently. The Assign champion picker lists only active champions with no current club (`GET /users?withoutClub=true`). Champions no longer see a Schools section in the menu; they reach their club's school from the club page. A club can still have a lead and assistants. The seed gives each demo champion one club and ends demo champions' assignments to other clubs (for example ones the browser tests made).
+- **Alternatives considered:** Ending the old assignment automatically when a new one is made (a mis-click would silently take a champion away from their club); a unique database index on current assignments (it would fail to build on databases that still hold two assignments for one champion, and stop the server starting).
+- **Consequences:** Scope rules are unchanged: they already limited a champion to the clubs they run. Moving a champion is two steps (end, then assign). Two coordinators assigning the same champion at the same moment could still both succeed (R5-7).
+
+## D5-10: The Code Club logo in the app
+
+- **Status:** Accepted (Enock, 2026-10-27)
+- **Date:** 2026-10-27
+- **Context:** Enock sent the official green horizontal Code Club logo. The STEAMLabs logo and partner credit live in the paused redesign (PR #4), so the current app showed no logo.
+- **Decision:** Show the Code Club logo, cropped but not recoloured, above the sign-in card and at the top of the menu, where it sits on a white tile so the green logo stays visible on the green menu. It is hidden in the phone bottom bar. It moves into the redesign when that resumes.
+- **Alternatives considered:** Waiting for the redesign; waiting for a white or SVG version from HQ.
+- **Consequences:** Code Club is a Raspberry Pi Foundation brand; the D3-12 point on partner wording and permission still applies. An SVG would stay sharper than the PNG.
+
+## D5-11: One Code Club per school
+
+- **Status:** Accepted (Enock, 2026-10-27)
+- **Date:** 2026-10-27
+- **Context:** Enock: "there is only one code club per school, so a learner is attached to one school and one club". Nothing stopped a second club at a school, and the demo had two active clubs at Nyalenda Hope Primary.
+- **Decision:** A school has at most one club that is not closed. Adding a club at a school that has one is refused (409, "This school already has a Code Club"), and so is moving a club to such a school or reopening a closed club there. The Add club form offers only schools without an open club (`GET /schools?withoutClub=true`). A closed club does not count, so a school can start again. Learners already belong to one club (D2-8), so they belong to one school too. In the demo, Kisumu AI Explorers (WNY-003) now meets at a new school, Manyatta Primary.
+- **Alternatives considered:** A unique database index on `clubs.schoolId` for open clubs (it would fail to build on databases that already hold two clubs at one school; the seed fixes the demo ones, so it can follow).
+- **Consequences:** With D5-9, a champion has one club and so one school. Two people adding a club at the same school at the same moment could still both succeed (R5-7 covers the same kind of race).
+
+## D5-12: The Programme Manager creates coordinator and champion accounts
+
+- **Status:** Accepted (Enock, 2026-10-27)
+- **Date:** 2026-10-27
+- **Context:** Enock: "the club champion should only be able to add learners while the code clubs coordinator should be able to create clubs and assign champions then the program manager is the one who can create accounts for code club coordinators". Only the System Administrator could create accounts (D1-4). Coordinators already create clubs and assign champions in their regions, and champions already cannot create clubs, schools or accounts.
+- **Decision:** `user:manage` now includes the Programme Manager, limited by `MANAGEABLE_ROLES` in `shared/src/permissions.js`: a Programme Manager creates, edits, deactivates and reactivates Code Clubs Coordinator and Club Champion accounts; only a System Administrator manages Programme Manager and System Administrator accounts. Anything else is refused (403, "You cannot manage accounts with this role"), including promoting a coordinator to Programme Manager. The Users page shows a Programme Manager every account but offers actions only on coordinators and champions, and the role list in the form offers only those two roles.
+- **Alternatives considered:** Coordinators creating champion accounts (adopted later the same day, D5-13).
+- **Consequences:** Enock confirmed (2026-10-27) that champions keep recording sessions, attendance, consent, progress and fault reports for their own club; they get no management powers (no clubs, schools, accounts or champion assignments).
+
+## D5-13: A coordinator creates Club Champion accounts only
+
+- **Status:** Accepted (Enock, 2026-10-27)
+- **Date:** 2026-10-27
+- **Context:** Enock: "a coordinator can only create club champion accounts". D5-12 left account creation to the System Administrator and the Programme Manager.
+- **Decision:** A new permission, `user:create`, adds the Code Clubs Coordinator, and `MANAGEABLE_ROLES` limits a coordinator to the Club Champion role. Any other role is refused (403, "You cannot manage accounts with this role"). Editing, deactivating and reactivating accounts (`user:manage`) stays with the Programme Manager and System Administrator. Coordinators get the Users page; its form preselects Club Champion, and it offers no edit or deactivate actions. A new champion has no club until the coordinator assigns one (D5-9).
+- **Alternatives considered:** Letting coordinators also edit or deactivate the champions in their regions (not asked for; it can follow by adding the coordinator to `user:manage` with a scope check).
+- **Consequences:** An unassigned champion is visible to every coordinator (D1-4 scope rule), so a coordinator can assign a champion another coordinator created.
+
+## D5-14: "STEAMLabs" keeps its case on screen; both logos in the menu
+
+- **Status:** Accepted (Enock, 2026-10-27)
+- **Date:** 2026-10-27
+- **Context:** Enock: the brand "is written as STEAMLabs, this exact case". The redesign (D3-11) used the kit's uppercase eyebrows and an uppercase menu brand, so screens showed "STEAMLABS". D5-10 added the Code Club logo while the redesign was paused.
+- **Decision:** Eyebrows and the menu brand keep the case they are written in (no `text-transform: uppercase`). A test fails if a page renders "STEAMLABS" or "Steamlabs". The menu shows the white STEAMLabs logo, then the Code Club logo on a white tile; the sign-in page shows the STEAMLabs panel and the Code Club logo above the form.
+- **Alternatives considered:** Keeping uppercase eyebrows and taking the brand out of every eyebrow (easy to break again).
+- **Consequences:** Eyebrows are quieter than on steamlabsafrica.com. The Raspberry Pi Foundation logo is added once HQ sends the official file (D3-12).
 
 ## Decision template
 

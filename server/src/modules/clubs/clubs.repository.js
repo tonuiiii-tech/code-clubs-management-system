@@ -6,6 +6,13 @@ import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 
 /** Only this file talks to the database for clubs and champion assignments (D1-16). */
 
+/** True when the school already has a club that is not closed, other than this one. */
+export async function schoolHasOtherClub(schoolId, exceptClubId = null) {
+  return Boolean(
+    await Club.exists({ schoolId, status: { $ne: 'closed' }, _id: { $ne: exceptClubId } }),
+  );
+}
+
 export async function listClubs(scopeFilter, query) {
   const filter = {
     $and: [
@@ -66,6 +73,11 @@ export async function upsertChampionAssignment({ clubId, userId, role, startDate
   ).lean();
   const { _id, ...assignment } = doc;
   return assignment;
+}
+
+/** True when the champion currently runs a club other than this one. */
+export async function championHasOtherClub(userId, clubId) {
+  return Boolean(await ClubChampion.exists({ userId, endDate: null, clubId: { $ne: clubId } }));
 }
 
 /** Ending keeps the record as history (D1-15). */

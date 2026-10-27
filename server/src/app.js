@@ -12,8 +12,16 @@ import { clubsRouter } from './modules/clubs/clubs.routes.js';
 import { learnersRouter } from './modules/learners/learners.routes.js';
 import { sessionsRouter } from './modules/sessions/sessions.routes.js';
 import { auditRouter } from './modules/audit/audit.routes.js';
-import { dashboardRouter } from './modules/dashboard/dashboard.routes.js';
+import { alertsRouter, dashboardRouter } from './modules/dashboard/dashboard.routes.js';
 import { syncRouter } from './modules/sync/sync.routes.js';
+import { notificationsRouter } from './modules/notifications/notifications.routes.js';
+import { reportsRouter } from './modules/reports/reports.routes.js';
+import { announcementsRouter } from './modules/announcements/announcements.routes.js';
+import { eventsRouter } from './modules/events/events.routes.js';
+import { termsRouter } from './modules/terms/terms.routes.js';
+import { equipmentRouter } from './modules/equipment/equipment.routes.js';
+import { resourcesRouter } from './modules/resources/resources.routes.js';
+import { progressRouter } from './modules/progress/progress.routes.js';
 
 /** Builds the Express app without listening, so tests can use it with Supertest. */
 export function createApp() {
@@ -40,6 +48,15 @@ export function createApp() {
   api.use('/audit', auditRouter);
   api.use('/dashboard', dashboardRouter);
   api.use('/sync', syncRouter);
+  api.use('/terms', termsRouter);
+  api.use('/alerts', alertsRouter);
+  api.use('/reports', reportsRouter);
+  api.use('/events', eventsRouter);
+  api.use('/announcements', announcementsRouter);
+  api.use('/notifications', notificationsRouter);
+  api.use('/equipment', equipmentRouter);
+  api.use('/resources', resourcesRouter);
+  api.use('/progress', progressRouter);
   app.use('/api/v1', api);
 
   app.use(notFoundHandler);

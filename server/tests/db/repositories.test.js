@@ -33,13 +33,13 @@ describe('MongoDB repositories', () => {
     expect(nairobi.data.map((c) => c.code)).toEqual(['NAC-001', 'NAC-002', 'NAC-003']);
 
     const faith = await clubs.listClubs({ championUserId: FAITH }, page);
-    expect(faith.data.map((c) => c.code)).toEqual(['NAC-001', 'NAC-002']);
+    expect(faith.data.map((c) => c.code)).toEqual(['NAC-001']);
     expect(await clubs.findClubInScope(uid(204), { championUserId: FAITH })).toBeNull();
   });
 
   it('shows a champion only the schools of their clubs', async () => {
     const result = await schools.listSchools({ championUserId: FAITH }, page);
-    expect(result.data.map((s) => s.id).sort()).toEqual([uid(101), uid(102)]);
+    expect(result.data.map((s) => s.id)).toEqual([uid(101)]);
   });
 
   it('lets a coordinator see their region, its champions and unassigned champions', async () => {
@@ -109,10 +109,10 @@ describe('MongoDB repositories', () => {
 
   it('counts the dashboard inside the scope', async () => {
     const all = await summaryCounts({ all: true });
-    expect(all).toMatchObject({ activeClubs: 10, schools: 10 });
+    expect(all).toMatchObject({ activeClubs: 10, schools: 11 });
     expect(all.clubsByRegion.nairobi_central).toBe(3);
     const faith = await summaryCounts({ championUserId: FAITH });
-    expect(faith).toMatchObject({ activeClubs: 2, schools: 2, champions: 2 });
+    expect(faith).toMatchObject({ activeClubs: 1, schools: 1, champions: 1 });
   });
 
   it('keeps the audit log append-only and region-scoped', async () => {

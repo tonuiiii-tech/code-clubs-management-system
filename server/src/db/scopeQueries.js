@@ -71,3 +71,32 @@ export function auditScopeQuery(filter) {
   if (filter.userId) return { actorId: filter.userId };
   return NOTHING;
 }
+
+/**
+ * Events (Sprint 4): coordinators see their regions' events and national ones, champions the
+ * events their clubs are invited to.
+ */
+export async function eventScopeQuery(filter) {
+  if (filter.all) return {};
+  if (filter.regions) return { region: { $in: [...filter.regions, null] } };
+  if (filter.championUserId) {
+    return { clubIds: { $in: await championClubIds(filter.championUserId) } };
+  }
+  return NOTHING;
+}
+
+/**
+ * Equipment (Sprint 5): coordinators see their regions' items and items lent to their regions'
+ * clubs; champions the items their clubs hold (D5-1).
+ */
+export async function equipmentScopeQuery(filter) {
+  if (filter.all) return {};
+  if (filter.regions) {
+    const clubIds = await Club.distinct('_id', { region: { $in: filter.regions } });
+    return { $or: [{ region: { $in: filter.regions } }, { clubId: { $in: clubIds } }] };
+  }
+  if (filter.championUserId) {
+    return { clubId: { $in: await championClubIds(filter.championUserId) } };
+  }
+  return NOTHING;
+}

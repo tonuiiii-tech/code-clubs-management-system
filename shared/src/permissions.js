@@ -24,7 +24,10 @@ export const POLICY = Object.freeze({
     [COORDINATOR]: ASSIGNED,
     [CHAMPION]: SELF,
   },
-  'user:manage': { [SYSTEM_ADMIN]: ALL },
+  // Which roles' accounts each role may create (user:create) or edit and deactivate
+  // (user:manage): MANAGEABLE_ROLES (D5-12, D5-13).
+  'user:create': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL, [COORDINATOR]: ASSIGNED },
+  'user:manage': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL },
   'user:updateSelf': {
     [SYSTEM_ADMIN]: SELF,
     [PROGRAMME_MANAGER]: SELF,
@@ -106,9 +109,93 @@ export const POLICY = Object.freeze({
     [PROGRAMME_MANAGER]: ALL,
     [COORDINATOR]: ASSIGNED,
   },
+
+  // Sprint 4 (docs/sprints/sprint-4.md, section 8).
+  'dashboard:hq': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL, [COORDINATOR]: ASSIGNED },
+  'report:read': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL, [COORDINATOR]: ASSIGNED },
+  // Who gets the termly email, and the log of messages the stub providers recorded (D4-5).
+  'report:schedule': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL },
+  'term:manage': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL },
+  // Champions see events their clubs are invited to; coordinators manage their regions' events.
+  'event:read': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+    [CHAMPION]: ASSIGNED,
+  },
+  'event:manage': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL, [COORDINATOR]: ASSIGNED },
+  'eventParticipant:manage': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+    [CHAMPION]: ASSIGNED,
+  },
+  'announcement:send': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL, [COORDINATOR]: ASSIGNED },
+  'announcement:read': {
+    [SYSTEM_ADMIN]: SELF,
+    [PROGRAMME_MANAGER]: SELF,
+    [COORDINATOR]: SELF,
+    [CHAMPION]: SELF,
+  },
+
+  // Sprint 5 (docs/sprints/sprint-5.md, section 8). Champions see and report the items their
+  // clubs hold; coordinators manage their regions' items.
+  'equipment:read': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+    [CHAMPION]: ASSIGNED,
+  },
+  'equipment:manage': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL, [COORDINATOR]: ASSIGNED },
+  'equipment:report': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+    [CHAMPION]: ASSIGNED,
+  },
+  'resource:read': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ALL,
+    [CHAMPION]: ALL,
+  },
+  'resource:manage': { [SYSTEM_ADMIN]: ALL, [PROGRAMME_MANAGER]: ALL },
+  // Projects and scores are learner data: the same scope as learner records (D5-6).
+  'progress:read': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+    [CHAMPION]: ASSIGNED,
+  },
+  'progress:record': {
+    [SYSTEM_ADMIN]: ALL,
+    [PROGRAMME_MANAGER]: ALL,
+    [COORDINATOR]: ASSIGNED,
+    [CHAMPION]: ASSIGNED,
+  },
 });
 
 export const PERMISSIONS = Object.freeze(Object.keys(POLICY));
+
+/**
+ * Account roles each role may create, and edit and (de)activate where it has user:manage
+ * (D5-12, D5-13). The Programme Manager manages Code Clubs Coordinators and Club Champions; a
+ * coordinator creates Club Champion accounts only; only a System Administrator manages
+ * Programme Managers and other administrators.
+ */
+export const MANAGEABLE_ROLES = Object.freeze({
+  [SYSTEM_ADMIN]: Object.freeze([SYSTEM_ADMIN, PROGRAMME_MANAGER, COORDINATOR, CHAMPION]),
+  [PROGRAMME_MANAGER]: Object.freeze([COORDINATOR, CHAMPION]),
+  [COORDINATOR]: Object.freeze([CHAMPION]),
+});
+
+/**
+ * True when the user may create (permission 'user:create') or edit and deactivate
+ * ('user:manage') accounts that have this role.
+ */
+export function canManageRole(user, role, permission = 'user:manage') {
+  return can(user, permission) && (MANAGEABLE_ROLES[user.role] ?? []).includes(role);
+}
 
 /**
  * Returns the scope a user has for a permission, or null when denied.

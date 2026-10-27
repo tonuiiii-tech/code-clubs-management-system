@@ -1,5 +1,6 @@
 import {
   CONSENT_TYPES,
+  OFFLINE_RESOURCES_MAX_BYTES,
   PHOTO_TYPES,
   SESSION_MAX_PHOTOS,
   UPLOAD_MAX_BYTES,
@@ -9,14 +10,22 @@ import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 import { can } from '@code-clubs/shared/permissions';
 import {
   ageFromBirthYear,
+  assessmentScoresSchema,
   attendanceSchema,
   birthYearFromAge,
   consentSchema,
+  createAssessmentSchema,
   createLearnerSchema,
+  createProjectSchema,
   createSessionSchema,
   learnerContactSchema,
+  notInFuture,
+  reportEquipmentSchema,
   sessionEditWindowOpen,
+  termForDate,
+  updateAssessmentSchema,
   updateLearnerSchema,
+  updateProjectSchema,
   updateSessionSchema,
 } from '@code-clubs/shared/schemas';
 import { ApiError } from '../services/http.js';
@@ -542,4 +551,561 @@ export async function saveDashboard(summary) {
 
 export async function cachedDashboard() {
   return (await currentDb()?.meta.get('dashboard'))?.value ?? null;
+}
+
+/** Any other numbers seen online (the HQ dashboard, alerts), kept with their date. */
+export async function saveValue(key, value) {
+  const db = currentDb();
+  if (db)
+    await db.meta.put({ key: `cache:${key}`, value: { value, at: new Date().toISOString() } });
+}
+
+export async function cachedValue(key) {
+  return (await currentDb()?.meta.get(`cache:${key}`))?.value ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Events and announcements (Sprint 4): read on the device when offline; changing an event needs a
+// connection, marking an announcement read does not (D4-8).
+
+export async function listEvents(query = {}) {
+  const rows = (await currentDb().events.toArray())
+    .filter(
+      (e) =>
+        (!query.status || e.status === query.status) &&
+        (!query.from || e.endDate >= query.from) &&
+        (!query.region || e.region === query.region),
+    )
+    .sort((a, b) =>
+      query.from ? a.startDate.localeCompare(b.startDate) : b.startDate.localeCompare(a.startDate),
+    );
+  return paginate(rows, query);
+}
+
+export async function getEvent(id) {
+  const db = currentDb();
+  const event = await db.events.get(id);
+  if (!event) throw notFound(ERROR_MESSAGES.eventNotFound);
+  const clubs = (await db.clubs.bulkGet(event.clubIds)).filter(Boolean);
+  const mine = (await db.eventParticipants.where('eventId').equals(id).toArray()).filter(
+    (p) => p.status !== 'withdrawn',
+  );
+  const consents = await db.eventConsents.where('eventId').equals(id).toArray();
+  const given = new Set(consents.filter((c) => c.status === 'given').map((c) => c.learnerId));
+  return {
+    data: {
+      ...event,
+      clubs: clubs.map(({ id: clubId, code, name, region }) => ({
+        id: clubId,
+        code,
+        name,
+        region,
+      })),
+      registered: null,
+      registrationOpen: false,
+      myParticipants: mine.length,
+      consentMissing: mine.filter((p) => !given.has(p.learnerId)).length,
+      offline: true,
+    },
+  };
+}
+
+export async function listEventParticipants(id) {
+  const db = currentDb();
+  const rows = await db.eventParticipants.where('eventId').equals(id).toArray();
+  const consents = await db.eventConsents.where('eventId').equals(id).toArray();
+  const learners = await db.learners.bulkGet(rows.map((p) => p.learnerId));
+  const clubs = await db.clubs.bulkGet(rows.map((p) => p.clubId));
+  return {
+    data: rows
+      .map((p, i) => {
+        const consent = consents.find((c) => c.learnerId === p.learnerId);
+        return {
+          learnerId: p.learnerId,
+          name: learners[i] ? nameOf(learners[i]) : '',
+          learnerNumber: learners[i]?.learnerNumber ?? null,
+          clubId: p.clubId,
+          clubCode: clubs[i]?.code ?? null,
+          status: p.status,
+          consent: consent?.status ?? 'pending',
+          consentSignedOn: consent?.signedOn ?? null,
+          hasConsentFile: Boolean(consent?.hasFile),
+        };
+      })
+      .sort(
+        (a, b) =>
+          (a.clubCode ?? '').localeCompare(b.clubCode ?? '') || a.name.localeCompare(b.name),
+      ),
+  };
+}
+
+async function readIds() {
+  return new Set((await currentDb().announcementReads.toArray()).map((r) => r.announcementId));
+}
+
+export async function listAnnouncements(query = {}) {
+  if (query.box === 'sent') throw new ApiError(0, 'NETWORK_ERROR', ERROR_MESSAGES.needsConnection);
+  const read = await readIds();
+  const rows = (await currentDb().announcements.toArray())
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .map((a) => ({ ...a, read: read.has(a.id) }));
+  return { ...paginate(rows, query), unread: rows.filter((a) => !a.read).length };
+}
+
+export async function getAnnouncement(id) {
+  const announcement = await currentDb().announcements.get(id);
+  if (!announcement) throw notFound(ERROR_MESSAGES.announcementNotFound);
+  return { data: { ...announcement, read: (await readIds()).has(id) } };
+}
+
+export async function markAnnouncementRead(id) {
+  const announcement = await currentDb().announcements.get(id);
+  if (!announcement) throw notFound(ERROR_MESSAGES.announcementNotFound);
+  if (!(await readIds()).has(id)) {
+    await record({ type: 'announcement.read', recordId: id, data: {}, label: announcement.title });
+  }
+  return { data: { announcementId: id, read: true } };
+}
+
+// ---------------------------------------------------------------------------
+// Sprint 5 (plan section 7): the club's equipment and the resource list are read on the device;
+// a champion reports damage, records projects and scores there, and opens saved resources.
+
+const clubSummary = (club) =>
+  club ? { id: club.id, code: club.code, name: club.name, region: club.region } : null;
+
+async function presentItems(items) {
+  const clubs = await currentDb().clubs.bulkGet(items.map((i) => i.clubId ?? ''));
+  return items.map((item, i) => ({
+    ...item,
+    club: clubSummary(clubs[i]),
+    dueDate: null,
+    overdue: false,
+  }));
+}
+
+export async function listEquipment(query = {}) {
+  const rows = (await currentDb().equipmentItems.toArray())
+    .filter(
+      (i) =>
+        (!query.type || i.type === query.type) &&
+        (!query.condition || i.condition === query.condition) &&
+        (!query.clubId || i.clubId === query.clubId) &&
+        (query.location !== 'store' || !i.clubId) &&
+        (query.location !== 'club' || i.clubId),
+    )
+    .filter((i) => matches(query.q, i.name, i.assetTag, i.serialNumber))
+    .sort((a, b) => a.assetTag.localeCompare(b.assetTag));
+  return paginate(await presentItems(rows), query);
+}
+
+/** Loans, repairs and reports stay on the server; the device shows the item itself. */
+export async function getEquipment(id) {
+  const item = await currentDb().equipmentItems.get(id);
+  if (!item) throw notFound(ERROR_MESSAGES.equipmentNotFound);
+  const [row] = await presentItems([item]);
+  return { data: { ...row, loans: [], repairs: [], reports: [], canManage: false, offline: true } };
+}
+
+export async function reportEquipment(id, body) {
+  const item = await currentDb().equipmentItems.get(id);
+  if (!item) throw notFound(ERROR_MESSAGES.equipmentNotFound);
+  const data = parse(reportEquipmentSchema, body);
+  await record({ type: 'equipment.report', recordId: id, data, label: item.name });
+  return getEquipment(id);
+}
+
+export async function listResources(query = {}) {
+  const saved = new Set(await currentDb().savedResources.toCollection().primaryKeys());
+  const rows = (await currentDb().resources.toArray())
+    .filter(
+      (r) =>
+        (!query.type || r.type === query.type) &&
+        (!query.track || r.tracks.includes(query.track)) &&
+        (!query.ageBand || r.ageBands.includes(query.ageBand)) &&
+        (!query.language || r.language === query.language),
+    )
+    .filter((r) => matches(query.q, r.title, r.description))
+    .sort((a, b) => a.title.localeCompare(b.title))
+    .map((r) => ({ ...r, saved: saved.has(r.id) }));
+  return paginate(rows, query);
+}
+
+export async function getResource(id) {
+  const resource = await currentDb().resources.get(id);
+  if (!resource) throw notFound(ERROR_MESSAGES.resourceNotFound);
+  return { data: { ...resource, saved: Boolean(await currentDb().savedResources.get(id)) } };
+}
+
+/** A saved file, or null when the resource is not saved on this device. */
+export async function savedResourceFile(id) {
+  const saved = await currentDb()?.savedResources.get(id);
+  return saved ? new Blob([saved.bytes], { type: saved.type }) : null;
+}
+
+export async function savedResources() {
+  const rows = await currentDb().savedResources.toArray();
+  return rows.map(({ bytes: _b, ...r }) => r);
+}
+
+/** Bytes used by saved resources, and the limit (D5-3, R5-1). */
+export async function savedResourcesSize() {
+  const used = (await savedResources()).reduce((sum, r) => sum + (r.size ?? 0), 0);
+  return { used, limit: OFFLINE_RESOURCES_MAX_BYTES };
+}
+
+/** Keeps a downloaded file on the device, within the 300 MB limit. */
+export async function keepResourceFile(resource, blob) {
+  const db = currentDb();
+  const others = (await savedResources()).filter((r) => r.id !== resource.id);
+  const used = others.reduce((sum, r) => sum + (r.size ?? 0), 0);
+  if (used + blob.size > OFFLINE_RESOURCES_MAX_BYTES) {
+    throw conflict(ERROR_MESSAGES.offlineStorageFull, 'STORAGE_FULL');
+  }
+  await db.savedResources.put({
+    id: resource.id,
+    title: resource.title,
+    fileName: resource.fileName,
+    type: blob.type || resource.fileType,
+    size: blob.size,
+    bytes: await readBytes(blob),
+    resourceUpdatedAt: resource.updatedAt,
+    savedAt: new Date().toISOString(),
+  });
+}
+
+export async function forgetResourceFile(id) {
+  await currentDb().savedResources.delete(id);
+}
+
+// Projects
+
+async function presentProjects(projects) {
+  const db = currentDb();
+  const ids = [...new Set(projects.flatMap((p) => p.learnerIds))];
+  const learners = new Map((await db.learners.bulkGet(ids)).filter(Boolean).map((l) => [l.id, l]));
+  return projects.map((p) => ({
+    ...p,
+    learners: p.learnerIds.map((id) => ({
+      id,
+      name: learners.has(id) ? nameOf(learners.get(id)) : '',
+    })),
+  }));
+}
+
+async function findProject(id) {
+  const project = await currentDb().learnerProjects.get(id);
+  if (!project) throw notFound(ERROR_MESSAGES.projectNotFound);
+  return project;
+}
+
+function checkNotFuture(date) {
+  if (!notInFuture(date)) {
+    throw badRequest(ERROR_MESSAGES.invalidFields, [
+      { field: 'body.date', message: 'The date cannot be in the future' },
+    ]);
+  }
+}
+
+async function checkMembers(clubId, learnerIds, keep = []) {
+  const learners = await currentDb().learners.bulkGet(learnerIds);
+  const ok = learners.every(
+    (l) => l && l.clubId === clubId && (l.status === 'active' || keep.includes(l.id)),
+  );
+  if (!ok) throw badRequest(ERROR_MESSAGES.projectLearnersOneClub);
+}
+
+const byDateDesc = (a, b) => b.date.localeCompare(a.date);
+
+export async function listProjects(query = {}) {
+  const rows = (await currentDb().learnerProjects.toArray())
+    .filter(
+      (p) =>
+        (!query.clubId || p.clubId === query.clubId) &&
+        (!query.learnerId || p.learnerIds.includes(query.learnerId)) &&
+        (!query.track || p.track === query.track),
+    )
+    .sort(byDateDesc);
+  return paginate(await presentProjects(rows), query);
+}
+
+export async function getProject(id) {
+  const [project] = await presentProjects([await findProject(id)]);
+  return { data: project };
+}
+
+export async function createProject(body) {
+  const input = parse(createProjectSchema, body);
+  await findClub(input.clubId);
+  checkNotFuture(input.date);
+  await checkMembers(input.clubId, input.learnerIds);
+  const data = { ...input, id: input.id ?? crypto.randomUUID() };
+  await record({ type: 'project.save', data, label: data.title });
+  return getProject(data.id);
+}
+
+/** A change saves the whole project again, so the server can create it if it never got it. */
+export async function updateProject(id, body) {
+  const project = await findProject(id);
+  const changes = parse(updateProjectSchema, body);
+  if (changes.date) checkNotFuture(changes.date);
+  if (changes.learnerIds)
+    await checkMembers(project.clubId, changes.learnerIds, project.learnerIds);
+  const {
+    id: _id,
+    clubId,
+    title,
+    track,
+    learnerIds,
+    sessionId,
+    link,
+    date,
+    note,
+  } = {
+    ...project,
+    ...changes,
+  };
+  const data = Object.fromEntries(
+    Object.entries({ id, clubId, title, track, learnerIds, sessionId, link, date, note }).filter(
+      ([, v]) => v !== null && v !== undefined,
+    ),
+  );
+  await record({ type: 'project.save', data, label: title });
+  return getProject(id);
+}
+
+export async function uploadProjectFile(id, file, confirmConsent = false) {
+  const project = await findProject(id);
+  checkFile(file, UPLOAD_TYPES, ERROR_MESSAGES.fileTypeNotAllowed);
+  const missing = [];
+  if (PHOTO_TYPES.includes(file.type)) {
+    for (const learnerId of project.learnerIds) {
+      const consent = await currentDb().consents.get(consentKey(learnerId, 'photo'));
+      if (consent?.status === 'given') continue;
+      const learner = await currentDb().learners.get(learnerId);
+      missing.push({ learnerId, name: learner ? nameOf(learner) : '' });
+    }
+  }
+  if (missing.length && !confirmConsent) {
+    throw conflict(ERROR_MESSAGES.photoConsentMissing, 'PHOTO_CONSENT_MISSING', missing);
+  }
+  await record(
+    {
+      type: 'file.project',
+      recordId: id,
+      data: { confirmConsent: missing.length > 0 },
+      label: project.title,
+    },
+    file,
+  );
+  return getProject(id);
+}
+
+// Assessments
+
+const percent = (score, max) => (score === null ? null : Math.round((score / max) * 100));
+const average = (values) =>
+  values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null;
+
+async function findAssessment(id) {
+  const assessment = await currentDb().assessments.get(id);
+  if (!assessment) throw notFound(ERROR_MESSAGES.assessmentNotFound);
+  return assessment;
+}
+
+const scoresOf = (id) => currentDb().assessmentScores.where('assessmentId').equals(id).toArray();
+
+async function presentAssessment(a) {
+  const given = (await scoresOf(a.id)).filter((s) => s.score !== null);
+  return {
+    ...a,
+    scored: given.length,
+    averageScore: average(given.map((s) => percent(s.score, a.maxScore))),
+  };
+}
+
+export async function listAssessments(query = {}) {
+  const rows = (await currentDb().assessments.toArray())
+    .filter(
+      (a) =>
+        (!query.clubId || a.clubId === query.clubId) && (!query.track || a.track === query.track),
+    )
+    .sort(byDateDesc);
+  return paginate(await Promise.all(rows.map(presentAssessment)), query);
+}
+
+const byName = (a, b) =>
+  a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName);
+
+export async function getAssessment(id) {
+  const db = currentDb();
+  const assessment = await findAssessment(id);
+  const scores = await scoresOf(id);
+  const scoreBy = new Map(scores.map((s) => [s.learnerId, s.score]));
+  const clubLearners = await db.learners.where('clubId').equals(assessment.clubId).toArray();
+  // Active learners first, then anyone who left after being scored, as on the server.
+  const rows = clubLearners
+    .filter((l) => l.status === 'active' || scoreBy.has(l.id))
+    .sort((a, b) => (b.status === 'active') - (a.status === 'active') || byName(a, b));
+  return {
+    data: {
+      ...(await presentAssessment(assessment)),
+      scores: rows.map((l) => ({
+        learnerId: l.id,
+        name: nameOf(l),
+        learnerNumber: l.learnerNumber ?? null,
+        status: l.status,
+        score: scoreBy.get(l.id) ?? null,
+      })),
+    },
+  };
+}
+
+export async function createAssessment(body) {
+  const input = parse(createAssessmentSchema, body);
+  await findClub(input.clubId);
+  checkNotFuture(input.date);
+  const data = { ...input, id: input.id ?? crypto.randomUUID() };
+  await record({ type: 'assessment.save', data, label: data.title });
+  return getAssessment(data.id);
+}
+
+export async function updateAssessment(id, body) {
+  const assessment = await findAssessment(id);
+  const changes = parse(updateAssessmentSchema, body);
+  if (changes.date) checkNotFuture(changes.date);
+  if (changes.maxScore !== undefined) {
+    const top = Math.max(-1, ...(await scoresOf(id)).map((s) => s.score ?? -1));
+    if (top > changes.maxScore) throw badRequest(ERROR_MESSAGES.scoreAboveMaximum);
+  }
+  const { clubId, title, track, date, maxScore } = { ...assessment, ...changes };
+  await record({
+    type: 'assessment.save',
+    data: { id, clubId, title, track, date, maxScore },
+    label: title,
+  });
+  return getAssessment(id);
+}
+
+/** Only changed scores are sent, merged learner by learner on the server (D5-5). */
+export async function saveScores(id, scores) {
+  const assessment = await findAssessment(id);
+  const { scores: rows } = parse(assessmentScoresSchema, { scores });
+  if (rows.some((s) => s.score !== null && s.score > assessment.maxScore)) {
+    throw badRequest(ERROR_MESSAGES.scoreAboveMaximum);
+  }
+  const existing = new Map((await scoresOf(id)).map((s) => [s.learnerId, s.score]));
+  const learners = await currentDb().learners.bulkGet(rows.map((r) => r.learnerId));
+  const ok = learners.every(
+    (l) => l && l.clubId === assessment.clubId && (l.status === 'active' || existing.has(l.id)),
+  );
+  if (!ok) throw badRequest(ERROR_MESSAGES.scoresNotInClub);
+  const changed = rows.filter((r) => (existing.get(r.learnerId) ?? null) !== r.score);
+  if (changed.length) {
+    await record({
+      type: 'assessment.scores',
+      recordId: id,
+      data: { scores: changed },
+      label: assessment.title,
+    });
+  }
+  return getAssessment(id);
+}
+
+// Progress pages
+
+function attendanceRate(marks) {
+  const present = marks.filter((m) => isPresent(m.status)).length;
+  return {
+    present,
+    total: marks.length,
+    rate: marks.length ? Math.round((present / marks.length) * 100) : null,
+  };
+}
+
+/**
+ * A learner's progress from the device. Attendance covers the sessions kept on the device, and
+ * event projects need a connection, so the page says it is the device's copy.
+ */
+export async function learnerProgress(id) {
+  const db = currentDb();
+  const learner = await findLearner(id);
+  const terms = (await getMetaValue('terms')) ?? [];
+  const term = termForDate(terms, today());
+  const marks = (await db.attendance.toArray()).filter((a) => a.learnerId === id);
+  const scores = (await db.assessmentScores.where('learnerId').equals(id).toArray()).filter(
+    (s) => s.score !== null,
+  );
+  const assessments = new Map(
+    (await db.assessments.bulkGet(scores.map((s) => s.assessmentId)))
+      .filter(Boolean)
+      .map((a) => [a.id, a]),
+  );
+  const results = scores
+    .filter((s) => assessments.has(s.assessmentId))
+    .map((s) => {
+      const a = assessments.get(s.assessmentId);
+      return {
+        assessmentId: a.id,
+        title: a.title,
+        track: a.track,
+        date: a.date,
+        score: s.score,
+        maxScore: a.maxScore,
+        percent: percent(s.score, a.maxScore),
+      };
+    })
+    .sort(byDateDesc);
+  const projects = (await db.learnerProjects.toArray())
+    .filter((p) => p.learnerIds.includes(id))
+    .sort(byDateDesc);
+  return {
+    data: {
+      learner: {
+        id,
+        name: nameOf(learner),
+        learnerNumber: learner.learnerNumber ?? null,
+        clubId: learner.clubId,
+        status: learner.status,
+      },
+      term: term ? { id: term.id, number: term.number, year: term.year } : null,
+      attendance: {
+        term: term ? attendanceRate(marks.filter((m) => m.date >= term.startDate)) : null,
+        allTime: attendanceRate(marks),
+      },
+      projects: await presentProjects(projects),
+      eventProjects: [],
+      results,
+      averageScore: average(results.map((r) => r.percent)),
+      offline: true,
+    },
+  };
+}
+
+export async function clubProgress(id) {
+  const db = currentDb();
+  const club = await findClub(id);
+  const projects = (await db.learnerProjects.where('clubId').equals(id).toArray()).sort(byDateDesc);
+  const learners = (await db.learners.where('clubId').equals(id).toArray()).filter(
+    (l) => l.status === 'active',
+  );
+  const byTrack = {};
+  for (const p of projects) byTrack[p.track] = (byTrack[p.track] ?? 0) + 1;
+  const withProject = new Set(projects.flatMap((p) => p.learnerIds));
+  const assessments = (await db.assessments.where('clubId').equals(id).toArray()).sort(byDateDesc);
+  return {
+    data: {
+      club: { id: club.id, code: club.code, name: club.name },
+      activeLearners: learners.length,
+      learnersWithProject: learners.filter((l) => withProject.has(l.id)).length,
+      projectsByTrack: byTrack,
+      projects: await presentProjects(projects.slice(0, 20)),
+      assessments: await Promise.all(assessments.map(presentAssessment)),
+    },
+  };
+}
+
+/** Terms seen online, for the learner progress page offline. */
+async function getMetaValue(key) {
+  return (await cachedValue(key))?.value ?? null;
 }

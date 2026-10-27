@@ -10,14 +10,22 @@ import {
   consentTypeSchema,
   createLearnerSchema,
   createSessionSchema,
+  assessmentScoresSchema,
+  createAssessmentSchema,
+  createProjectSchema,
   learnerContactSchema,
   learnerStatusSchema,
+  reportEquipmentSchema,
   updateLearnerSchema,
   updateSessionSchema,
 } from '@code-clubs/shared/schemas';
 import { badRequest, forbidden, HttpError } from '../../utils/httpError.js';
 import { deviceTime } from '../../utils/deviceTime.js';
 import { scopeFilter } from '../scope.js';
+import * as announcements from '../announcements/announcements.service.js';
+import * as equipment from '../equipment/equipment.service.js';
+import * as progress from '../progress/progress.service.js';
+import { presentResource } from '../resources/resources.service.js';
 import * as learners from '../learners/learners.service.js';
 import { learnerExists } from '../learners/learners.repository.js';
 import * as sessions from '../sessions/sessions.service.js';
@@ -124,6 +132,41 @@ const OPERATIONS = {
     },
     run: ({ actor, scope, recordId, data, ctx }) =>
       sessions.saveAttendance(actor, scope, recordId, data, { ...ctx, merge: true }),
+  },
+  // Sprint 4: opening an announcement offline marks it read when the device syncs (D4-8).
+  'announcement.read': {
+    needsRecord: true,
+    permission: 'announcement:read',
+    schema: z.object({}).strict(),
+    run: ({ actor, recordId, ctx }) =>
+      announcements.markRead(actor, recordId, { readAt: ctx.recordedAt ?? new Date() }),
+  },
+  // Sprint 5 (D5-5): reports, projects and scores made offline.
+  'equipment.report': {
+    needsRecord: true,
+    permission: 'equipment:report',
+    schema: reportEquipmentSchema,
+    run: ({ actor, scope, recordId, data, ctx }) =>
+      equipment.reportEquipment(actor, scope, recordId, data, ctx),
+  },
+  // A project or assessment made on the device, then changed there: the same id each time.
+  'project.save': {
+    permission: 'progress:record',
+    schema: createProjectSchema.required({ id: true }),
+    run: ({ actor, scope, data, ctx }) => progress.saveProject(actor, scope, data, ctx),
+  },
+  'assessment.save': {
+    permission: 'progress:record',
+    schema: createAssessmentSchema.required({ id: true }),
+    run: ({ actor, scope, data, ctx }) => progress.saveAssessment(actor, scope, data, ctx),
+  },
+  // Scores are merged learner by learner, like attendance (D2-4, D5-5).
+  'assessment.scores': {
+    needsRecord: true,
+    permission: 'progress:record',
+    schema: assessmentScoresSchema,
+    run: ({ actor, scope, recordId, data, ctx }) =>
+      progress.saveScores(actor, scope, recordId, data, ctx),
   },
 };
 
@@ -281,7 +324,25 @@ export async function push(actor, { operations }, { requestId }) {
 
 const PAGE = 500;
 const OVERLAP_MS = 2 * 60 * 1000;
-const KINDS = ['schools', 'clubs', 'learners', 'consents', 'sessions', 'attendance', 'deleted'];
+const KINDS = [
+  'schools',
+  'clubs',
+  'learners',
+  'consents',
+  'sessions',
+  'attendance',
+  'deleted',
+  'events',
+  'eventParticipants',
+  'eventConsents',
+  'announcements',
+  'announcementReads',
+  'equipmentItems',
+  'resources',
+  'learnerProjects',
+  'assessments',
+  'assessmentScores',
+];
 
 function decodeCursor(text) {
   if (!text) return { at: {}, more: false };
@@ -316,7 +377,8 @@ const presentConsent = ({ fileId, createdBy: _c, updatedBy: _u, ...consent }) =>
   hasFile: Boolean(fileId),
 });
 
-const presentAttendance = ({ createdBy: _c, updatedBy: _u, ...mark }) => mark;
+/** Records without who created or changed them, which a device does not need. */
+const withoutAuthors = ({ createdBy: _c, updatedBy: _u, ...mark }) => mark;
 
 /**
  * What changed in the user's scope after the cursor (docs/sync-protocol.md §4). The first page
@@ -344,17 +406,44 @@ export async function pull(actor, query) {
     return { at, id: saved[1] };
   };
   const fromDate = daysAgo(SYNC_SESSION_DAYS);
-  const [schools, clubs, learnerRecords, consents, sessionRecords, attendance, deleted] =
-    await Promise.all([
-      repo.changedSchools(filter, after('schools'), PAGE),
-      repo.changedClubs(filter, after('clubs'), PAGE),
-      repo.changedLearners(filter, after('learners'), PAGE),
-      repo.changedConsents(filter, after('consents'), PAGE),
-      repo.changedSessions(filter, after('sessions'), PAGE, fromDate),
-      repo.changedAttendance(filter, after('attendance'), PAGE, fromDate),
-      repo.deletedRecords(filter, after('deleted'), PAGE),
-    ]);
-  const lists = [schools, clubs, learnerRecords, consents, sessionRecords, attendance, deleted];
+  const lists = await Promise.all([
+    repo.changedSchools(filter, after('schools'), PAGE),
+    repo.changedClubs(filter, after('clubs'), PAGE),
+    repo.changedLearners(filter, after('learners'), PAGE),
+    repo.changedConsents(filter, after('consents'), PAGE),
+    repo.changedSessions(filter, after('sessions'), PAGE, fromDate),
+    repo.changedAttendance(filter, after('attendance'), PAGE, fromDate),
+    repo.deletedRecords(filter, after('deleted'), PAGE),
+    repo.changedEvents(filter, after('events'), PAGE, fromDate),
+    repo.changedEventParticipants(filter, after('eventParticipants'), PAGE),
+    repo.changedEventConsents(filter, after('eventConsents'), PAGE),
+    repo.changedAnnouncements(actor.id, after('announcements'), PAGE),
+    repo.changedAnnouncementReads(actor.id, after('announcementReads'), PAGE),
+    repo.changedEquipmentItems(filter, after('equipmentItems'), PAGE),
+    repo.changedResources(after('resources'), PAGE),
+    repo.changedLearnerProjects(filter, after('learnerProjects'), PAGE),
+    repo.changedAssessments(filter, after('assessments'), PAGE),
+    repo.changedAssessmentScores(filter, after('assessmentScores'), PAGE),
+  ]);
+  const [
+    schools,
+    clubs,
+    learnerRecords,
+    consents,
+    sessionRecords,
+    attendance,
+    deleted,
+    events,
+    eventParticipants,
+    eventConsents,
+    announcementRecords,
+    announcementReads,
+    equipmentItems,
+    resources,
+    learnerProjects,
+    assessments,
+    assessmentScores,
+  ] = lists;
 
   const next = { at: { ...cursor.at }, more: lists.some((list) => list.length === PAGE) };
   KINDS.forEach((kind, i) => {
@@ -371,8 +460,29 @@ export async function pull(actor, query) {
       learners: await presentLearners(learnerRecords),
       consents: consents.map(presentConsent),
       sessions: sessionRecords,
-      attendance: attendance.map(presentAttendance),
+      attendance: attendance.map(withoutAuthors),
+      events: events.map(withoutAuthors),
+      eventParticipants: eventParticipants.map(withoutAuthors),
+      eventConsents: eventConsents.map(presentConsent),
+      // Who else received it stays on the server.
+      announcements: announcementRecords.map(({ recipientIds: _r, ...a }) => withoutAuthors(a)),
+      announcementReads: announcementReads.map(({ announcementId, readAt, updatedAt }) => ({
+        id: announcementId,
+        announcementId,
+        readAt,
+        updatedAt,
+      })),
+      equipmentItems: equipmentItems.map(withoutAuthors),
+      // The list only: files are saved on the device when a champion asks (D5-3).
+      resources: resources.map(presentResource),
+      learnerProjects: learnerProjects.map(({ fileId, ...p }) => ({
+        ...withoutAuthors(p),
+        hasFile: Boolean(fileId),
+      })),
+      assessments: assessments.map(withoutAuthors),
+      assessmentScores: assessmentScores.map(withoutAuthors),
     },
+    ...(firstPage && { inScope: await repo.idsInScope(filter, fromDate) }),
     deleted: {
       attendance: deleted.filter((t) => t.entityType === 'attendance').map((t) => t.recordId),
     },

@@ -31,22 +31,43 @@ describe('navigation follows the permission policy', () => {
       'Clubs',
       'Learners',
       'Sessions',
+      'Events',
+      'Equipment',
+      'Resources',
+      'Announcements',
+      'Reports',
       'Schools',
       'Users',
+      'Settings',
       'Sync',
       'My profile',
     ]);
   });
 
-  it('hides user management from a Club Champion', () => {
+  it('hides user management, reports, settings and schools from a Club Champion', () => {
     expect(renderAs('champion')).toEqual([
       'Dashboard',
       'Clubs',
       'Learners',
       'Sessions',
-      'Schools',
+      'Events',
+      'Equipment',
+      'Resources',
+      'Announcements',
       'Sync',
       'My profile',
     ]);
+  });
+
+  it('gives a Programme Manager the Users section to create coordinator accounts (D5-12)', () => {
+    expect(renderAs('programme_manager')).toContain('Users');
+  });
+
+  it('keeps the Schools section for a Code Clubs Coordinator', () => {
+    expect(renderAs('coordinator')).toContain('Schools');
+  });
+
+  it('gives a Code Clubs Coordinator the Users section to add Club Champions (D5-13)', () => {
+    expect(renderAs('coordinator')).toContain('Users');
   });
 });

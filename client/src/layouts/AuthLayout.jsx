@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Eyebrow } from 'steamlabsui';
 import { Logo } from 'steamlabsui/logo';
 import { DemoBanner } from '../components/DemoBanner.jsx';
+import codeClubLogo from '../assets/code-club-logo.png';
 
 /** Sign-in pages: a brand panel in the style of steamlabsafrica.com beside the form. */
 export function AuthLayout() {
@@ -25,6 +26,7 @@ export function AuthLayout() {
         </section>
         <div className="auth-form">
           <div className="auth-card">
+            <img className="auth-logo" src={codeClubLogo} alt="Code Club" width={180} />
             <Outlet />
           </div>
         </div>

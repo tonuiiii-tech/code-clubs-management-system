@@ -1,4 +1,4 @@
-import { PERMISSIONS, POLICY, can, scopeFor } from '@code-clubs/shared/permissions';
+import { PERMISSIONS, POLICY, can, canManageRole, scopeFor } from '@code-clubs/shared/permissions';
 import { ROLES, ROLE_VALUES } from '@code-clubs/shared/enums';
 
 const user = (role, extra = {}) => ({ id: 'u1', role, status: 'active', ...extra });
@@ -22,11 +22,25 @@ describe('Permission policy', () => {
     }
   });
 
-  it('lets only the System Administrator manage accounts and roles', () => {
-    expect(can(user(ROLES.SYSTEM_ADMIN), 'user:manage')).toBe(true);
-    expect(can(user(ROLES.PROGRAMME_MANAGER), 'user:manage')).toBe(false);
+  it('lets the System Administrator manage every account, the Programme Manager only coordinators and champions (D5-12)', () => {
+    const admin = user(ROLES.SYSTEM_ADMIN);
+    const pm = user(ROLES.PROGRAMME_MANAGER);
+    expect(Object.values(ROLES).every((r) => canManageRole(admin, r))).toBe(true);
+    expect(canManageRole(pm, ROLES.COORDINATOR)).toBe(true);
+    expect(canManageRole(pm, ROLES.CHAMPION)).toBe(true);
+    expect(canManageRole(pm, ROLES.PROGRAMME_MANAGER)).toBe(false);
+    expect(canManageRole(pm, ROLES.SYSTEM_ADMIN)).toBe(false);
     expect(can(user(ROLES.COORDINATOR), 'user:manage')).toBe(false);
     expect(can(user(ROLES.CHAMPION), 'user:manage')).toBe(false);
+    expect(canManageRole(user(ROLES.COORDINATOR), ROLES.CHAMPION)).toBe(false);
+  });
+
+  it('lets a coordinator create Club Champion accounts only (D5-13)', () => {
+    const coordinator = user(ROLES.COORDINATOR);
+    expect(canManageRole(coordinator, ROLES.CHAMPION, 'user:create')).toBe(true);
+    expect(canManageRole(coordinator, ROLES.COORDINATOR, 'user:create')).toBe(false);
+    expect(canManageRole(coordinator, ROLES.PROGRAMME_MANAGER, 'user:create')).toBe(false);
+    expect(can(user(ROLES.CHAMPION), 'user:create')).toBe(false);
   });
 
   it('limits coordinators and champions to their assignments', () => {
@@ -69,5 +83,39 @@ describe('Permission policy', () => {
     expect(can(user(ROLES.PROGRAMME_MANAGER), 'sync:use')).toBe(false);
     expect(can(user(ROLES.CHAMPION), 'syncConflict:read')).toBe(false);
     expect(scopeFor(user(ROLES.COORDINATOR), 'syncConflict:read')).toBe('assigned');
+  });
+
+  it('matches the Sprint 4 table (docs/sprints/sprint-4.md, section 8)', () => {
+    const table = {
+      'dashboard:hq': ['all', 'all', 'assigned', null],
+      'report:read': ['all', 'all', 'assigned', null],
+      'report:schedule': ['all', 'all', null, null],
+      'term:manage': ['all', 'all', null, null],
+      'event:read': ['all', 'all', 'assigned', 'assigned'],
+      'event:manage': ['all', 'all', 'assigned', null],
+      'eventParticipant:manage': ['all', 'all', 'assigned', 'assigned'],
+      'announcement:send': ['all', 'all', 'assigned', null],
+      'announcement:read': ['self', 'self', 'self', 'self'],
+    };
+    const roles = [ROLES.SYSTEM_ADMIN, ROLES.PROGRAMME_MANAGER, ROLES.COORDINATOR, ROLES.CHAMPION];
+    for (const [permission, scopes] of Object.entries(table)) {
+      expect(roles.map((role) => scopeFor(user(role), permission))).toEqual(scopes);
+    }
+  });
+
+  it('matches the Sprint 5 table (docs/sprints/sprint-5.md, section 8)', () => {
+    const table = {
+      'equipment:read': ['all', 'all', 'assigned', 'assigned'],
+      'equipment:manage': ['all', 'all', 'assigned', null],
+      'equipment:report': ['all', 'all', 'assigned', 'assigned'],
+      'resource:read': ['all', 'all', 'all', 'all'],
+      'resource:manage': ['all', 'all', null, null],
+      'progress:read': ['all', 'all', 'assigned', 'assigned'],
+      'progress:record': ['all', 'all', 'assigned', 'assigned'],
+    };
+    const roles = [ROLES.SYSTEM_ADMIN, ROLES.PROGRAMME_MANAGER, ROLES.COORDINATOR, ROLES.CHAMPION];
+    for (const [permission, scopes] of Object.entries(table)) {
+      expect(roles.map((role) => scopeFor(user(role), permission))).toEqual(scopes);
+    }
   });
 });

@@ -134,9 +134,95 @@ export const SYNC_OPERATION_TYPES = [
   'session.create',
   'session.update',
   'session.attendance',
+  // Sprint 4: marking an announcement as read.
+  'announcement.read',
+  // Sprint 5: reporting equipment, learner projects and assessments (D5-5).
+  'equipment.report',
+  'project.save',
+  'assessment.save',
+  'assessment.scores',
 ];
 export const SYNC_PUSH_MAX_OPERATIONS = 50;
 /** Devices hold sessions and attendance from this many days back (and future sessions). */
 export const SYNC_SESSION_DAYS = 120;
 /** Local data is deleted after this many days without a successful sync (D3-2). */
 export const OFFLINE_MAX_DAYS = 14;
+
+// Sprint 4: HQ dashboard, reports, events and announcements (docs/sprints/sprint-4.md).
+/** Kenyan school terms (questionnaire Q9); HQ sets the dates each year. */
+export const TERM_NUMBERS = [1, 2, 3];
+export const EVENT_TYPES = ['hackathon', 'showcase', 'competition', 'camp'];
+export const EVENT_STATUSES = ['planned', 'open', 'closed', 'held', 'cancelled'];
+export const EVENT_PARTICIPANT_STATUSES = ['registered', 'attended', 'absent', 'withdrawn'];
+export const EVENT_MAX_PHOTOS = 10;
+/** Alert rules (section 4.2 of the plan, agreed with Enock on 2026-10-25). */
+export const ALERT_TYPES = [
+  'noRecentSession',
+  'lowAttendance',
+  'missingConsent',
+  'nearCapacity',
+  'eventConsentMissing',
+  // Sprint 5 (plan section 4).
+  'equipmentOverdue',
+  'equipmentReported',
+];
+export const ALERT_RULES = Object.freeze({
+  noSessionDays: 14,
+  lowAttendancePercent: 60,
+  lowAttendanceSessions: 4,
+  nearCapacityLearners: 28,
+  eventConsentDays: 7,
+  equipmentReportedDays: 7,
+});
+/** Days a dismissed alert stays hidden for the person who dismissed it (R4-4). */
+export const ALERT_DISMISS_DAYS = 7;
+export const MESSAGE_CHANNELS = ['sms', 'whatsapp'];
+export const ANNOUNCEMENT_MAX_LENGTH = 1000;
+/** Reports show counts below this as "fewer than 5", so no child can be picked out (R4-1). */
+export const REPORT_MIN_GROUP = 5;
+export const AGE_BANDS = ['9-10', '11-12', '13-14'];
+
+// Sprint 5: equipment, resources and learner progress (docs/sprints/sprint-5.md).
+export const EQUIPMENT_TYPES = [
+  'laptop',
+  'tablet',
+  'robotics_kit',
+  'microbit',
+  'raspberry_pi',
+  'other',
+];
+export const EQUIPMENT_CONDITIONS = ['working', 'needs_repair', 'damaged', 'lost', 'retired'];
+/** What a champion can report about an item their club holds (plan section 4). */
+export const EQUIPMENT_REPORT_CONDITIONS = ['needs_repair', 'damaged', 'lost'];
+/** Items in these conditions can be lent to a club (D5-1). */
+export const LENDABLE_CONDITIONS = ['working', 'needs_repair'];
+
+export const RESOURCE_TYPES = ['lesson_plan', 'slides', 'worksheet', 'video', 'other'];
+export const RESOURCE_STATUSES = ['draft', 'published'];
+export const RESOURCE_MAX_BYTES = 20 * 1024 * 1024;
+/**
+ * Files a resource can hold, by extension (D5-2). Office, OpenDocument and Scratch files are ZIP
+ * files inside, so the server checks the first bytes match the family of the extension.
+ */
+export const RESOURCE_FILE_TYPES = Object.freeze({
+  pdf: { type: 'application/pdf', family: 'pdf' },
+  pptx: {
+    type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    family: 'zip',
+  },
+  docx: {
+    type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    family: 'zip',
+  },
+  odp: { type: 'application/vnd.oasis.opendocument.presentation', family: 'zip' },
+  odt: { type: 'application/vnd.oasis.opendocument.text', family: 'zip' },
+  sb3: { type: 'application/x.scratch.sb3', family: 'zip' },
+  zip: { type: 'application/zip', family: 'zip' },
+  png: { type: 'image/png', family: 'png' },
+  jpg: { type: 'image/jpeg', family: 'jpeg' },
+  jpeg: { type: 'image/jpeg', family: 'jpeg' },
+});
+/** Space saved resources may take on one device (D5-3, R5-1). */
+export const OFFLINE_RESOURCES_MAX_BYTES = 300 * 1024 * 1024;
+
+export const ASSESSMENT_MAX_SCORE = 1000;

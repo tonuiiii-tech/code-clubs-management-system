@@ -201,6 +201,19 @@ export function createSeedData() {
       36.4333,
       'Susan Nyokabi',
     ),
+    // One Code Club per school (D5-11): Kisumu AI Explorers meets here, not at Nyalenda Hope.
+    school(
+      11,
+      'Manyatta Primary School',
+      'primary_school',
+      'western_nyanza',
+      'Kisumu',
+      'Kisumu East',
+      'Manyatta B',
+      -0.0917,
+      34.768,
+      'Paul Ochieng',
+    ),
   ];
 
   const venueFor = (s) => (s.type === 'other' ? 'community_centre' : s.type);
@@ -221,7 +234,7 @@ export function createSeedData() {
     ...stamp,
     ...extra,
   });
-  const [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] = schools;
+  const [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11] = schools;
 
   const clubs = [
     club(1, 'NAC-001', 'Mwangaza Scratch Stars', s1, 'tuesday', '15:30', '17:00', 'scratch'),
@@ -233,7 +246,7 @@ export function createSeedData() {
     club(5, 'WNY-002', 'Lurambi Game Makers', s5, 'saturday', '09:00', '11:00', 'game_design', {
       status: 'paused',
     }),
-    club(6, 'WNY-003', 'Kisumu AI Explorers', s4, 'friday', '15:00', '16:30', 'ai_basics'),
+    club(6, 'WNY-003', 'Kisumu AI Explorers', s11, 'friday', '15:00', '16:30', 'ai_basics'),
     club(7, 'CST-001', 'Majengo Micro:bit Makers', s6, 'thursday', '15:30', '17:00', 'robotics'),
     club(8, 'CST-002', 'Bahari Coders', s7, 'saturday', '10:00', '12:00', 'scratch', {
       frequency: 'fortnightly',
@@ -255,27 +268,27 @@ export function createSeedData() {
     startDate: '2026-01-12',
     endDate: null,
   });
+  // One club per champion (D5-9). Peter Kariuki is waiting for a club; Lanet, Bahari Coders,
+  // Kapsoya and Naivasha are waiting for a champion.
   const assignments = [
     assign(1, 11, 'lead'),
-    assign(2, 11, 'lead'),
-    assign(2, 15, 'assistant'),
+    assign(2, 15, 'lead'),
     assign(3, 12, 'lead'),
     assign(4, 13, 'lead'),
     assign(5, 17, 'lead'),
     assign(6, 14, 'lead'),
     assign(7, 16, 'lead'),
-    assign(8, 13, 'assistant'),
-    assign(10, 18, 'lead'),
-    assign(11, 17, 'assistant'),
-    assign(12, 14, 'assistant'),
   ];
 
+  const learnerData = createLearnerData(clubs);
   return {
     users,
     schools,
     clubs,
     assignments,
-    ...createLearnerData(clubs),
+    ...learnerData,
+    ...createEventData(clubs, learnerData.learners),
+    ...createProgrammeData(clubs),
   };
 }
 
@@ -417,6 +430,463 @@ function createLearnerData(clubs, today = new Date()) {
   );
 
   return { learners, learnerContacts, consents, sessions, attendance };
+}
+
+/**
+ * Sprint 4: terms, events and announcements. Dates are counted from today like sessions, so the
+ * demo always has a current term, an upcoming event with a consent gap and a past event.
+ */
+function createEventData(clubs, learners, today = new Date()) {
+  const byCode = Object.fromEntries(clubs.map((c) => [c.code, c]));
+  const day = (n) => new Date(today.getTime() + n * 86_400_000).toISOString().slice(0, 10);
+  const year = today.getFullYear();
+
+  // The current term started eight weeks ago; the two before it are a holiday apart.
+  const terms = [
+    { number: 1, startDate: day(-56 - 21 - 91 - 21 - 91), endDate: day(-56 - 21 - 91 - 21) },
+    { number: 2, startDate: day(-56 - 21 - 91), endDate: day(-56 - 21) },
+    { number: 3, startDate: day(-56), endDate: day(35) },
+  ].map((t) => ({ id: uid(2400 + t.number), year, ...t, ...stamp }));
+
+  const event = (n, name, type, start, length, venue, region, status, codes, extra = {}) => ({
+    id: uid(1800 + n),
+    name,
+    type,
+    startDate: day(start),
+    endDate: day(start + length),
+    venue,
+    region,
+    description: '',
+    capacity: 40,
+    registrationCloses: day(start - 2),
+    status,
+    clubIds: codes.map((code) => byCode[code].id),
+    photoIds: [],
+    ...stamp,
+    ...extra,
+  });
+  const events = [
+    event(
+      1,
+      'Nairobi Scratch Showcase',
+      'showcase',
+      5,
+      0,
+      'Kenyatta International Convention Centre',
+      'nairobi_central',
+      'open',
+      ['NAC-001', 'NAC-002'],
+      { description: 'Learners show the games and stories they made this term.' },
+    ),
+    event(
+      2,
+      'National Code Clubs Hackathon',
+      'hackathon',
+      30,
+      1,
+      'STEAMLabs Hub, Nairobi',
+      null,
+      'planned',
+      ['NAC-001', 'WNY-001', 'CST-001', 'RVL-001'],
+      { capacity: 60 },
+    ),
+    event(
+      3,
+      'Kisumu Game Jam',
+      'competition',
+      -20,
+      0,
+      'Kisumu Social Hall',
+      'western_nyanza',
+      'held',
+      ['WNY-001'],
+    ),
+  ];
+
+  const byNumber = (n) => learners.find((l) => l.id === uid(1000 + n));
+  const participant = (n, eventN, learnerN, status) => {
+    const l = byNumber(learnerN);
+    return {
+      id: uid(1900 + n),
+      eventId: uid(1800 + eventN),
+      learnerId: l.id,
+      clubId: l.clubId,
+      region: l.region,
+      status,
+      ...stamp,
+    };
+  };
+  const eventParticipants = [
+    participant(1, 1, 1, 'registered'),
+    participant(2, 1, 2, 'registered'),
+    participant(3, 1, 3, 'registered'),
+    participant(4, 3, 10, 'attended'),
+    participant(5, 3, 11, 'attended'),
+  ];
+  // Imani (learner 3) has no event consent yet, so the showcase shows the alert.
+  const eventConsents = [
+    [1, 1, 1],
+    [2, 1, 2],
+    [3, 3, 10],
+    [4, 3, 11],
+  ].map(([n, eventN, learnerN]) => {
+    const l = byNumber(learnerN);
+    return {
+      id: uid(2000 + n),
+      eventId: uid(1800 + eventN),
+      learnerId: l.id,
+      clubId: l.clubId,
+      region: l.region,
+      status: 'given',
+      signedOn: day(-10),
+      fileId: null,
+      ...stamp,
+    };
+  });
+  const eventProjects = [
+    {
+      id: uid(2101),
+      eventId: uid(1803),
+      title: 'Lake Victoria Clean-up Game',
+      description: 'A Scratch game where a boat collects plastic from the lake.',
+      link: null,
+      learnerIds: [uid(1010), uid(1011)],
+      clubId: byCode['WNY-001'].id,
+      region: 'western_nyanza',
+      award: 'Best game design',
+      rank: 1,
+      ...stamp,
+    },
+  ];
+
+  const announcement = (n, title, body, audience, senderN, senderName, recipientIds, days) => ({
+    id: uid(2200 + n),
+    title,
+    body,
+    audience: { roles: [], regions: [], clubIds: [], ...audience },
+    channels: [],
+    recipientIds,
+    senderId: uid(senderN),
+    senderName,
+    ...stamp,
+    createdAt: `${day(days)}T07:00:00.000Z`,
+    updatedAt: `${day(days)}T07:00:00.000Z`,
+  });
+  const champions = [11, 12, 13, 14, 15, 16, 17, 18].map(uid);
+  const announcements = [
+    announcement(
+      1,
+      'Term reports due Friday',
+      'Please report every session held this term by Friday so the termly report is complete.',
+      { roles: ['champion'] },
+      2,
+      'Otieno Ouma',
+      champions,
+      -3,
+    ),
+    announcement(
+      2,
+      'Nairobi Scratch Showcase',
+      'Register your learners for the showcase and collect the event consent forms this week.',
+      { regions: ['nairobi_central'], roles: ['champion'] },
+      3,
+      'Mwende Mutua',
+      [uid(11), uid(12), uid(15)],
+      -1,
+    ),
+  ];
+  const announcementReads = [
+    {
+      id: uid(2301),
+      announcementId: uid(2201),
+      userId: uid(11),
+      readAt: `${day(-2)}T09:00:00.000Z`,
+      createdAt: `${day(-2)}T09:00:00.000Z`,
+      updatedAt: `${day(-2)}T09:00:00.000Z`,
+    },
+  ];
+
+  return {
+    terms,
+    events,
+    eventParticipants,
+    eventConsents,
+    eventProjects,
+    announcements,
+    announcementReads,
+  };
+}
+
+/**
+ * Sprint 5: equipment, resources, learner projects and assessments. Dates are counted from today
+ * so the current term always has results and one loan is always overdue.
+ */
+function createProgrammeData(clubs, today = new Date()) {
+  const byCode = Object.fromEntries(clubs.map((c) => [c.code, c]));
+  const day = (n) => new Date(today.getTime() + n * 86_400_000).toISOString().slice(0, 10);
+  const at = (n) => `${day(n)}T08:00:00.000Z`;
+  const dated = (n) => ({ ...stamp, createdAt: at(n), updatedAt: at(n) });
+
+  const item = (n, name, type, serialNumber, region, code, extra = {}) => ({
+    id: uid(2600 + n),
+    assetTag: `EQ-${String(n).padStart(4, '0')}`,
+    name,
+    type,
+    serialNumber,
+    condition: 'working',
+    region,
+    clubId: code ? byCode[code].id : null,
+    contents: null,
+    notes: null,
+    ...dated(-60),
+    ...extra,
+  });
+  const equipmentItems = [
+    item(1, 'Laptop 1', 'laptop', 'HP-5CG2041A1', 'nairobi_central', 'NAC-001'),
+    item(2, 'Laptop 2', 'laptop', 'HP-5CG2041A2', 'nairobi_central', 'NAC-001'),
+    item(3, 'Laptop 3', 'laptop', 'HP-5CG2041A3', 'nairobi_central', 'NAC-001', {
+      condition: 'damaged',
+      notes: 'Screen cracked',
+      ...dated(-2),
+    }),
+    item(4, 'Robotics kit 1', 'robotics_kit', 'RK-2025-001', 'nairobi_central', 'NAC-003', {
+      contents: '10 micro:bits, 10 battery packs, 1 box of crocodile clips',
+    }),
+    item(5, 'Tablet 1', 'tablet', 'SM-T220-0091', 'nairobi_central', null),
+    item(6, 'Laptop 4', 'laptop', 'HP-5CG2041A4', 'nairobi_central', null, {
+      condition: 'needs_repair',
+      notes: 'Keyboard missing two keys',
+    }),
+    item(7, 'micro:bit class set', 'microbit', 'MB-SET-07', 'coast', 'CST-001', {
+      contents: '15 micro:bits with USB cables',
+    }),
+    item(8, 'Raspberry Pi 400 kit', 'raspberry_pi', 'RPI400-118', 'western_nyanza', 'WNY-001'),
+    item(9, 'Laptop 5', 'laptop', 'LEN-PF3K21', 'rift_valley', null),
+    item(10, 'Old tablet', 'tablet', 'SM-T110-0007', 'coast', null, { condition: 'retired' }),
+  ];
+  const loan = (n, itemNumber, code, out, due, extra = {}) => ({
+    id: uid(2700 + n),
+    itemId: uid(2600 + itemNumber),
+    clubId: byCode[code].id,
+    region: byCode[code].region,
+    outDate: day(out),
+    dueDate: due === null ? null : day(due),
+    returnedDate: null,
+    conditionOut: 'working',
+    conditionReturned: null,
+    note: null,
+    outBy: uid(2),
+    returnedBy: null,
+    open: true,
+    ...dated(out),
+    ...extra,
+  });
+  const equipmentLoans = [
+    loan(1, 1, 'NAC-001', -50, 35),
+    loan(2, 2, 'NAC-001', -50, 35),
+    loan(3, 3, 'NAC-001', -50, 35),
+    // Due back last week: shows as an alert.
+    loan(4, 4, 'NAC-003', -40, -5),
+    loan(5, 7, 'CST-001', -30, 60),
+    loan(6, 8, 'WNY-001', -20, null),
+    loan(7, 5, 'NAC-002', -120, -80, {
+      returnedDate: day(-82),
+      conditionReturned: 'working',
+      returnedBy: uid(2),
+      open: false,
+    }),
+  ];
+  const equipmentRepairs = [
+    {
+      id: uid(2751),
+      itemId: uid(2606),
+      region: 'nairobi_central',
+      date: day(-10),
+      problem: 'Two keys came off the keyboard',
+      action: 'Waiting for a replacement keyboard',
+      cost: null,
+      conditionAfter: 'needs_repair',
+      ...dated(-10),
+    },
+  ];
+  const equipmentReports = [
+    {
+      id: uid(2761),
+      itemId: uid(2603),
+      clubId: byCode['NAC-001'].id,
+      region: 'nairobi_central',
+      condition: 'damaged',
+      note: 'Screen cracked when the laptop fell off a desk',
+      date: day(-2),
+      reportedBy: uid(11),
+      ...dated(-2),
+    },
+  ];
+
+  const resource = (n, title, type, tracks, extra = {}) => ({
+    id: uid(2800 + n),
+    title,
+    description: '',
+    type,
+    tracks,
+    ageBands: [],
+    language: 'en',
+    link: null,
+    fileId: null,
+    fileName: null,
+    fileType: null,
+    size: null,
+    status: 'published',
+    ...dated(-30),
+    ...extra,
+  });
+  const resources = [
+    resource(1, 'Scratch: Make a chatbot', 'lesson_plan', ['scratch'], {
+      description: 'A Raspberry Pi Foundation project: learners make a character that talks back.',
+      link: 'https://projects.raspberrypi.org/en/projects/chatbot',
+      ageBands: ['9-10', '11-12'],
+    }),
+    resource(2, 'micro:bit: Step counter', 'lesson_plan', ['robotics'], {
+      link: 'https://projects.raspberrypi.org/en/projects/step-counter',
+      ageBands: ['11-12', '13-14'],
+    }),
+    resource(3, 'What is an algorithm? (video)', 'video', ['unplugged', 'scratch'], {
+      link: 'https://www.youtube.com/watch?v=6hfOvs8pY1k',
+    }),
+    resource(4, 'Algorithms with paper and pencil', 'worksheet', ['unplugged'], {
+      language: 'sw',
+      description: 'Karatasi ya kazi: andika hatua za kupika chai.',
+      ...demoFileFields(DEMO_RESOURCE_FILES[uid(2804)]),
+    }),
+    resource(5, 'Term 1 game design slides', 'slides', ['game_design'], { status: 'draft' }),
+  ];
+
+  const project = (n, code, learnerNumbers, title, track, days, extra = {}) => ({
+    id: uid(2900 + n),
+    clubId: byCode[code].id,
+    region: byCode[code].region,
+    learnerIds: learnerNumbers.map((ln) => uid(1000 + ln)),
+    sessionId: null,
+    title,
+    track,
+    link: null,
+    fileId: null,
+    fileType: null,
+    date: day(days),
+    note: null,
+    ...dated(days),
+    ...extra,
+  });
+  const learnerProjects = [
+    project(1, 'NAC-001', [1, 2], 'Maze game', 'scratch', -20, {
+      link: 'https://scratch.mit.edu/projects/100000001',
+    }),
+    project(2, 'NAC-001', [3], 'Animated birthday card', 'scratch', -12),
+    project(3, 'NAC-001', [4, 5], 'Quiz about Kenya', 'scratch', -5),
+    project(4, 'NAC-002', [7], 'Algorithm for making tea', 'unplugged', -9),
+  ];
+
+  const assessment = (n, code, title, track, days, maxScore) => ({
+    id: uid(3000 + n),
+    clubId: byCode[code].id,
+    region: byCode[code].region,
+    title,
+    track,
+    date: day(days),
+    maxScore,
+    ...dated(days),
+  });
+  const assessments = [
+    assessment(1, 'NAC-001', 'Scratch loops quiz', 'scratch', -21, 10),
+    assessment(2, 'NAC-001', 'Events and broadcasts quiz', 'scratch', -7, 20),
+  ];
+  const scores = [
+    [1, 1, 8],
+    [1, 2, 6],
+    [1, 3, 9],
+    [1, 4, 7],
+    [1, 5, 5],
+    [2, 1, 17],
+    [2, 2, 12],
+    [2, 3, 18],
+    [2, 4, 15],
+  ];
+  const assessmentScores = scores.map(([a, ln, score], i) => ({
+    id: uid(3100 + i + 1),
+    assessmentId: uid(3000 + a),
+    learnerId: uid(1000 + ln),
+    clubId: byCode['NAC-001'].id,
+    region: 'nairobi_central',
+    score,
+    ...dated(a === 1 ? -21 : -7),
+  }));
+
+  return {
+    equipmentItems,
+    equipmentLoans,
+    equipmentRepairs,
+    equipmentReports,
+    resources,
+    learnerProjects,
+    assessments,
+    assessmentScores,
+  };
+}
+
+/**
+ * A one-page PDF with these lines of text, so demo resources have a real file to open and save
+ * on a device. Plain ASCII only.
+ */
+export function demoPdf(lines) {
+  const text = lines
+    .map(
+      (line, i) =>
+        `BT /F1 ${i ? 12 : 18} Tf 56 ${770 - i * 24} Td (${line.replace(/[()\\]/g, '')}) Tj ET`,
+    )
+    .join('\n');
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    `<< /Length ${text.length} >>\nstream\n${text}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets = objects.map((body, i) => {
+    const at = pdf.length;
+    pdf += `${i + 1} 0 obj\n${body}\nendobj\n`;
+    return at;
+  });
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  pdf += offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('');
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return pdf;
+}
+
+/** Files of demo resources, by resource id: made by the seed (server) and the demo API. */
+export const DEMO_RESOURCE_FILES = {
+  [uid(2804)]: {
+    fileId: uid(2854),
+    fileName: 'algorithms-worksheet.pdf',
+    lines: [
+      'Algorithms with paper and pencil',
+      'Hatua kwa hatua: andika hatua za kupika chai.',
+      '1. Chemsha maji.',
+      '2. Weka majani ya chai.',
+      '3. Ongeza maziwa na sukari.',
+      'Fictional demo worksheet for STEAMLabs Code Clubs.',
+    ],
+  },
+};
+
+function demoFileFields({ fileId, fileName, lines }) {
+  return {
+    fileId,
+    fileName,
+    fileType: 'application/pdf',
+    size: new TextEncoder().encode(demoPdf(lines)).length,
+  };
 }
 
 /** One account per role for the "Sign in as" buttons on the login page (mock mode only). */

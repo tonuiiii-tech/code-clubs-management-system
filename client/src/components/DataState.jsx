@@ -17,6 +17,24 @@ export function DataState({ loading, error, isEmpty, emptyTitle, emptyAction, on
   }
   // Records outside the user's scope also come back as 404 (D1-4), so this reads the same for both.
   if (error?.status === 404) return <NotFoundState />;
+  // Offline with nothing saved on the device yet: not an error, just connect once.
+  if (error?.status === 0) {
+    return (
+      <Alert
+        tone="info"
+        title={t('common.noSavedCopy')}
+        action={
+          onRetry && (
+            <Button variant="outline" size="sm" onClick={onRetry}>
+              {t('common.retry')}
+            </Button>
+          )
+        }
+      >
+        {t('common.noSavedCopyHint')}
+      </Alert>
+    );
+  }
   if (error) {
     return (
       <Alert

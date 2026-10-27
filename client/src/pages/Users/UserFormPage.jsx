@@ -23,6 +23,7 @@ import {
   SAFEGUARDING_STATUSES,
 } from '@code-clubs/shared/enums';
 import { createUserSchema, updateUserSchema } from '@code-clubs/shared/schemas';
+import { canManageRole } from '@code-clubs/shared/permissions';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { DataState } from '../../components/DataState.jsx';
 import { EnumSelect } from '../../components/EnumSelect.jsx';
@@ -83,7 +84,7 @@ function toInput(values) {
 
 const noUser = async () => ({ data: null });
 
-/** Create (/users/new) and edit (/users/:id/edit). System Administrator only. */
+/** Create (/users/new) and edit (/users/:id/edit). Coordinators only add Club Champions. */
 export function UserFormPage() {
   const { id } = useParams();
   const { loading, error, data } = useApi(id ? getUser : noUser, id);
@@ -102,9 +103,16 @@ function UserForm({ user }) {
   const [created, setCreated] = useState(null);
   const editing = Boolean(user);
   const editingSelf = editing && user.id === me.id;
+  // Only the roles this manager may create (D5-12); editing yourself keeps your role shown.
+  const roleChoices = editingSelf
+    ? ROLE_VALUES
+    : ROLE_VALUES.filter((r) => canManageRole(me, r, editing ? 'user:manage' : 'user:create'));
 
   const form = useForm({
-    initial: user ? toFormValues(user) : EMPTY,
+    // A coordinator can only add Club Champions, so the role is chosen for them (D5-13).
+    initial: user
+      ? toFormValues(user)
+      : { ...EMPTY, role: roleChoices.length === 1 ? roleChoices[0] : '' },
     toInput: (values) => {
       const input = toInput(values);
       if (editingSelf) delete input.role;
@@ -163,7 +171,7 @@ function UserForm({ user }) {
               <Field label={t('users.role')} error={errors.role} required>
                 <EnumSelect
                   {...bind('role')}
-                  values={ROLE_VALUES}
+                  values={roleChoices}
                   labelKey="roles"
                   placeholder=""
                   disabled={editingSelf}

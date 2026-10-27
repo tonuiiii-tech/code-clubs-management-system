@@ -10,7 +10,8 @@
     "./permissions": "./src/permissions.js",
     "./schemas": "./src/schemas/index.js",
     "./demo": "./src/demo/data.js",
-    "./errors": "./src/errors.js"
+    "./errors": "./src/errors.js",
+    "./insights": "./src/insights.js"
   },
   "dependencies": {
     "zod": "^4.6.7"

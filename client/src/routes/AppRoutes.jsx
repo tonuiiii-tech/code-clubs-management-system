@@ -20,7 +20,22 @@ import { SessionDetailPage } from '../pages/Sessions/SessionDetailPage.jsx';
 import { SessionFormPage } from '../pages/Sessions/SessionFormPage.jsx';
 import { ProfilePage } from '../pages/Profile/ProfilePage.jsx';
 import { SyncPage } from '../pages/Sync/SyncPage.jsx';
+import { EventsPage } from '../pages/Events/EventsPage.jsx';
+import { EventDetailPage } from '../pages/Events/EventDetailPage.jsx';
+import { EventFormPage } from '../pages/Events/EventFormPage.jsx';
+import { AnnouncementsPage } from '../pages/Announcements/AnnouncementsPage.jsx';
+import { ReportsPage } from '../pages/Reports/ReportsPage.jsx';
+import { SettingsPage } from '../pages/Settings/SettingsPage.jsx';
 import { NotFoundPage } from '../pages/NotFound/NotFoundPage.jsx';
+import { EquipmentPage } from '../pages/Equipment/EquipmentPage.jsx';
+import { EquipmentDetailPage } from '../pages/Equipment/EquipmentDetailPage.jsx';
+import { EquipmentFormPage } from '../pages/Equipment/EquipmentFormPage.jsx';
+import { ResourcesPage } from '../pages/Resources/ResourcesPage.jsx';
+import { ResourceDetailPage } from '../pages/Resources/ResourceDetailPage.jsx';
+import { ResourceFormPage } from '../pages/Resources/ResourceFormPage.jsx';
+import { ProjectFormPage } from '../pages/Progress/ProjectFormPage.jsx';
+import { AssessmentPage } from '../pages/Progress/AssessmentPage.jsx';
+import { AssessmentFormPage } from '../pages/Progress/AssessmentFormPage.jsx';
 
 /** [path, permission, page]. Guards only hide screens; the API enforces the same rules (D1-3). */
 const PROTECTED = [
@@ -40,9 +55,29 @@ const PROTECTED = [
   ['/schools/new', 'school:write', SchoolFormPage],
   ['/schools/:id', 'school:read', SchoolDetailPage],
   ['/schools/:id/edit', 'school:write', SchoolFormPage],
-  ['/users', 'user:manage', UsersPage],
-  ['/users/new', 'user:manage', UserFormPage],
+  ['/users', 'user:create', UsersPage],
+  ['/users/new', 'user:create', UserFormPage],
   ['/users/:id/edit', 'user:manage', UserFormPage],
+  ['/events', 'event:read', EventsPage],
+  ['/events/new', 'event:manage', EventFormPage],
+  ['/events/:id', 'event:read', EventDetailPage],
+  ['/events/:id/edit', 'event:manage', EventFormPage],
+  ['/announcements', 'announcement:read', AnnouncementsPage],
+  ['/equipment', 'equipment:read', EquipmentPage],
+  ['/equipment/new', 'equipment:manage', EquipmentFormPage],
+  ['/equipment/:id', 'equipment:read', EquipmentDetailPage],
+  ['/equipment/:id/edit', 'equipment:manage', EquipmentFormPage],
+  ['/resources', 'resource:read', ResourcesPage],
+  ['/resources/new', 'resource:manage', ResourceFormPage],
+  ['/resources/:id', 'resource:read', ResourceDetailPage],
+  ['/resources/:id/edit', 'resource:manage', ResourceFormPage],
+  ['/projects/new', 'progress:record', ProjectFormPage],
+  ['/projects/:id/edit', 'progress:record', ProjectFormPage],
+  ['/assessments/new', 'progress:record', AssessmentFormPage],
+  ['/assessments/:id', 'progress:read', AssessmentPage],
+  ['/assessments/:id/edit', 'progress:record', AssessmentFormPage],
+  ['/reports', 'report:read', ReportsPage],
+  ['/settings', ['term:manage', 'report:schedule'], SettingsPage],
   ['/profile', 'user:updateSelf', ProfilePage],
   // Everyone can open it; it shows sync to those who sync and conflicts to those who may read them.
   ['/sync', 'user:updateSelf', SyncPage],

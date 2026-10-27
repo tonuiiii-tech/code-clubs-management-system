@@ -41,6 +41,7 @@ import { listLearners } from '../../services/learnersService.js';
 import { listSessions } from '../../services/sessionsService.js';
 import { ConsentBadges } from '../../components/ConsentBadges.jsx';
 import { SessionTable } from '../Sessions/SessionsPage.jsx';
+import { ClubProgressCard } from '../Progress/ProgressCards.jsx';
 
 export function ClubDetailPage() {
   const { id } = useParams();
@@ -69,6 +70,7 @@ export function ClubDetailPage() {
             <ClubChampions club={data} />
             {can('learner:read') && <ClubLearners club={data} />}
             {can('session:read') && <ClubSessions club={data} />}
+            {can('progress:read') && <ClubProgressCard club={data} />}
           </div>
         )}
       </DataState>
@@ -216,7 +218,9 @@ function ClubChampions({ club }) {
   );
 }
 
-const activeChampions = () => listUsers({ role: 'champion', status: 'active', pageSize: 100 });
+// A champion runs one club (D5-9), so only those without one can be chosen.
+const activeChampions = () =>
+  listUsers({ role: 'champion', status: 'active', withoutClub: 'true', pageSize: 100 });
 
 function AssignChampionDialog({ club, current, onClose, onAssigned }) {
   const { t } = useTranslation();
@@ -265,7 +269,7 @@ function AssignChampionDialog({ club, current, onClose, onAssigned }) {
     >
       <DataState loading={candidates.loading} error={candidates.error}>
         {options.length === 0 ? (
-          <EmptyState title={t('users.empty')} />
+          <EmptyState title={t('clubs.noFreeChampions')} />
         ) : (
           <div className="stack">
             {error && <Alert tone="danger">{error}</Alert>}

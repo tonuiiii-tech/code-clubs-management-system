@@ -14,6 +14,7 @@ import {
   useToast,
 } from 'steamlabsui';
 import { ROLE_VALUES, USER_STATUSES } from '@code-clubs/shared/enums';
+import { canManageRole } from '@code-clubs/shared/permissions';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { ConfirmDialog } from '../../components/ConfirmDialog.jsx';
 import { DataState } from '../../components/DataState.jsx';
@@ -28,6 +29,7 @@ import { listUsers, setUserStatus } from '../../services/usersService.js';
 export function UsersPage() {
   const { t } = useTranslation();
   const { user: me } = useAuth();
+  const manageable = (role) => canManageRole(me, role);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { filters, page, setFilter, setPage } = useUrlFilters(['q', 'role', 'status']);
@@ -104,6 +106,9 @@ export function UsersPage() {
           <TableBody>
             {rows.map((user) => {
               const isMe = user.id === me.id;
+              // A Programme Manager sees every account but changes only coordinators and
+              // champions (D5-12).
+              const canChange = manageable(user.role);
               return (
                 <TableRow key={user.id}>
                   <TableCell>
@@ -119,30 +124,32 @@ export function UsersPage() {
                     <StatusBadge status={user.status} />
                   </TableCell>
                   <TableCell>
-                    <Menu
-                      label={`${t('common.actions')}: ${user.fullName}`}
-                      items={[
-                        {
-                          label: t('common.edit'),
-                          onSelect: () => navigate(`/users/${user.id}/edit`),
-                        },
-                        // Nobody can lock themselves out (the server refuses it too).
-                        ...(isMe
-                          ? []
-                          : [
-                              user.status === 'active'
-                                ? {
-                                    label: t('users.deactivate'),
-                                    tone: 'danger',
-                                    onSelect: () => setDeactivating(user),
-                                  }
-                                : {
-                                    label: t('users.activate'),
-                                    onSelect: () => changeStatus(user, 'active'),
-                                  },
-                            ]),
-                      ]}
-                    />
+                    {canChange && (
+                      <Menu
+                        label={`${t('common.actions')}: ${user.fullName}`}
+                        items={[
+                          {
+                            label: t('common.edit'),
+                            onSelect: () => navigate(`/users/${user.id}/edit`),
+                          },
+                          // Nobody can lock themselves out (the server refuses it too).
+                          ...(isMe
+                            ? []
+                            : [
+                                user.status === 'active'
+                                  ? {
+                                      label: t('users.deactivate'),
+                                      tone: 'danger',
+                                      onSelect: () => setDeactivating(user),
+                                    }
+                                  : {
+                                      label: t('users.activate'),
+                                      onSelect: () => changeStatus(user, 'active'),
+                                    },
+                              ]),
+                        ]}
+                      />
+                    )}
                   </TableCell>
                 </TableRow>
               );

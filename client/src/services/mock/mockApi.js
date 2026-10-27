@@ -16,7 +16,7 @@ import {
   UPLOAD_MAX_BYTES,
   UPLOAD_TYPES,
 } from '@code-clubs/shared/enums';
-import { SCOPES, scopeFor } from '@code-clubs/shared/permissions';
+import { SCOPES, canManageRole, scopeFor } from '@code-clubs/shared/permissions';
 import {
   assignChampionSchema,
   attendanceSchema,
@@ -51,6 +51,8 @@ import {
 } from '@code-clubs/shared/schemas';
 import { createSeedData, DEMO_PASSWORD } from '@code-clubs/shared/demo';
 import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
+import { sprint4Routes } from './sprint4Routes.js';
+import { sprint5Routes } from './sprint5Routes.js';
 
 const STORAGE_KEY = 'cc-mock-db';
 const INVALID_LOGIN = ERROR_MESSAGES.invalidLogin;
@@ -73,6 +75,7 @@ const notFound = (message = ERROR_MESSAGES.notFound) =>
   new MockHttpError(404, 'NOT_FOUND', message);
 const conflict = (message, code = 'CONFLICT', details) =>
   new MockHttpError(409, code, message, details);
+const tooLarge = (message) => new MockHttpError(413, 'TOO_LARGE', message);
 
 // ---------------------------------------------------------------------------
 // Store: kept in localStorage so demo changes survive a page reload.
@@ -84,8 +87,8 @@ function load() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) db = JSON.parse(saved);
-    // Demo data saved before Sprint 2 has no learners; start again from the seed.
-    if (db && !db.learners) db = null;
+    // Demo data saved before Sprint 4 or 5 lacks their records; start again from the seed.
+    if (db && (!db.terms || !db.equipmentItems)) db = null;
   } catch {
     db = null;
   }
@@ -169,6 +172,20 @@ function scopeFilter(user, scope) {
 
 const currentAssignments = (clubId) =>
   db.assignments.filter((a) => a.clubId === clubId && !a.endDate);
+
+/** True when the school already has a club that is not closed, other than this one (D5-11). */
+/** Only the roles in MANAGEABLE_ROLES: a coordinator creates champions only (D5-12, D5-13). */
+function assertCanManage(actor, roles, permission = 'user:manage') {
+  if (!roles.every((role) => canManageRole(actor, role, permission))) {
+    throw forbidden(ERROR_MESSAGES.roleNotManageable);
+  }
+}
+
+function schoolHasOtherClub(schoolId, exceptClubId = null) {
+  return db.clubs.some(
+    (c) => c.schoolId === schoolId && c.status !== 'closed' && c.id !== exceptClubId,
+  );
+}
 
 function clubInFilter(club, filter) {
   if (filter.all) return true;
@@ -945,7 +962,11 @@ async function applySyncOperation(actor, op, aliases) {
       }
       return {};
     }
+    case 'announcement.read':
+      sprint4.markRead(actor, need(), op.recordedAt);
+      return {};
     default:
+      if (sprint5.applyOperation(actor, op, need)) return {};
       throw badRequest(ERROR_MESSAGES.invalidFields);
   }
 }
@@ -997,6 +1018,8 @@ function syncPull(actor) {
   const learners = db.learners.filter((l) => clubRecordInFilter(l, filter));
   const sessions = db.sessions.filter((s) => clubRecordInFilter(s, filter) && s.date >= from);
   const sessionIds = new Set(sessions.map((s) => s.id));
+  const sprint4Changes = sprint4.pullChanges(actor, filter, from);
+  const programme = sprint5.pullChanges(actor, filter);
   return [
     200,
     {
@@ -1020,7 +1043,10 @@ function syncPull(actor) {
             })),
           sessions,
           attendance: db.attendance.filter((a) => sessionIds.has(a.sessionId)),
+          ...sprint4Changes,
+          ...programme.changes,
         },
+        inScope: { events: sprint4Changes.events.map((e) => e.id), ...programme.inScope },
         deleted: { attendance: [] },
         cursor: 'demo',
         more: false,
@@ -1059,6 +1085,40 @@ function learnerAndSessionCounts(filter) {
   };
 }
 
+const sprint5 = sprint5Routes({
+  getDb: () => db,
+  authorize,
+  scopeFilter,
+  clubInFilter,
+  clubRecordInFilter,
+  currentAssignments,
+  validate,
+  paginate,
+  readBytes,
+  files,
+  errors: { badRequest, forbidden, notFound, conflict, tooLarge },
+  matches,
+  today,
+  now,
+});
+
+const sprint4 = sprint4Routes({
+  programme: sprint5.insights,
+  getDb: () => db,
+  authorize,
+  scopeFilter,
+  clubInFilter,
+  clubRecordInFilter,
+  currentAssignments,
+  validate,
+  paginate,
+  checkFile,
+  files,
+  errors: { badRequest, forbidden, notFound, conflict },
+  today,
+  now,
+});
+
 const routes = [
   ['POST', '/auth/login', ({ body }) => login(body), { public: true }],
   ['POST', '/auth/refresh', () => refresh(), { public: true }],
@@ -1077,6 +1137,9 @@ const routes = [
         .filter((u) => userInFilter(u, filter))
         .filter((u) => (!q.role || u.role === q.role) && (!q.status || u.status === q.status))
         .filter((u) => matches(q.q, u.fullName, u.email))
+        .filter(
+          (u) => !q.withoutClub || !db.assignments.some((a) => a.userId === u.id && !a.endDate),
+        )
         .sort(byName('fullName'))
         .map(toPublicUser);
       return [200, paginate(rows, q)];
@@ -1106,8 +1169,9 @@ const routes = [
     'POST',
     '/users',
     ({ actor, body }) => {
-      authorize(actor, 'user:manage');
+      authorize(actor, 'user:create');
       const input = validate(createUserSchema, body, 'body');
+      assertCanManage(actor, [input.role], 'user:create');
       if (db.users.some((u) => u.email === input.email)) {
         throw conflict(ERROR_MESSAGES.duplicateEmail);
       }
@@ -1138,6 +1202,7 @@ const routes = [
       if (id === actor.id) throw forbidden(ERROR_MESSAGES.ownStatus);
       const user = db.users.find((u) => u.id === id);
       if (!user) throw notFound();
+      assertCanManage(actor, [user.role]);
       Object.assign(user, {
         status,
         ...(status === 'inactive' && { tokenVersion: user.tokenVersion + 1 }),
@@ -1159,6 +1224,7 @@ const routes = [
       }
       const user = db.users.find((u) => u.id === id);
       if (!user) throw notFound();
+      assertCanManage(actor, [user.role, changes.role ?? user.role]);
       Object.assign(user, changes, { updatedAt: now(), updatedBy: actor.id });
       return [200, { data: toPublicUser(user) }];
     },
@@ -1180,6 +1246,7 @@ const routes = [
             (!q.status || s.status === q.status),
         )
         .filter((s) => matches(q.q, s.name, s.subCounty, s.ward))
+        .filter((s) => !q.withoutClub || !schoolHasOtherClub(s.id))
         .sort(byName('name'));
       return [200, paginate(rows, q)];
     },
@@ -1270,6 +1337,8 @@ const routes = [
       if (filter.regions && !filter.regions.includes(school.region)) {
         throw forbidden(ERROR_MESSAGES.clubOwnRegion);
       }
+      // One Code Club per school; a closed one does not count (D5-11).
+      if (schoolHasOtherClub(school.id)) throw conflict(ERROR_MESSAGES.schoolHasClub);
       const prefix = REGION_CODE_PREFIX[school.region];
       const used = db.clubs.filter((c) => c.code.startsWith(`${prefix}-`)).length;
       const club = {
@@ -1307,6 +1376,15 @@ const routes = [
           { field: 'body.endTime', message: 'End time must be after start time' },
         ]);
       }
+      const movesOrReopens = changes.schoolId !== undefined || changes.status !== undefined;
+      if (
+        movesOrReopens &&
+        merged.schoolId &&
+        merged.status !== 'closed' &&
+        schoolHasOtherClub(merged.schoolId, club.id)
+      ) {
+        throw conflict(ERROR_MESSAGES.schoolHasClub);
+      }
       Object.assign(club, changes, { updatedAt: now(), updatedBy: actor.id });
       return [200, { data: club }];
     },
@@ -1333,6 +1411,10 @@ const routes = [
       const champion = db.users.find((u) => u.id === userId);
       if (!champion || champion.status !== 'active' || champion.role !== ROLES.CHAMPION) {
         throw badRequest(ERROR_MESSAGES.onlyActiveChampions);
+      }
+      // A champion runs one club, and so one school (D5-9).
+      if (db.assignments.some((a) => a.userId === userId && !a.endDate && a.clubId !== club.id)) {
+        throw conflict(ERROR_MESSAGES.championHasClub);
       }
       let assignment = currentAssignments(club.id).find((a) => a.userId === userId);
       if (assignment) {
@@ -1364,6 +1446,8 @@ const routes = [
 
   ...learnerRoutes(),
   ...sessionRoutes(),
+  ...sprint4.routes,
+  ...sprint5.routes,
   ['POST', '/sync/push', ({ actor, body }) => syncPush(actor, body)],
   ['GET', '/sync/pull', ({ actor }) => syncPull(actor)],
   [

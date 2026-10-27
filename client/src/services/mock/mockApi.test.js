@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mockRequest, resetMockDb } from './mockApi.js';
 import { DEMO_PASSWORD, uid } from '@code-clubs/shared/demo';
+import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 
 const ADMIN = 'wanjiru.kamau@demo.steamlabs.test';
 const COORDINATOR_NAIROBI = 'mwende.mutua@demo.steamlabs.test';
-const CHAMPION_FAITH = 'faith.njeri@demo.steamlabs.test'; // leads NAC-001 and NAC-002
+const CHAMPION_FAITH = 'faith.njeri@demo.steamlabs.test'; // leads NAC-001
 
 async function signIn(email) {
   const res = await mockRequest({
@@ -51,7 +52,7 @@ describe('mock API: same contract and rules as the server', () => {
   it('lets a champion see only the clubs they run', async () => {
     const token = await signIn(CHAMPION_FAITH);
     const res = await call(token, 'GET', '/clubs');
-    expect(res.body.data.map((c) => c.code)).toEqual(['NAC-001', 'NAC-002']);
+    expect(res.body.data.map((c) => c.code)).toEqual(['NAC-001']);
   });
 
   it('answers 404, not 403, when a champion opens another club', async () => {
@@ -108,30 +109,54 @@ describe('mock API: same contract and rules as the server', () => {
     expect(res.status).toBe(409);
   });
 
-  it('gives a new club the next code for its school region', async () => {
+  it('allows one club per school, and gives a new club the next code for its region', async () => {
     const token = await signIn(ADMIN);
-    const res = await call(token, 'POST', '/clubs', {
+    const club = (schoolId) => ({
+      name: 'Kibra Junior Coders',
+      schoolId,
+      venueType: 'primary_school',
+      meetingDay: 'thursday',
+      startTime: '15:00',
+      endTime: '16:30',
+      mainTrack: 'scratch',
+    });
+    // Mwangaza Primary already has NAC-001 (D5-11).
+    const taken = await call(token, 'POST', '/clubs', { body: club(uid(101)) });
+    expect(taken.status).toBe(409);
+    expect(taken.body.error.message).toBe(ERROR_MESSAGES.schoolHasClub);
+
+    const school = await call(token, 'POST', '/schools', {
       body: {
-        name: 'Kibra Junior Coders',
-        schoolId: uid(101),
-        venueType: 'primary_school',
-        meetingDay: 'thursday',
-        startTime: '15:00',
-        endTime: '16:30',
-        mainTrack: 'scratch',
+        name: 'Kibra Olympic Primary School',
+        type: 'primary_school',
+        region: 'nairobi_central',
+        county: 'Nairobi',
+        subCounty: 'Kibra',
+        contactPhone: '+254700000999',
       },
     });
+    expect(school.status).toBe(201);
+    const free = await call(token, 'GET', '/schools', { query: { withoutClub: 'true' } });
+    expect(free.body.data.map((s) => s.id)).toEqual([school.body.data.id]);
+    const res = await call(token, 'POST', '/clubs', { body: club(school.body.data.id) });
     expect(res.status).toBe(201);
     expect(res.body.data).toMatchObject({ code: 'NAC-004', region: 'nairobi_central' });
   });
 
-  it('assigns only active club champions and keeps history when an assignment ends', async () => {
+  it('assigns only active club champions, one club each, and keeps history when an assignment ends', async () => {
     const token = await signIn(ADMIN);
     const club = uid(209);
     const notChampion = await call(token, 'PUT', `/clubs/${club}/champions/${uid(2)}`, {
       body: { role: 'lead' },
     });
     expect(notChampion.status).toBe(400);
+
+    // Joseph Mutiso runs CST-001, so he must leave it first (D5-9).
+    const busy = await call(token, 'PUT', `/clubs/${club}/champions/${uid(16)}`, {
+      body: { role: 'lead' },
+    });
+    expect(busy.status).toBe(409);
+    await call(token, 'DELETE', `/clubs/${uid(207)}/champions/${uid(16)}`);
 
     const assigned = await call(token, 'PUT', `/clubs/${club}/champions/${uid(16)}`, {
       body: { role: 'lead' },
@@ -147,7 +172,63 @@ describe('mock API: same contract and rules as the server', () => {
     const admin = await call(await signIn(ADMIN), 'GET', '/dashboard/summary');
     const champion = await call(await signIn(CHAMPION_FAITH), 'GET', '/dashboard/summary');
     expect(admin.body.data.activeClubs).toBe(10);
-    expect(champion.body.data).toMatchObject({ activeClubs: 2, schools: 2 });
+    expect(champion.body.data).toMatchObject({ activeClubs: 1, schools: 1 });
+  });
+
+  it('lets a Programme Manager manage only coordinator and champion accounts (D5-12)', async () => {
+    const token = await signIn('otieno.ouma@demo.steamlabs.test');
+    const coordinator = await call(token, 'POST', '/users', {
+      body: {
+        fullName: 'Baraka Kiprono',
+        email: 'baraka.kiprono@demo.steamlabs.test',
+        role: 'coordinator',
+        regions: ['rift_valley'],
+      },
+    });
+    expect(coordinator.status).toBe(201);
+    const admin = await call(token, 'POST', '/users', {
+      body: {
+        fullName: 'Imani Wekesa',
+        email: 'imani.wekesa@demo.steamlabs.test',
+        role: 'system_admin',
+      },
+    });
+    expect(admin.status).toBe(403);
+    expect(admin.body.error.message).toBe(ERROR_MESSAGES.roleNotManageable);
+    const promote = await call(token, 'PATCH', `/users/${uid(3)}`, {
+      body: { role: 'programme_manager' },
+    });
+    expect(promote.status).toBe(403);
+    const lockout = await call(token, 'PATCH', `/users/${uid(1)}/status`, {
+      body: { status: 'inactive' },
+    });
+    expect(lockout.status).toBe(403);
+  });
+
+  it('lets a coordinator create Club Champion accounts only (D5-13)', async () => {
+    const token = await signIn(COORDINATOR_NAIROBI);
+    const champion = await call(token, 'POST', '/users', {
+      body: {
+        fullName: 'Wanjala Barasa',
+        email: 'wanjala.barasa@demo.steamlabs.test',
+        role: 'champion',
+        championProfile: { type: 'volunteer' },
+      },
+    });
+    expect(champion.status).toBe(201);
+    const peer = await call(token, 'POST', '/users', {
+      body: {
+        fullName: 'Nafula Simiyu',
+        email: 'nafula.simiyu@demo.steamlabs.test',
+        role: 'coordinator',
+        regions: ['nairobi_central'],
+      },
+    });
+    expect(peer.status).toBe(403);
+    const off = await call(token, 'PATCH', `/users/${champion.body.data.id}/status`, {
+      body: { status: 'inactive' },
+    });
+    expect(off.status).toBe(403);
   });
 
   it('stops admins from changing their own role or deactivating themselves', async () => {

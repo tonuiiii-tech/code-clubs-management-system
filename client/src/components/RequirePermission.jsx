@@ -11,6 +11,7 @@ export function RequirePermission({ permission, children }) {
 
   if (!ready) return <Spinner label={t('common.loading')} />;
   if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
-  if (permission && !can(permission)) return <Alert tone="warning">{t('errors.forbidden')}</Alert>;
+  if (permission && ![permission].flat().some((p) => can(p)))
+    return <Alert tone="warning">{t('errors.forbidden')}</Alert>;
   return children;
 }
