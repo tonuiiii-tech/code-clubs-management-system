@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mockRequest, resetMockDb } from './mockApi.js';
 import { DEMO_PASSWORD, uid } from '@code-clubs/shared/demo';
+import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 
 const ADMIN = 'wanjiru.kamau@demo.steamlabs.test';
 const COORDINATOR_NAIROBI = 'mwende.mutua@demo.steamlabs.test';
@@ -108,19 +109,36 @@ describe('mock API: same contract and rules as the server', () => {
     expect(res.status).toBe(409);
   });
 
-  it('gives a new club the next code for its school region', async () => {
+  it('allows one club per school, and gives a new club the next code for its region', async () => {
     const token = await signIn(ADMIN);
-    const res = await call(token, 'POST', '/clubs', {
+    const club = (schoolId) => ({
+      name: 'Kibra Junior Coders',
+      schoolId,
+      venueType: 'primary_school',
+      meetingDay: 'thursday',
+      startTime: '15:00',
+      endTime: '16:30',
+      mainTrack: 'scratch',
+    });
+    // Mwangaza Primary already has NAC-001 (D5-11).
+    const taken = await call(token, 'POST', '/clubs', { body: club(uid(101)) });
+    expect(taken.status).toBe(409);
+    expect(taken.body.error.message).toBe(ERROR_MESSAGES.schoolHasClub);
+
+    const school = await call(token, 'POST', '/schools', {
       body: {
-        name: 'Kibra Junior Coders',
-        schoolId: uid(101),
-        venueType: 'primary_school',
-        meetingDay: 'thursday',
-        startTime: '15:00',
-        endTime: '16:30',
-        mainTrack: 'scratch',
+        name: 'Kibra Olympic Primary School',
+        type: 'primary_school',
+        region: 'nairobi_central',
+        county: 'Nairobi',
+        subCounty: 'Kibra',
+        contactPhone: '+254700000999',
       },
     });
+    expect(school.status).toBe(201);
+    const free = await call(token, 'GET', '/schools', { query: { withoutClub: 'true' } });
+    expect(free.body.data.map((s) => s.id)).toEqual([school.body.data.id]);
+    const res = await call(token, 'POST', '/clubs', { body: club(school.body.data.id) });
     expect(res.status).toBe(201);
     expect(res.body.data).toMatchObject({ code: 'NAC-004', region: 'nairobi_central' });
   });

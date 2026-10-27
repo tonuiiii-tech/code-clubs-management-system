@@ -6,6 +6,13 @@ import { ERROR_MESSAGES } from '@code-clubs/shared/errors';
 
 /** Only this file talks to the database for clubs and champion assignments (D1-16). */
 
+/** True when the school already has a club that is not closed, other than this one. */
+export async function schoolHasOtherClub(schoolId, exceptClubId = null) {
+  return Boolean(
+    await Club.exists({ schoolId, status: { $ne: 'closed' }, _id: { $ne: exceptClubId } }),
+  );
+}
+
 export async function listClubs(scopeFilter, query) {
   const filter = {
     $and: [

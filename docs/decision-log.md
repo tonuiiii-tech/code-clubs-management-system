@@ -158,7 +158,7 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Context:** Clubs are hosted by schools, community centres or libraries. A club can have several champions, and a champion can run several clubs.
 - **Decision:** School is an entity that clubs reference. Each club–champion assignment is its own record with start and end dates.
 - **Consequences:** No retyping of host details; assignment history is preserved; offline edits to different assignments will not overwrite each other in Sprint 3.
-- **Update (2026-10-27):** A champion now runs one club at a time; see D5-9. A club can still have several champions.
+- **Update (2026-10-27):** A champion now runs one club at a time (D5-9), and a school has one club (D5-11). A club can still have several champions.
 
 ## D1-16: Data access through repositories
 
@@ -549,6 +549,15 @@ IDs use the format `D<sprint>-<number>`, for example `D1-1`. Decisions stay **Pr
 - **Decision:** A champion has at most one current club assignment. Assigning a champion who already runs another club is refused (409, "end that assignment first"), on the server and in demo mode; it is not moved silently. The Assign champion picker lists only active champions with no current club (`GET /users?withoutClub=true`). Champions no longer see a Schools section in the menu; they reach their club's school from the club page. A club can still have a lead and assistants. The seed gives each demo champion one club and ends demo champions' assignments to other clubs (for example ones the browser tests made).
 - **Alternatives considered:** Ending the old assignment automatically when a new one is made (a mis-click would silently take a champion away from their club); a unique database index on current assignments (it would fail to build on databases that still hold two assignments for one champion, and stop the server starting).
 - **Consequences:** Scope rules are unchanged: they already limited a champion to the clubs they run. Moving a champion is two steps (end, then assign). Two coordinators assigning the same champion at the same moment could still both succeed (R5-7).
+
+## D5-11: One Code Club per school
+
+- **Status:** Accepted (Enock, 2026-10-27)
+- **Date:** 2026-10-27
+- **Context:** Enock: "there is only one code club per school, so a learner is attached to one school and one club". Nothing stopped a second club at a school, and the demo had two active clubs at Nyalenda Hope Primary.
+- **Decision:** A school has at most one club that is not closed. Adding a club at a school that has one is refused (409, "This school already has a Code Club"), and so is moving a club to such a school or reopening a closed club there. The Add club form offers only schools without an open club (`GET /schools?withoutClub=true`). A closed club does not count, so a school can start again. Learners already belong to one club (D2-8), so they belong to one school too. In the demo, Kisumu AI Explorers (WNY-003) now meets at a new school, Manyatta Primary.
+- **Alternatives considered:** A unique database index on `clubs.schoolId` for open clubs (it would fail to build on databases that already hold two clubs at one school; the seed fixes the demo ones, so it can follow).
+- **Consequences:** With D5-9, a champion has one club and so one school. Two people adding a club at the same school at the same moment could still both succeed (R5-7 covers the same kind of race).
 
 ## Decision template
 

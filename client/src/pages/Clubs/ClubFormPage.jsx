@@ -43,7 +43,8 @@ const EMPTY = {
 };
 
 const noClub = async () => ({ data: null });
-const activeSchools = () => listSchools({ status: 'active', pageSize: 100 });
+// One Code Club per school (D5-11), so a new club can only go to a school without one.
+const activeSchools = () => listSchools({ status: 'active', withoutClub: 'true', pageSize: 100 });
 
 /** Create (/clubs/new) and edit (/clubs/:id/edit). */
 export function ClubFormPage() {

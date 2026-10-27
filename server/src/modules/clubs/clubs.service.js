@@ -31,6 +31,8 @@ export async function createClub(actor, scope, input, { requestId }) {
   if (filter.regions && !filter.regions.includes(school.region)) {
     throw forbidden(ERROR_MESSAGES.clubOwnRegion);
   }
+  // One Code Club per school; a closed one does not count (Enock, 2026-10-27, D5-11).
+  if (await repo.schoolHasOtherClub(school.id)) throw conflict(ERROR_MESSAGES.schoolHasClub);
   const now = new Date();
   const club = {
     id: randomUUID(),
@@ -64,6 +66,15 @@ export async function updateClub(actor, scope, id, changes, { requestId }) {
     throw badRequest(ERROR_MESSAGES.invalidFields, [
       { field: 'body.endTime', message: 'End time must be after start time' },
     ]);
+  }
+  const movesOrReopens = changes.schoolId !== undefined || changes.status !== undefined;
+  if (
+    movesOrReopens &&
+    merged.schoolId &&
+    merged.status !== 'closed' &&
+    (await repo.schoolHasOtherClub(merged.schoolId, id))
+  ) {
+    throw conflict(ERROR_MESSAGES.schoolHasClub);
   }
   const updated = await repo.updateClubById(id, {
     ...changes,

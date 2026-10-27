@@ -109,7 +109,7 @@ describe('MongoDB repositories', () => {
 
   it('counts the dashboard inside the scope', async () => {
     const all = await summaryCounts({ all: true });
-    expect(all).toMatchObject({ activeClubs: 10, schools: 10 });
+    expect(all).toMatchObject({ activeClubs: 10, schools: 11 });
     expect(all.clubsByRegion.nairobi_central).toBe(3);
     const faith = await summaryCounts({ championUserId: FAITH });
     expect(faith).toMatchObject({ activeClubs: 1, schools: 1, champions: 1 });

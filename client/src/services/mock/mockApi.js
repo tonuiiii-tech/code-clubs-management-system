@@ -173,6 +173,13 @@ function scopeFilter(user, scope) {
 const currentAssignments = (clubId) =>
   db.assignments.filter((a) => a.clubId === clubId && !a.endDate);
 
+/** True when the school already has a club that is not closed, other than this one (D5-11). */
+function schoolHasOtherClub(schoolId, exceptClubId = null) {
+  return db.clubs.some(
+    (c) => c.schoolId === schoolId && c.status !== 'closed' && c.id !== exceptClubId,
+  );
+}
+
 function clubInFilter(club, filter) {
   if (filter.all) return true;
   if (filter.regions) return filter.regions.includes(club.region);
@@ -1229,6 +1236,7 @@ const routes = [
             (!q.status || s.status === q.status),
         )
         .filter((s) => matches(q.q, s.name, s.subCounty, s.ward))
+        .filter((s) => !q.withoutClub || !schoolHasOtherClub(s.id))
         .sort(byName('name'));
       return [200, paginate(rows, q)];
     },
@@ -1319,6 +1327,8 @@ const routes = [
       if (filter.regions && !filter.regions.includes(school.region)) {
         throw forbidden(ERROR_MESSAGES.clubOwnRegion);
       }
+      // One Code Club per school; a closed one does not count (D5-11).
+      if (schoolHasOtherClub(school.id)) throw conflict(ERROR_MESSAGES.schoolHasClub);
       const prefix = REGION_CODE_PREFIX[school.region];
       const used = db.clubs.filter((c) => c.code.startsWith(`${prefix}-`)).length;
       const club = {
@@ -1355,6 +1365,15 @@ const routes = [
         throw badRequest(ERROR_MESSAGES.invalidFields, [
           { field: 'body.endTime', message: 'End time must be after start time' },
         ]);
+      }
+      const movesOrReopens = changes.schoolId !== undefined || changes.status !== undefined;
+      if (
+        movesOrReopens &&
+        merged.schoolId &&
+        merged.status !== 'closed' &&
+        schoolHasOtherClub(merged.schoolId, club.id)
+      ) {
+        throw conflict(ERROR_MESSAGES.schoolHasClub);
       }
       Object.assign(club, changes, { updatedAt: now(), updatedBy: actor.id });
       return [200, { data: club }];

@@ -201,6 +201,19 @@ export function createSeedData() {
       36.4333,
       'Susan Nyokabi',
     ),
+    // One Code Club per school (D5-11): Kisumu AI Explorers meets here, not at Nyalenda Hope.
+    school(
+      11,
+      'Manyatta Primary School',
+      'primary_school',
+      'western_nyanza',
+      'Kisumu',
+      'Kisumu East',
+      'Manyatta B',
+      -0.0917,
+      34.768,
+      'Paul Ochieng',
+    ),
   ];
 
   const venueFor = (s) => (s.type === 'other' ? 'community_centre' : s.type);
@@ -221,7 +234,7 @@ export function createSeedData() {
     ...stamp,
     ...extra,
   });
-  const [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10] = schools;
+  const [s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11] = schools;
 
   const clubs = [
     club(1, 'NAC-001', 'Mwangaza Scratch Stars', s1, 'tuesday', '15:30', '17:00', 'scratch'),
@@ -233,7 +246,7 @@ export function createSeedData() {
     club(5, 'WNY-002', 'Lurambi Game Makers', s5, 'saturday', '09:00', '11:00', 'game_design', {
       status: 'paused',
     }),
-    club(6, 'WNY-003', 'Kisumu AI Explorers', s4, 'friday', '15:00', '16:30', 'ai_basics'),
+    club(6, 'WNY-003', 'Kisumu AI Explorers', s11, 'friday', '15:00', '16:30', 'ai_basics'),
     club(7, 'CST-001', 'Majengo Micro:bit Makers', s6, 'thursday', '15:30', '17:00', 'robotics'),
     club(8, 'CST-002', 'Bahari Coders', s7, 'saturday', '10:00', '12:00', 'scratch', {
       frequency: 'fortnightly',

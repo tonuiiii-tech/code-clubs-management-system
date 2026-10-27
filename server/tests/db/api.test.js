@@ -104,7 +104,7 @@ describe('API on MongoDB', () => {
       .send({ ...body, name: 'gatina primary school' });
     expect(dup.status).toBe(409);
 
-    const club = await request(app).post('/api/v1/clubs').set(auth(coordinator.token)).send({
+    const newClub = {
       name: 'Gatina Code Club',
       schoolId: school.body.data.id,
       venueType: 'primary_school',
@@ -112,7 +112,11 @@ describe('API on MongoDB', () => {
       startTime: '16:00',
       endTime: '17:00',
       mainTrack: 'scratch',
-    });
+    };
+    const club = await request(app)
+      .post('/api/v1/clubs')
+      .set(auth(coordinator.token))
+      .send(newClub);
     expect(club.status).toBe(201);
     expect(club.body.data).toMatchObject({ code: 'NAC-004', region: 'nairobi_central' });
 
@@ -121,6 +125,32 @@ describe('API on MongoDB', () => {
       .set(auth(coordinator.token))
       .send({ endTime: '15:00' });
     expect(badTime.status).toBe(400);
+
+    // One Code Club per school (D5-11): a second one is refused, unless the first has closed.
+    const second = { ...newClub, name: 'Gatina Robotics', schoolId: school.body.data.id };
+    const refused = await request(app)
+      .post('/api/v1/clubs')
+      .set(auth(coordinator.token))
+      .send(second);
+    expect(refused.status).toBe(409);
+    expect(refused.body.error.message).toBe(ERROR_MESSAGES.schoolHasClub);
+    const free = await request(app).get('/api/v1/schools?withoutClub=true').set(auth(admin.token));
+    expect(free.body.data.map((s) => s.id)).not.toContain(school.body.data.id);
+    await request(app)
+      .patch(`/api/v1/clubs/${club.body.data.id}`)
+      .set(auth(coordinator.token))
+      .send({ status: 'closed' });
+    const replacement = await request(app)
+      .post('/api/v1/clubs')
+      .set(auth(coordinator.token))
+      .send(second);
+    expect(replacement.status).toBe(201);
+    // Reopening the closed club would make two.
+    const reopen = await request(app)
+      .patch(`/api/v1/clubs/${club.body.data.id}`)
+      .set(auth(coordinator.token))
+      .send({ status: 'active' });
+    expect(reopen.status).toBe(409);
   });
 
   it('assigns and ends a champion assignment, and records it in the audit log', async () => {

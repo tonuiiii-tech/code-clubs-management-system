@@ -36,6 +36,7 @@ export const ERROR_MESSAGES = Object.freeze({
   clubOwnRegion: 'You can only add clubs in your own region',
   onlineClubsNotSupported: 'Online clubs are not supported yet',
   onlyActiveChampions: 'Only active Club Champions can be assigned to a club',
+  schoolHasClub: 'This school already has a Code Club. A school has one club.',
   championHasClub: 'This Club Champion already runs another club. End that assignment first.',
   clubInactive: 'The club is not active',
   clubFull: 'This club is full',
